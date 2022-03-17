@@ -32,13 +32,16 @@ import * as jwt from "jsonwebtoken";
 import * as jwks from "jwks-rsa";
 import {Jwt} from "jsonwebtoken";
 import {JwksClient} from "jwks-rsa";
+import {ILogger} from "@mojaloop/logging-bc-logging-client-lib";
 
 export class TokenHelper {
+    private _logger:ILogger;
     private _jwksUrl: string;
     private _issuerName: string;
     private _jwksClient: JwksClient;
 
-    constructor(issuerName: string, jwksUrl: string) {
+    constructor(issuerName: string, jwksUrl: string, logger:ILogger) {
+        this._logger = logger;
         this._issuerName = issuerName;
         this._jwksUrl = jwksUrl;
 
@@ -86,7 +89,17 @@ export class TokenHelper {
         };
 
         const token = jwt.decode(accessToken, {complete: true}) as Jwt;
+        if(!token || !token.header || !token.header || !token.header.kid){
+            this._logger.warn("could not decode token or token without kid");
+            return false;
+        }
+
         const key = await this._jwksClient.getSigningKey(token.header.kid);
+        if(!key){
+            this._logger.warn(`public signing key not found for kid: ${token.header.kid}`);
+            return false;
+        }
+
         const signingKey = key.getPublicKey();
 
         const decoded = jwt.verify(accessToken, signingKey, verify_opts) as Jwt;
@@ -95,7 +108,6 @@ export class TokenHelper {
             return false;
         }
 
-        //console.log(decoded)
         return true;
     }
 

@@ -33,14 +33,17 @@ import axios, { AxiosResponse, AxiosInstance } from "axios";
 import {AuthLoginResponse, AuthToken} from "./types";
 import * as jwt from "jsonwebtoken";
 import {Jwt} from "jsonwebtoken";
+import {ILogger} from "@mojaloop/logging-bc-logging-client-lib";
 
 const AUTH_HTTPCLIENT_TIMEOUT_MS = 5000;
 
 export class LoginHelper{
+    private _logger:ILogger;
     private _authBaseUrl:string;
     private _httpClient: AxiosInstance;
 
-    constructor(authBaseUrl:string) {
+    constructor(authBaseUrl:string, logger:ILogger) {
+        this._logger = logger;
         this._authBaseUrl = authBaseUrl;
 
         this._httpClient = axios.create({
@@ -90,14 +93,14 @@ export class LoginHelper{
                 payload: token.payload
             }
         }catch(err){
-            console.error(err);
-            throw err; // TODO throw own errors
+            this._logger.error(err);
+            return null;
         }
     }
 
-    loginApp(username:string, password:string):Promise<AuthToken|null>{
-        throw new Error("not implemented");
-    }
+    // loginApp(username:string, password:string):Promise<AuthToken|null>{
+    //     throw new Error("not implemented");
+    // }
 
 
 }
