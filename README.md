@@ -1,22 +1,16 @@
-# logging-bc
+# security-bc
 
-**EXPERIMENTAL** vNext Logging Bounded Context Mono Repository
+**EXPERIMENTAL** vNext Security Bounded Context Mono Repository
 
-{{DESCRIPTION}}
+See the Reference Architecture documentation [security section](https://mojaloop.github.io/reference-architecture-doc/boundedContexts/security/) for context on this vNext implementation guidelines
+
 
 ## Modules
 
-### logging-svc
+### Authentication service [link](modules/authentication-svc/README.md)
 
-{{DESCRIPTION}}
+### Authentication client lib [link](modules/authentication-svc/README.md)
 
-[README](./modules/logging-svc/README.md)
-
-#### Run
-
-```bash
-yarn start:logging-svc
-```
 
 ## Usage
 

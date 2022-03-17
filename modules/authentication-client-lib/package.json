@@ -1,0 +1,76 @@
+{
+  "name": "@mojaloop/security-bc-authentication-client-lib",
+  "version": "0.0.1",
+  "description": "mojaloop security authentication client library",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/mojaloop/security-bc/tree/main/modules/security-bc-authentication-client-lib",
+  "bugs": {
+    "url": "https://github.com/mojaloop/security-bc/issues#readme"
+  },
+  "contributors": [
+    "Pedro Sousa Barreto <pedrosousabarreto@gmail.com>"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "/dist"
+  ],
+  "pre-commit": [
+    "dep:check",
+    "build",
+    "lint",
+    "test:unit"
+  ],
+  "scripts": {
+    "start": "yarn run service",
+    "service": "tsc && node dist/application/index.js --config ../../.env",
+    "build": "tsc",
+    "watch": "tsc -w",
+    "clean": "rm -Rf dist",
+    "pretest": "yarn run build",
+    "standard": "yarn run lint",
+    "lint": "yarn run build && npx eslint ./src",
+    "lint:fix": "yarn run build && npx eslint ./src --fix",
+    "test:unit": "jest --passWithNoTests --testMatch '**/test/unit/**/*.test.ts'",
+    "test:integration": "jest --passWithNoTests --testMatch '**/test/integration/**/*.test.ts'",
+    "test:coverage": "jest --passWithNoTests --coverage --coverageThreshold='{}' --testMatch '**/test/unit/**/*.test.ts'",
+    "test:coverage-check": "jest --coverage --testMatch '**/test/unit/**/*.test.ts'",
+    "audit:resolve": "SHELL=sh resolve-audit",
+    "audit:check": "SHELL=sh check-audit",
+    "dep:check": "yarn run ncu -e 2",
+    "dep:update": "yarn run ncu -u"
+  },
+  "dependencies": {
+    "@mojaloop/logging-bc-logging-client-lib": "*",
+    "axios": "^0.25.0",
+    "jsonwebtoken": "^8.5.1",
+    "jwks-rsa": "^2.0.5"
+  },
+  "devDependencies": {
+    "@types/axios": "^0.14.0",
+    "@types/jest": "^27.0.3",
+    "@types/jsonwebtoken": "^8.5.1",
+    "@types/node": "^16.11.9",
+    "@types/node-cache": "^4.2.5",
+    "@typescript-eslint/eslint-plugin": "^5.4.0",
+    "eslint": "^8.3.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-import": "^2.25.3",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^5.1.1",
+    "eslint-plugin-standard": "^5.0.0",
+    "jest": "^27.3.1",
+    "jest-junit": "^13.0.0",
+    "nock": "^13.2.4",
+    "npm-audit-resolver": "^2.3.1",
+    "npm-check-updates": "^12.0.2",
+    "nyc": "^15.1.0",
+    "pre-commit": "^1.2.2",
+    "ts-jest": "^27.0.7",
+    "typedoc": "^0.22.9",
+    "typescript": "^4.5.0"
+  },
+  "peerDependencies": {
+    "@mojaloop/logging-bc-logging-client-lib": "*"
+  }
+}
