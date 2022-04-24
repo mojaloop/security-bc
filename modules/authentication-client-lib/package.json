@@ -33,6 +33,7 @@
     "test:unit": "jest --passWithNoTests --testMatch '**/test/unit/**/*.test.ts'",
     "test:integration": "jest --passWithNoTests --testMatch '**/test/integration/**/*.test.ts'",
     "test:coverage": "jest --passWithNoTests --coverage --testMatch '**/test/unit/**/*.test.ts'",
+    "test:coverage-check": "jest --coverage --testMatch '**/test/unit/**/*.test.ts'",
     "audit:resolve": "SHELL=sh resolve-audit",
     "audit:check": "SHELL=sh check-audit",
     "dep:check": "yarn run ncu -e 2",
@@ -40,6 +41,7 @@
   },
   "dependencies": {
     "@mojaloop/logging-bc-logging-client-lib": "*",
+    "@mojaloop/security-bc-public-types-lib": "*",
     "axios": "^0.25.0",
     "jsonwebtoken": "^8.5.1",
     "jwks-rsa": "^2.0.5"

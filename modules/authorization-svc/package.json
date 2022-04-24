@@ -1,9 +1,9 @@
 {
-  "name": "@mojaloop/security-bc-authentication-svc",
+  "name": "@mojaloop/security-bc-authorization-svc",
   "version": "0.0.1",
-  "description": "mojaloop security authentication service",
+  "description": "mojaloop security authorization service",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/mojaloop/security-bc/tree/main/modules/authentication-svc",
+  "homepage": "https://github.com/mojaloop/security-bc/tree/main/modules/authorization-svc",
   "private": true,
   "bugs": {
     "url": "https://github.com/mojaloop/security-bc/issues#readme"
@@ -35,6 +35,7 @@
     "test:unit": "jest --passWithNoTests --testMatch '**/test/unit/**/*.test.ts'",
     "test:integration": "jest --passWithNoTests --testMatch '**/test/integration/**/*.test.ts'",
     "test:coverage": "jest --passWithNoTests --coverage --testMatch '**/test/unit/**/*.test.ts'",
+    "test:coverage-check": "jest --coverage --testMatch '**/test/unit/**/*.test.ts'",
     "audit:resolve": "SHELL=sh resolve-audit",
     "audit:check": "SHELL=sh check-audit",
     "dep:check": "yarn run ncu -e 2",
@@ -42,21 +43,16 @@
   },
   "dependencies": {
     "@mojaloop/logging-bc-logging-client-lib": "latest",
-    "@mojaloop/security-bc-public-types-lib": "*",
-    "asn1": "^0.2.6",
     "express": "^4.17.2",
-    "jsonwebtoken": "^8.5.1",
-    "node-jose": "^2.1.1",
+    "semver": "^7.3.5",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
-    "@types/asn1": "^0.2.0",
     "@types/express": "^4.17.13",
     "@types/jest": "^27.0.3",
-    "@types/jsonwebtoken": "^8.5.1",
     "@types/node": "^16.11.9",
     "@types/node-cache": "^4.2.5",
-    "@types/node-jose": "^1.1.10",
+    "@types/semver": "^7.3.9",
     "@types/uuid": "^8.3.4",
     "@typescript-eslint/eslint-plugin": "^5.4.0",
     "eslint": "^8.3.0",

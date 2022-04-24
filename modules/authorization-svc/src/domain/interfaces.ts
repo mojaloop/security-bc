@@ -27,8 +27,28 @@
 
  --------------
  ******/
+
 "use strict"
 
-export * from "./login_helper"
-export * from "./token_helper"
+
+import {AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
+
+export interface IAMAuthorizationAdapter {
+    init(): Promise<void>;
+    getAllRoles():Promise<PlatformRole[]>
+}
+
+export interface IAuthorizationRepository {
+    init(): Promise<void>;
+
+    // PlatformRole
+    storePlatformRole(role:PlatformRole):Promise<boolean>;
+    fetchPlatformRole(roleId:string):Promise<PlatformRole | null>;
+    fetchAllPlatformRoles():Promise<PlatformRole[]>;
+
+    // AppPrivileges
+    storeAppPrivileges(priv:AppPrivileges):Promise<boolean>;
+    fetchAppPrivileges(boundedContextName: string, applicationName: string):Promise<AppPrivileges | null>;
+    fetchAllAppPrivileges():Promise<AppPrivileges[]>;
+}
 

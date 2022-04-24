@@ -27,8 +27,25 @@
 
  --------------
  ******/
+
 "use strict"
 
-export * from "./login_helper"
-export * from "./token_helper"
+import {IAMLoginResponse} from "@mojaloop/security-bc-public-types-lib";
 
+
+export interface IAMAuthenticationAdapter {
+    init(): Promise<void>;
+    loginUser(client_id:string, client_secret:string|null, username:string, password:string): Promise<IAMLoginResponse>;
+    loginApp(client_id:string, client_secret:string): Promise<IAMLoginResponse>;
+
+    userExists(username:string):Promise<boolean>;
+    appExists(client_id:string):Promise<boolean>;
+}
+
+
+export interface ICryptoAuthenticationAdapter {
+    init(): Promise<void>;
+    generateJWT(additionalPayload:any, sub:string, aud:string, lifeInSecs:number):Promise<string>;
+    getJwsKeys():Promise<any[]>; // returns an JWS object array, no need to type it
+    generateRandomToken(length:number):Promise<string>;
+}

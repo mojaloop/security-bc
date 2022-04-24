@@ -61,7 +61,7 @@ export class TokenHelper {
         for(const k of keys){
             k.getPublicKey();
         }
-
+        // TODO setup timer
     }
 
     /**

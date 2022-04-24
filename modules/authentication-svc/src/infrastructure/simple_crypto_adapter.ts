@@ -36,16 +36,20 @@ import * as  uuid from "uuid";
 import { BerReader } from "asn1";
 import { createHash } from "crypto";
 
-import {ICryptoAdapter} from "../domain/types";
+import {ICryptoAuthenticationAdapter} from "../domain/types";
 import {ILogger} from "@mojaloop/logging-bc-logging-client-lib/dist/index";
 import crypto from "crypto";
+import * as nodejose from "node-jose";
+import {urlencoded} from "express";
 
 const PUBLIC_RSA_OID = "1.2.840.113549.1.1.1";
 const PUBLIC_OPENING_BOUNDARY = "-----BEGIN PUBLIC KEY-----";
 const PUBLIC_CLOSING_BOUNDARY = "-----END PUBLIC KEY-----";
 
+const HASH_ALG = "SHA-256"; // these must match
+const SIGNATURE_ALG = "RS256";
 
-export class SimpleCryptoAdapter implements ICryptoAdapter{
+export class SimpleCryptoAdapter implements ICryptoAuthenticationAdapter{
     private readonly _logger: ILogger;
     private readonly _issuerName:string;
     private readonly _privateCertPath:string;
@@ -55,6 +59,7 @@ export class SimpleCryptoAdapter implements ICryptoAdapter{
     private _privateKeyStr: string;
     private _publicKeyStr: string;
     private _publicKeyId: string;
+    private _joseKeyStore: nodejose.JWK.KeyStore;
 
     constructor(privCertPath:string, pubCertPath:string, issuerName:string, logger: ILogger) {
         this._logger = logger;
@@ -71,7 +76,15 @@ export class SimpleCryptoAdapter implements ICryptoAdapter{
             this._publicCert = fs.readFileSync(this._publicCertPath);
             this._publicKeyStr = this._publicCert.toString();
 
-            this._publicKeyId = toSHA256(this._publicKeyStr);
+
+            this._joseKeyStore = nodejose.JWK.createKeyStore();
+            const key  = await this._joseKeyStore.add(this._publicCert, "pem");
+
+            //this._publicKeyId = toSHA256(this._publicKeyStr);
+
+            const keyId = await key.thumbprint(HASH_ALG);
+            this._publicKeyId = Buffer.from(keyId).toString("base64");
+            this._publicKeyId = this._publicKeyId.replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
         }catch(err){
             // log
             this._logger.error(err);
@@ -83,7 +96,7 @@ export class SimpleCryptoAdapter implements ICryptoAdapter{
 
         // https://datatracker.ietf.org/doc/html/rfc7519
         const signOptions: jwt.SignOptions = {
-            algorithm: "RS256",
+            algorithm: SIGNATURE_ALG,
             audience: aud,
             expiresIn: lifeInSecs,
             issuer: this._issuerName,
@@ -97,9 +110,15 @@ export class SimpleCryptoAdapter implements ICryptoAdapter{
     }
     async getJwsKeys():Promise<any>{
         // https://datatracker.ietf.org/doc/html/rfc7517
-        const keys = [createJWS(this._publicKeyStr)];
-        return keys;
+        // const keys = [createJWS(this._publicKeyStr)];
+        // return keys;
+
+        // const keystore = nodejose.JWK.createKeyStore();
+        // const key = await keystore.add(this._publicCert, "pem");
+        // this._logger.debug(key);
+        return this._joseKeyStore.toJSON();
     }
+
 
     async generateRandomToken(length:number):Promise<string>{
         return generateRandomToken(length);

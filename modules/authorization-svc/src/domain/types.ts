@@ -28,17 +28,13 @@
  --------------
  ******/
 
-'use strict'
+"use strict"
 
-export interface IAMAdapter{
-    init(): Promise<void>;
-    loginUser(username:string, password:string): Promise<boolean>;
-    loginApp(app_id:string, password:string): Promise<boolean>;
-}
-
-export interface ICryptoAdapter{
-    init(): Promise<void>;
-    generateJWT(additionalPayload:any, sub:string, aud:string, lifeInSecs:number):Promise<string>;
-    getJwsKeys():Promise<any[]>; // returns an JWS object array, no need to type it
-    generateRandomToken(length:number):Promise<string>;
+export type AllPrivilegesResp = {
+    id: string;
+    labelName: string;
+    description: string;
+    boundedContextName: string;
+    applicationName: string;
+    applicationVersion: string;
 }

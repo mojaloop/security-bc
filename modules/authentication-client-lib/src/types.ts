@@ -29,18 +29,9 @@
  ******/
 "use strict"
 
-
 export class AuthToken{
     payload:any;
     accessToken: string; // original access token
-    refreshToken: string; // original refresh token
+    refreshToken: string | null; // original refresh token
+    scope: string | null;
 }
-
-export class AuthLoginResponse{
-    token_type: "bearer";
-    access_token: string;
-    expires_in: number;
-    refresh_token: string;
-    refresh_token_expires_in: number;
-}
-

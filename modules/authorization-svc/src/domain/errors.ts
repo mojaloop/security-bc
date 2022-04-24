@@ -27,8 +27,15 @@
 
  --------------
  ******/
+
 "use strict"
 
-export * from "./login_helper"
-export * from "./token_helper"
+export class InvalidAppPrivilegesError extends Error{}
+export class CannotCreateDuplicateAppPrivilegesError extends Error{}
+export class CannotOverrideAppPrivilegesError extends Error{}
+export class CouldNotStoreAppPrivilegesError extends Error{}
+
+export class InvalidPlatformRoleError extends Error{}
+export class NewRoleWithPrivsUsersOrAppsError extends Error{}
+export class CannotCreateDuplicateRoleError extends Error{}
 

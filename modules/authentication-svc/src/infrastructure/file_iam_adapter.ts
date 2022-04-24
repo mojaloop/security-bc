@@ -31,26 +31,35 @@
 'use strict'
 
 
-import {IAMAdapter} from "../domain/types";
+import {IAMAuthenticationAdapter} from "../domain/interfaces";
 import {readFile, stat, writeFile} from "fs/promises";
 import fs from "fs";
+import {IAMLoginResponse} from "@mojaloop/security-bc-public-types-lib";
+
+const FIXED_EXPIRES_IN_SECS = 3600;
 
 class UserRecord{
     username: string;
     password: string;
-
 }
 
-export class FileIAMAdapter implements IAMAdapter{
+class AppRecord{
+    client_id: string;
+    client_secret: string | null;
+}
+
+
+export class FileIAMAdapter implements IAMAuthenticationAdapter{
     private _filePath: string;
-    private _store:Map<string, UserRecord> = new Map<string, UserRecord>();
+    private _users:Map<string, UserRecord> = new Map<string, UserRecord>();
+    private _apps:Map<string, AppRecord> = new Map<string, AppRecord>();
 
     constructor(filePath:string) {
         this._filePath = filePath;
     }
 
     private async _loadFromFile():Promise<boolean>{
-        let fileData: [any];
+        let fileData: any;
         try{
             const strContents = await readFile(this._filePath, "utf8");
             if(!strContents || !strContents.length){
@@ -62,21 +71,40 @@ export class FileIAMAdapter implements IAMAdapter{
             throw new Error("cannot read FileIAMAdapter storage file");
         }
 
-        for(const rec of fileData){
-            const userRec = new UserRecord();
-            userRec.username = rec.username;
-            userRec.password = rec.password;
+        if(fileData.users && Array.isArray(fileData.users)){
+            for (const rec of fileData.users) {
+                const userRec = new UserRecord();
+                userRec.username = rec.username;
+                userRec.password = rec.password;
 
-            if(userRec.username && userRec.password && !this._store.has(userRec.username)){
-                this._store.set(userRec.username, userRec);
+                if (userRec.username && userRec.password && !this._users.has(userRec.username)) {
+                    this._users.set(userRec.username, userRec);
+                }
             }
         }
+
+        if(fileData.apps && Array.isArray(fileData.apps)){
+            for (const rec of fileData.apps) {
+                const appRecord = new AppRecord();
+                appRecord.client_id = rec.client_id;
+                appRecord.client_secret = rec.client_secret;
+
+                if (appRecord.client_id && appRecord.client_secret && !this._apps.has(appRecord.client_id)) {
+                    this._apps.set(appRecord.client_id, appRecord);
+                }
+            }
+        }
+
         return true;
     }
 
     private async _saveToFile():Promise<void>{
         try{
-            const strContents = JSON.stringify(Array.from(this._store.values()));
+            const obj = {
+                users: Array.from(this._users.values()),
+                apps: Array.from(this._apps.values())
+            };
+            const strContents = JSON.stringify(obj, null, 4);
             await writeFile(this._filePath, strContents, "utf8");
         }catch (e) {
             throw new Error("cannot rewrite FileIAMAdapter storage file");
@@ -95,38 +123,89 @@ export class FileIAMAdapter implements IAMAdapter{
 
     }
 
+    async createApp(client_id: string, client_secret: string | null):Promise<boolean>{
+        if(this._users.has(client_id)){
+            return false;
+        }
+        const appRec = new AppRecord();
+        appRec.client_id = client_id;
+        appRec.client_secret = client_secret;
+        this._apps.set(client_id, appRec);
+
+        await this._saveToFile();
+        return true;
+    }
+
+    appCount():number{
+        return this._apps.size;
+    }
+
+    async appExists(client_id:string):Promise<boolean>{
+        return this._apps.has(client_id);
+    }
+
     async createUser(username: string, password: string):Promise<boolean>{
-        if(this._store.has(username)){
+        if(this._users.has(username)){
             return false;
         }
         const userRec = new UserRecord();
         userRec.username = username;
         userRec.password = password;
-        this._store.set(userRec.username, userRec);
+        this._users.set(userRec.username, userRec);
 
         await this._saveToFile();
         return true;
     }
 
     userCount():number{
-        return this._store.size;
+        return this._users.size;
     }
 
-
-    async loginApp(app_id: string, password: string): Promise<boolean> {
-        return Promise.resolve(false);
+    async userExists(username:string):Promise<boolean>{
+        return this._users.has(username);
     }
 
-    async loginUser(username: string, password: string): Promise<boolean> {
-        if(!this._store.has(username)){
-            return false;
+    async loginApp(app_id: string, password: string): Promise<IAMLoginResponse> {
+        const resp:IAMLoginResponse = {
+            success: false,
+            scope: null,
+            expires_in_secs: 0,
+            roles: []
+        };
+
+        return resp;
+    }
+
+    async loginUser(client_id:string, client_secret:string|null, username: string, password: string): Promise<IAMLoginResponse> {
+        const resp:IAMLoginResponse = {
+            success: false,
+            scope: null,
+            expires_in_secs: 0,
+            roles: []
+        };
+
+        const appRec = this._apps.get(client_id);
+        if(!appRec){
+            return resp;
         }
-        const rec = this._store.get(username);
+
+        if(appRec.client_secret != null && appRec.client_secret !== client_secret ){
+            return resp;
+        }
+
+        if(!this._users.has(username)){
+            return resp;
+        }
+        const rec = this._users.get(username);
 
         // this is a mock implementation, no ecryption needed or desired - but pass must not be empty
         if(rec && rec.password && rec.password === password){
-            return true;
+            resp.success = true;
+            resp.expires_in_secs = FIXED_EXPIRES_IN_SECS;
+            resp.roles = [];
+
+            return resp;
         }
-        return false;
+        return resp;
     }
 }

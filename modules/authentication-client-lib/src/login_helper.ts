@@ -30,10 +30,11 @@
 "use strict"
 
 import axios, { AxiosResponse, AxiosInstance } from "axios";
-import {AuthLoginResponse, AuthToken} from "./types";
 import * as jwt from "jsonwebtoken";
 import {Jwt} from "jsonwebtoken";
+import {AuthToken} from "./types";
 import {ILogger} from "@mojaloop/logging-bc-logging-client-lib";
+import {TokenEndpointResponse} from "@mojaloop/security-bc-public-types-lib";
 
 const AUTH_HTTPCLIENT_TIMEOUT_MS = 5000;
 
@@ -77,20 +78,21 @@ export class LoginHelper{
                 return null;
             }
 
-            const loginResp: AuthLoginResponse = resp.data as AuthLoginResponse;
-            if(!loginResp || ! loginResp.access_token || !loginResp.token_type || loginResp.expires_in == undefined){
+            const tokenResp: TokenEndpointResponse = resp.data as TokenEndpointResponse;
+            if(!tokenResp || ! tokenResp.access_token || !tokenResp.token_type || tokenResp.expires_in == undefined){
                 return null;
             }
 
-            const token = jwt.decode(loginResp.access_token, {complete: true}) as Jwt;
+            const token = jwt.decode(tokenResp.access_token, {complete: true}) as Jwt;
             if(!token){
                 return null;
             }
 
             return {
-                accessToken: loginResp.access_token,
-                refreshToken: loginResp.refresh_token ?? null,
-                payload: token.payload
+                accessToken: tokenResp.access_token,
+                refreshToken: tokenResp.refresh_token ?? null,
+                payload: token.payload,
+                scope: tokenResp.scope
             }
         }catch(err){
             this._logger.error(err);
