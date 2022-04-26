@@ -38,3 +38,4 @@ export type AllPrivilegesResp = {
     applicationName: string;
     applicationVersion: string;
 }
+

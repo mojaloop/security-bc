@@ -36,7 +36,7 @@ import * as  uuid from "uuid";
 import { BerReader } from "asn1";
 import { createHash } from "crypto";
 
-import {ICryptoAuthenticationAdapter} from "../domain/types";
+import {ICryptoAuthenticationAdapter} from "../domain/interfaces";
 import {ILogger} from "@mojaloop/logging-bc-logging-client-lib/dist/index";
 import crypto from "crypto";
 import * as nodejose from "node-jose";

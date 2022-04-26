@@ -15,6 +15,7 @@
     "prepare": "husky install",
     "start": "lerna run --no-progress --stream  start",
     "start:authentication-svc": "lerna run build --no-progress --stream --scope='@mojaloop/security-bc-authentication-svc' && lerna run --no-progress --stream --scope='@mojaloop/security-bc-authentication-svc' start",
+    "start:authorization-svc": "lerna run build --no-progress --stream --scope='@mojaloop/security-bc-authorization-svc' && lerna run --no-progress --stream --scope='@mojaloop/security-bc-authorization-svc' start",
     "build": "lerna run --stream build",
     "watch": "lerna run --no-progress --stream --parallel watch",
     "clean": "yarn run clean:dist && yarn run clean:npm",
@@ -42,5 +43,5 @@
   "workspaces": [
     "modules/*"
   ],
-  "packageManager": "yarn@3.1.0"
+  "packageManager": "yarn@3.2.0"
 }

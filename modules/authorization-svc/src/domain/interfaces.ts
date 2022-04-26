@@ -31,7 +31,7 @@
 "use strict"
 
 
-import {AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
+import {Privilege, AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
 
 export interface IAMAuthorizationAdapter {
     init(): Promise<void>;
@@ -48,6 +48,7 @@ export interface IAuthorizationRepository {
 
     // AppPrivileges
     storeAppPrivileges(priv:AppPrivileges):Promise<boolean>;
+    fetchPrivilege(privilegeId: string):Promise<Privilege | null>;
     fetchAppPrivileges(boundedContextName: string, applicationName: string):Promise<AppPrivileges | null>;
     fetchAllAppPrivileges():Promise<AppPrivileges[]>;
 }

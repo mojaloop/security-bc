@@ -73,7 +73,7 @@ export type PlatformRole = {
     externalId:string;              // id of the role in the external system/iam
     labelName: string;              // label name to show on a UI
     description: string;            // description to show on a UI
-    appPrivileges: string[]         // array of Privilege.id's
+    privileges: string[]         // array of Privilege.id's
     memberUsers: string[];          // array or PlatformUser.id's
     memberApps: string[]            // array or PlatformApp.id's
 }

@@ -38,4 +38,9 @@ export class CouldNotStoreAppPrivilegesError extends Error{}
 export class InvalidPlatformRoleError extends Error{}
 export class NewRoleWithPrivsUsersOrAppsError extends Error{}
 export class CannotCreateDuplicateRoleError extends Error{}
+export class CannotStorePlatformRoleError extends Error{}
+
+export class PrivilegeNotFoundError extends Error{}
+export class PlatformRoleNotFoundError extends Error{}
+export class DuplicatePrivilegeInPlatformRoleError extends Error{}
 

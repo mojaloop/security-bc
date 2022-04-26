@@ -34,11 +34,11 @@ import express from "express";
 import {
     CannotCreateDuplicateAppPrivilegesError,
     CannotCreateDuplicateRoleError,
-    CannotOverrideAppPrivilegesError,
+    CannotOverrideAppPrivilegesError, CannotStorePlatformRoleError,
     CouldNotStoreAppPrivilegesError,
     InvalidAppPrivilegesError,
     InvalidPlatformRoleError,
-    NewRoleWithPrivsUsersOrAppsError
+    NewRoleWithPrivsUsersOrAppsError, PlatformRoleNotFoundError, PrivilegeNotFoundError
 } from "../domain/errors";
 import {AllPrivilegesResp} from "../domain/types";
 import {ILogger} from "@mojaloop/logging-bc-logging-client-lib";
@@ -64,7 +64,10 @@ export class ExpressRoutes {
         this._privilegesRouter.get("/", this.getAllAppPrivileges.bind(this));
 
         // roles
+        this._rolesRouter.get("/", this.getAllPlatformRole.bind(this));
         this._rolesRouter.post("/", this.postPlatformRole.bind(this));
+        this._rolesRouter.post("/:roleId/associatePrivileges", this.postAssociatePrivsToPlatformRole.bind(this));
+
     }
 
     get MainRouter():express.Router{
@@ -127,12 +130,24 @@ export class ExpressRoutes {
 
 
     // roles
+    private async getAllPlatformRole(req: express.Request, res: express.Response, next: express.NextFunction){
+        await this._authorizationAggregate.getAllRoles().then((resp:PlatformRole[])=>{
+            return res.send(resp);
+        }).catch(()=>{
+            this._logger.error("error in getAllPlatformRole route")
+            return res.status(500).json({
+                status: "error",
+                msg: "unknown error"
+            });
+        });
+    }
+
     private async postPlatformRole(req: express.Request, res: express.Response, next: express.NextFunction){
         const data: PlatformRole = req.body as PlatformRole;
         this._logger.debug(data);
 
-        await this._authorizationAggregate.createLocalRole(data).then(()=>{
-            return res.status(200).send();
+        await this._authorizationAggregate.createLocalRole(data).then((roleId:string)=>{
+            return res.status(200).send({roleId: roleId});
         }).catch((error: Error)=>{
             if (error instanceof InvalidPlatformRoleError) {
                 return res.status(400).json({
@@ -156,5 +171,48 @@ export class ExpressRoutes {
                 });
             }
         });
+    }
+
+    private async postAssociatePrivsToPlatformRole(req: express.Request, res: express.Response, next: express.NextFunction){
+        const roleId = req.params["roleId"] ?? null;
+        // body is supposed to be array of strings
+        const data: string[] = req.body as string[];
+        this._logger.debug(data);
+
+        if(!roleId){
+            return res.status(400).json({
+                status: "error",
+                msg: "invalid PlatformRole"
+            });
+        }
+
+        if(!Array.isArray(data) || data.length<=0){
+            return res.status(400).json({
+                status: "error",
+                msg: "invalid privilege id list in body"
+            });
+        }
+
+        await this._authorizationAggregate.associatePrivilegesToRole(data, roleId).then(()=>{
+            return res.status(200).send();
+        }).catch((error: Error)=>{
+            if (error instanceof PlatformRoleNotFoundError) {
+                return res.status(404).json({
+                    status: "error",
+                    msg: "PlatformRole not found"
+                });
+            } else if (error instanceof PrivilegeNotFoundError) {
+                return res.status(400).json({
+                    status: "error",
+                    msg: "Privilege not found"
+                });
+            } else {
+                return res.status(500).json({
+                    status: "error",
+                    msg: "unknown error"
+                });
+            }
+        });
+        return;
     }
 }

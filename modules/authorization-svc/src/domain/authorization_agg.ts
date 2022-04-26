@@ -33,16 +33,16 @@
 import semver from "semver";
 import * as uuid from "uuid";
 import {ILogger} from "@mojaloop/logging-bc-logging-client-lib/dist/index";
-import {AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
+import {Privilege, AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
 import {IAMAuthorizationAdapter, IAuthorizationRepository} from "./interfaces";
 import {
     CannotCreateDuplicateAppPrivilegesError,
     CannotCreateDuplicateRoleError,
-    CannotOverrideAppPrivilegesError,
-    CouldNotStoreAppPrivilegesError,
+    CannotOverrideAppPrivilegesError, CannotStorePlatformRoleError,
+    CouldNotStoreAppPrivilegesError, DuplicatePrivilegeInPlatformRoleError,
     InvalidAppPrivilegesError,
     InvalidPlatformRoleError,
-    NewRoleWithPrivsUsersOrAppsError
+    NewRoleWithPrivsUsersOrAppsError, PlatformRoleNotFoundError, PrivilegeNotFoundError
 } from "./errors";
 import {AllPrivilegesResp} from "../domain/types";
 
@@ -131,8 +131,17 @@ export class AuthorizationAggregate{
         return ret;
     }
 
+    async getAllRoles():Promise<PlatformRole[]> {
+        const allRoles = await this._authzRepo.fetchAllPlatformRoles();
 
-    async createLocalRole(role:PlatformRole):Promise<void>{
+        if(!allRoles || allRoles.length ==0) {
+            return [];
+        }
+
+        return allRoles;
+    }
+
+    async createLocalRole(role:PlatformRole):Promise<string>{
         if(role.isExternal && !role.externalId){
             throw new InvalidPlatformRoleError();
         }
@@ -141,7 +150,7 @@ export class AuthorizationAggregate{
             throw new InvalidPlatformRoleError();
         }
 
-        if((role.appPrivileges && role.appPrivileges.length>0)
+        if((role.privileges && role.privileges.length>0)
                 || (role.memberUsers && role.memberUsers.length>0)
                 || (role.memberApps && role.memberApps.length>0)){
             throw new NewRoleWithPrivsUsersOrAppsError();
@@ -156,8 +165,37 @@ export class AuthorizationAggregate{
             throw new CannotCreateDuplicateRoleError();
         }
 
-        await this._authzRepo.storePlatformRole(role);
+        const success = await this._authzRepo.storePlatformRole(role);
+        if(!success){
+            throw new CannotStorePlatformRoleError();
+        }
+
+        return role.id;
     }
 
+    async associatePrivilegesToRole(privilegeIds:string[], roleId:string):Promise<void>{
+        const role:PlatformRole  | null = await this._authzRepo.fetchPlatformRole(roleId);
+        if(!role) {
+            throw new PlatformRoleNotFoundError();
+        }
+
+        if(!role.privileges) role.privileges = [];
+
+        for (const privId of privilegeIds) {
+            const priv:Privilege | null = await this._authzRepo.fetchPrivilege(privId);
+            if(!priv) {
+                throw new PrivilegeNotFoundError();
+            }
+
+            if(role.privileges.findIndex(value => value === privId) <= -1){
+                role.privileges.push(privId);
+            }
+        }
+
+        const success = await this._authzRepo.storePlatformRole(role);
+        if(!success){
+            throw new CannotStorePlatformRoleError();
+        }
+    }
 
 }

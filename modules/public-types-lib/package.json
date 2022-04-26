@@ -1,6 +1,6 @@
 {
   "name": "@mojaloop/security-bc-public-types-lib",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "mojaloop security public types library",
   "license": "Apache-2.0",
   "homepage": "https://github.com/mojaloop/security-bc/tree/main/modules/public-types-lib",

@@ -33,7 +33,7 @@ import semver from "semver";
 import fs from "fs";
 import {readFile, stat, writeFile} from "fs/promises";
 import {ILogger} from "@mojaloop/logging-bc-logging-client-lib";
-import {AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
+import {Privilege, AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
 import {IAuthorizationRepository} from "../domain/interfaces";
 
 
@@ -90,12 +90,12 @@ export class FileAuthorizationRepo implements IAuthorizationRepository{
                     isApplicationRole: rec.isApplicationRole,
                     labelName: rec.labelName,
                     description: rec.description,
-                    appPrivileges: rec.appPrivileges,
+                    privileges: rec.privileges,
                     memberApps: rec.memberApps,
                     memberUsers: rec.memberUsers
                 }
 
-                if (role.id && role.labelName && role.description && Array.isArray(role.appPrivileges) ){
+                if (role.id && role.labelName && role.description ){
                     if(!this._roles.has(role.id)) {
                         this._roles.set(role.id, role);
                     }
@@ -167,6 +167,16 @@ export class FileAuthorizationRepo implements IAuthorizationRepository{
         this._appPrivs.set(id, priv);
         await this._saveToFile();
         return true;
+    }
+
+    async fetchPrivilege(privilegeId: string):Promise<Privilege | null>{
+        for(const appPrivs of this._appPrivs.values()){
+            const foundPriv = appPrivs.privileges.find(value => value.id === privilegeId) || null;
+            if(foundPriv)
+                return foundPriv;
+        }
+
+        return null;
     }
 
     async fetchAppPrivileges(boundedContextName: string, applicationName: string):Promise<AppPrivileges | null>{
