@@ -25,7 +25,7 @@ Extract public certificate from private certificate
 ---
 
 ### Install
-See nodes in root dir of this repository
+See notes in root dir of this repository
 
 More information on how to install NVM: https://github.com/nvm-sh/nvm
 
