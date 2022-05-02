@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@mojaloop/logging-bc-logging-client-lib": "latest",
-    "@mojaloop/security-bc-public-types-lib": "0.0.1^",
+    "@mojaloop/security-bc-public-types-lib": "workspace:*",
     "asn1": "^0.2.6",
     "express": "^4.17.2",
     "jsonwebtoken": "^8.5.1",
@@ -55,7 +55,6 @@
     "@types/jest": "^27.0.3",
     "@types/jsonwebtoken": "^8.5.1",
     "@types/node": "^16.11.9",
-    "@types/node-cache": "^4.2.5",
     "@types/node-jose": "^1.1.10",
     "@types/uuid": "^8.3.4",
     "@typescript-eslint/eslint-plugin": "^5.4.0",
