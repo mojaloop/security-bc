@@ -31,7 +31,7 @@
 "use strict"
 
 import {IAMAuthenticationAdapter, ICryptoAuthenticationAdapter} from "./interfaces";
-import {ILogger} from "@mojaloop/logging-bc-logging-client-lib/dist/index";
+import {ILogger} from "@mojaloop/logging-bc-client-lib";
 import {TokenEndpointResponse} from "@mojaloop/security-bc-public-types-lib";
 
 // These should later be put in configurations

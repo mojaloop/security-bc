@@ -32,7 +32,7 @@
 import semver from "semver";
 import fs from "fs";
 import {readFile, stat, writeFile} from "fs/promises";
-import {ILogger} from "@mojaloop/logging-bc-logging-client-lib";
+import {ILogger} from "@mojaloop/logging-bc-client-lib";
 import {Privilege, AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
 import {IAuthorizationRepository} from "../domain/interfaces";
 

@@ -32,7 +32,7 @@ import * as jwt from "jsonwebtoken";
 import * as jwks from "jwks-rsa";
 import {Jwt} from "jsonwebtoken";
 import {JwksClient} from "jwks-rsa";
-import {ILogger} from "@mojaloop/logging-bc-logging-client-lib";
+import {ILogger} from "@mojaloop/logging-bc-client-lib";
 
 export class TokenHelper {
     private _logger:ILogger;

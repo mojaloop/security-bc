@@ -32,7 +32,7 @@
 import nock from "nock";
 import { URL } from "url";
 import {LoginHelper, TokenHelper} from "../../src/index";
-import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-logging-client-lib";
+import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-client-lib";
 
 const logger: ILogger = new ConsoleLogger();
 
@@ -84,7 +84,6 @@ describe('authentication-client-lib tests', () => {
                 return [ 404, {}, {}];
             }
         });
-
     })
 
     afterAll(async () => {
@@ -104,9 +103,6 @@ describe('authentication-client-lib tests', () => {
 
         const verified = await tokenHelper.verifyToken(accessToken!.accessToken, FIX_AUDIENCE_CHANGE);
         expect(verified).toBe(true);
-
-
-
     });
 
     test("Login with wrong pass", async () => {
@@ -125,7 +121,6 @@ describe('authentication-client-lib tests', () => {
         const payload = tokenHelper.decodeToken(accessToken);
         expect(payload).not.toBeNull();
         expect(payload.testObj).toEqual("pedro1");
-
     });
 
     test("Verify invalid token", async () => {
@@ -137,7 +132,7 @@ describe('authentication-client-lib tests', () => {
     });
 
     test("Test login api not available", async () => {
-        nock.cleanAll()
+        nock.cleanAll();
         const loginHelper = new LoginHelper(LOGIN_BASE_URL, logger);
         await loginHelper.init();
 

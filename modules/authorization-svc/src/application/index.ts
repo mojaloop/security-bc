@@ -32,7 +32,7 @@
 
 import express from "express";
 
-import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-logging-client-lib";
+import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-client-lib";
 import {AppPrivileges} from "@mojaloop/security-bc-public-types-lib";
 import {AuthorizationAggregate} from "../domain/authorization_agg";
 import {IAMAuthorizationAdapter, IAuthorizationRepository} from "../domain/interfaces";

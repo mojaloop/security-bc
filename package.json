@@ -12,30 +12,39 @@
     "Pedro Sousa Barreto <pedrosousabarreto@gmail.com>"
   ],
   "scripts": {
-    "prepare": "husky install",
     "start": "yarn workspaces foreach --parallel -v run start",
     "start:authentication-svc": "yarn workspace @mojaloop/security-bc-authentication-svc run start",
     "start:authorization-svc": "yarn workspace @mojaloop/security-bc-authorization-svc run start",
-    "build": "yarn workspaces foreach --parallel -v run build",
+    "build": "yarn workspaces foreach -v run build",
     "watch": "yarn workspaces foreach --parallel -v run watch",
-    "clean": "yarn run clean:dist && yarn run clean:npm",
-    "clean:npm": "yarn workspaces foreach --parallel -v run clean",
-    "clean:dist": "yarn workspaces foreach --parallel -v run clean",
+    "clean": "yarn run clean:dist",
+    "clean:npm": "yarn workspaces foreach --parallel -v run clean:npm",
+    "clean:dist": "yarn workspaces foreach --parallel -v run clean:dist",
     "pretest": "echo 'FIX ME'",
-    "standard": "yarn run --no-progress --stream lint'",
-    "lint": "yarn workspaces foreach --parallel -v run lint",
-    "lint:fix": "yarn workspaces foreach --parallel -v run lint:fix",
-    "test:unit": "yarn workspaces foreach --parallel -v run test:unit",
+    "lint": "yarn workspaces foreach -v run lint",
+    "lint:fix": "yarn workspaces foreach -v run lint:fix",
+    "test:unit": "yarn workspaces foreach -v run test:unit",
     "test:coverage": "yarn workspaces foreach --parallel -v run test:coverage",
     "test:coverage-check": "yarn workspaces foreach --parallel -v run test:coverage-check",
     "test:integration": "yarn workspaces foreach --parallel -v run test:integration",
     "audit:resolve": "yarn workspaces foreach --parallel -v run audit:resolve",
     "audit:check": "yarn workspaces foreach --parallel -v run audit:check",
     "dep:check": "yarn workspaces foreach --parallel -v run dep:check",
-    "dep:update": "yarn workspaces foreach --parallel -v run dep:update"
+    "dep:update": "yarn workspaces foreach --parallel -v run dep:update",
+    "prepare": "husky install"
   },
   "devDependencies": {
-    "husky": "^7.0.4"
+    "@types/jest": "^27.0.3",
+    "@types/node": "^16.11.9",
+    "@types/node-cache": "^4.2.5",
+    "@typescript-eslint/eslint-plugin": "^5.22.0",
+    "@typescript-eslint/parser": "^5.22.0",
+    "eslint": "^8.14.0",
+    "jest": "^27.3.1",
+    "npm-check-updates": "^12.5.11",
+    "ts-jest": "^27.0.7",
+    "typescript": "^4.6.4",
+    "husky": "^8.0.0"
   },
   "workspaces": [
     "modules/*"

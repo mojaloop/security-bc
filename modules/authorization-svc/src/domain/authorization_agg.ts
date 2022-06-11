@@ -32,7 +32,7 @@
 
 import semver from "semver";
 import * as uuid from "uuid";
-import {ILogger} from "@mojaloop/logging-bc-logging-client-lib";
+import {ILogger} from "@mojaloop/logging-bc-client-lib";
 import {Privilege, AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
 import {IAMAuthorizationAdapter, IAuthorizationRepository} from "./interfaces";
 import {

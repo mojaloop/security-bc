@@ -41,7 +41,7 @@ import {
     NewRoleWithPrivsUsersOrAppsError, PlatformRoleNotFoundError, PrivilegeNotFoundError
 } from "../domain/errors";
 import {AllPrivilegesResp} from "../domain/types";
-import {ILogger} from "@mojaloop/logging-bc-logging-client-lib";
+import {ILogger} from "@mojaloop/logging-bc-client-lib";
 import {AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
 import {AuthorizationAggregate} from "../domain/authorization_agg";
 
