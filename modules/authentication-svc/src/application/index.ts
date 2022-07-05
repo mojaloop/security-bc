@@ -31,7 +31,7 @@
 'use strict'
 
 import express from "express";
-import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-client-lib";
+import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {IAMAuthenticationAdapter, ICryptoAuthenticationAdapter} from "../domain/interfaces";
 import {FileIAMAdapter} from "../infrastructure/file_iam_adapter";
 import {SimpleCryptoAdapter} from "../infrastructure/simple_crypto_adapter";
