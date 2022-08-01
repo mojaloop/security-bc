@@ -29,6 +29,7 @@
  ******/
 "use strict"
 
-export * from "./login_helper"
-export * from "./token_helper"
-
+export * from "./login_helper";
+export * from "./token_helper";
+export * from "./authorization_client";
+export * from "./types";

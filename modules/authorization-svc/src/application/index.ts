@@ -32,7 +32,8 @@
 
 import express from "express";
 
-import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-client-lib";
+import {LogLevel, ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 import {AppPrivileges} from "@mojaloop/security-bc-public-types-lib";
 import {AuthorizationAggregate} from "../domain/authorization_agg";
 import {IAMAuthorizationAdapter, IAuthorizationRepository} from "../domain/interfaces";
@@ -44,7 +45,33 @@ import {
 import {AllPrivilegesResp} from "../domain/types";
 import {ExpressRoutes} from "./routes";
 
-const logger: ILogger = new ConsoleLogger();
+const BC_NAME = "security-bc";
+const APP_NAME = "authorization-svc";
+const APP_VERSION = "0.0.1";
+const LOGLEVEL = LogLevel.DEBUG;
+
+const SVC_DEFAULT_HTTP_PORT = 3202;
+
+const KAFKA_URL = process.env["KAFKA_URL"] || "localhost:9092";
+const KAFKA_AUDITS_TOPIC = process.env["KAFKA_AUDITS_TOPIC"] || "audits";
+const KAFKA_LOGS_TOPIC = process.env["KAFKA_LOGS_TOPIC"] || "logs";
+
+// const logger: ILogger = new ConsoleLogger();
+
+// kafka logger
+const kafkaProducerOptions = {
+    kafkaBrokerList: KAFKA_URL
+}
+
+const logger:KafkaLogger = new KafkaLogger(
+        BC_NAME,
+        APP_NAME,
+        APP_VERSION,
+        kafkaProducerOptions,
+        KAFKA_LOGS_TOPIC,
+        LOGLEVEL
+);
+
 const app = express();
 let authorizationAggregate: AuthorizationAggregate;
 //let iamAuthNAdapter:IAMAuthorizationAdapter;
@@ -68,7 +95,8 @@ function setupRoutes() {
 }
 
 async function start():Promise<void>{
-    authNRepo = new FileAuthorizationRepo("./dist/iamTempStorageFile", logger);
+    await logger.start();
+    authNRepo = new FileAuthorizationRepo("./dist/authZ_TempStorageFile", logger);
     await authNRepo.init();
 
     authorizationAggregate = new AuthorizationAggregate(authNRepo, logger);
@@ -78,7 +106,15 @@ async function start():Promise<void>{
     setupExpress();
     setupRoutes();
 
-    const server = app.listen(3000, () =>console.log(`🚀 Server ready at: http://localhost:3000`))
+    let portNum = SVC_DEFAULT_HTTP_PORT;
+    if(process.env["SVC_HTTP_PORT"] && !isNaN(parseInt(process.env["SVC_HTTP_PORT"]))) {
+        portNum = parseInt(process.env["SVC_HTTP_PORT"])
+    }
+
+    const server = app.listen(portNum, () => {
+        console.log(`🚀 Server ready at: http://localhost:${portNum}`);
+        logger.info("Authorization service started");
+    });
 }
 
 

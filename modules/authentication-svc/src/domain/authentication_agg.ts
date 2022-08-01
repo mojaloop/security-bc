@@ -31,12 +31,12 @@
 "use strict"
 
 import {IAMAuthenticationAdapter, ICryptoAuthenticationAdapter} from "./interfaces";
-import {ILogger} from "@mojaloop/logging-bc-client-lib";
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {TokenEndpointResponse} from "@mojaloop/security-bc-public-types-lib";
 
 // These should later be put in configurations
 const ISSUER_NAME = "vNext Security BC - Authorization Svc";
-const DEFAULT_AUDIENCE = "account";
+const DEFAULT_AUDIENCE = "mojaloop.vnext.default_audience";
 const TOKEN_LIFE_SECS = 3600;
 const REFRESH_TOKEN_LENGTH = 128;
 
@@ -77,7 +77,7 @@ export class AuthenticationAggregate{
 
         const accessCode = await this._crypto.generateJWT(
                 additionalPayload,
-                username,
+                `user::${username}`,
                 audience || DEFAULT_AUDIENCE,
                 TOKEN_LIFE_SECS
         );
@@ -118,7 +118,7 @@ export class AuthenticationAggregate{
 
         const accessCode = await this._crypto.generateJWT(
                 additionalPayload,
-                client_id,
+                `app::${client_id}`,
                 audience || DEFAULT_AUDIENCE,
                 TOKEN_LIFE_SECS
         );

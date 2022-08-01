@@ -32,10 +32,11 @@
 
 import semver from "semver";
 import * as uuid from "uuid";
-import {ILogger} from "@mojaloop/logging-bc-client-lib";
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Privilege, AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
 import {IAMAuthorizationAdapter, IAuthorizationRepository} from "./interfaces";
 import {
+    ApplicationsPrivilegesNotFoundError,
     CannotCreateDuplicateAppPrivilegesError,
     CannotCreateDuplicateRoleError,
     CannotOverrideAppPrivilegesError, CannotStorePlatformRoleError,
@@ -44,7 +45,7 @@ import {
     InvalidPlatformRoleError,
     NewRoleWithPrivsUsersOrAppsError, PlatformRoleNotFoundError, PrivilegeNotFoundError
 } from "./errors";
-import {AllPrivilegesResp} from "../domain/types";
+import {AllPrivilegesResp, PrivilegesByRole} from "../domain/types";
 
 
 export class AuthorizationAggregate{
@@ -127,6 +128,69 @@ export class AuthorizationAggregate{
                 });
             })
         })
+
+        return ret;
+    }
+
+    async getAppPrivilegesByRole(bcName:string, appName:string):Promise<PrivilegesByRole>{
+        const appPrivIds = await this.getAppPrivilegeIds(bcName, appName);
+
+        if(appPrivIds.length<=0){
+            throw new ApplicationsPrivilegesNotFoundError();
+        }
+
+        const allRoles = await this.getAllRoles();
+
+        const ret:PrivilegesByRole = {};
+
+        allRoles.forEach(role => {
+            if(role.privileges.length<=0) return;
+
+            role.privileges.forEach(rolePriv => {
+                if(!appPrivIds.includes(rolePriv)) return;
+
+                if (!ret[role.id]){
+                    ret[role.id] = {
+                        roleName: role.labelName,
+                        privileges: []
+                    };
+                }
+                ret[role.id].privileges.push(rolePriv);
+            });
+        });
+
+        return ret;
+    }
+
+    async getAppPrivilegeIds(bcName:string, appName:string, appVersion:string|null = null):Promise<string[]>{
+        const ret : string[] = [];
+        const allPrivs = await this._authzRepo.fetchAllAppPrivileges();
+
+        if(!allPrivs || allPrivs.length ==0) {
+            return ret;
+        }
+
+        const appPrivs = allPrivs.filter(value => value.boundedContextName==bcName && value.applicationName === appName);
+        if(!appPrivs || appPrivs.length ==0) {
+            return ret;
+        }
+
+        // TODO find lastest
+        if(!appVersion){
+            appVersion = appPrivs.sort((a, b) => semver.compare(a.applicationVersion, b.applicationVersion))[0].applicationVersion;
+        }
+
+        allPrivs.forEach(appPrivs => {
+            if(appPrivs.boundedContextName != bcName
+                    || appPrivs.applicationName != appName
+                    || appPrivs.applicationVersion != appVersion){
+                return;
+            }
+
+            appPrivs.privileges.forEach(priv=>{
+                ret.push(priv.id);
+            })
+        });
 
         return ret;
     }

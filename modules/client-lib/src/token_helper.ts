@@ -32,17 +32,19 @@ import * as jwt from "jsonwebtoken";
 import * as jwks from "jwks-rsa";
 import {Jwt} from "jsonwebtoken";
 import {JwksClient} from "jwks-rsa";
-import {ILogger} from "@mojaloop/logging-bc-client-lib";
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
 export class TokenHelper {
     private _logger:ILogger;
     private _jwksUrl: string;
     private _issuerName: string;
+    private _audience: string;
     private _jwksClient: JwksClient;
 
-    constructor(issuerName: string, jwksUrl: string, logger:ILogger) {
+    constructor(issuerName: string, jwksUrl: string, audience:string, logger:ILogger) {
         this._logger = logger;
         this._issuerName = issuerName;
+        this._audience = audience;
         this._jwksUrl = jwksUrl;
 
         this._jwksClient = new jwks.JwksClient({
@@ -80,11 +82,11 @@ export class TokenHelper {
      * @param accessToken
      * @param audience
      */
-    async verifyToken(accessToken: string, audience: string): Promise<boolean> {
+    async verifyToken(accessToken: string): Promise<boolean> {
         const verify_opts: jwt.VerifyOptions = {
             complete: true,
             issuer: this._issuerName,
-            audience: audience,
+            audience: this._audience,
 
         };
 

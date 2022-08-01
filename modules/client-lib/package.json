@@ -1,9 +1,9 @@
 {
-  "name": "@mojaloop/security-bc-authentication-client-lib",
-  "version": "0.0.1",
-  "description": "mojaloop security authentication client library",
+  "name": "@mojaloop/security-bc-client-lib",
+  "version": "0.0.4",
+  "description": "mojaloop security authentication and authorization client library",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/mojaloop/security-bc/tree/main/modules/security-bc-authentication-client-lib",
+  "homepage": "https://github.com/mojaloop/security-bc/tree/main/modules/client-lib",
   "bugs": {
     "url": "https://github.com/mojaloop/security-bc/issues#readme"
   },
@@ -32,10 +32,11 @@
     "audit:resolve": "SHELL=sh resolve-audit",
     "audit:check": "SHELL=sh check-audit",
     "dep:check": "yarn run ncu -e 2",
-    "dep:update": "yarn run ncu -u"
+    "dep:update": "yarn run ncu -u",
+    "publish": "yarn run build && yarn version patch && yarn npm publish --tag=latest --access public"
   },
   "dependencies": {
-    "@mojaloop/logging-bc-client-lib": "^0.0.10",
+    "@mojaloop/logging-bc-public-types-lib": "^0.0.3",
     "@mojaloop/security-bc-public-types-lib": "workspace:*",
     "axios": "^0.25.0",
     "jsonwebtoken": "^8.5.1",

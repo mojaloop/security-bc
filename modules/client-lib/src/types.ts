@@ -29,9 +29,16 @@
  ******/
 "use strict"
 
-export class AuthToken{
+export type AuthToken = {
     payload:any;
     accessToken: string; // original access token
     refreshToken: string | null; // original refresh token
     scope: string | null;
+}
+
+export type CallSecurityContext = {
+    username: string;
+    clientId: string;
+    rolesIds: string[];
+    accessToken: string;
 }

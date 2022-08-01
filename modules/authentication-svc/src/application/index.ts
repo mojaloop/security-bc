@@ -37,10 +37,39 @@ import {FileIAMAdapter} from "../infrastructure/file_iam_adapter";
 import {SimpleCryptoAdapter} from "../infrastructure/simple_crypto_adapter";
 import {AuthenticationAggregate} from "../domain/authentication_agg";
 import {TokenEndpointResponse} from "@mojaloop/security-bc-public-types-lib";
+import {LogLevel} from "@mojaloop/logging-bc-public-types-lib/dist/index";
+import {KafkaLogger} from "@mojaloop/logging-bc-client-lib/dist/index";
 
-const ISSUER_NAME = "http://localhost:3000/";
+const ISSUER_NAME = "http://localhost:3201/";
 
-const logger: ILogger = new ConsoleLogger();
+const BC_NAME = "security-bc";
+const APP_NAME = "authentication-svc";
+const APP_VERSION = "0.0.1";
+const LOGLEVEL = LogLevel.DEBUG;
+
+const SVC_DEFAULT_HTTP_PORT = 3201;
+
+const KAFKA_URL = process.env["KAFKA_URL"] || "localhost:9092";
+const KAFKA_AUDITS_TOPIC = process.env["KAFKA_AUDITS_TOPIC"] || "audits";
+const KAFKA_LOGS_TOPIC = process.env["KAFKA_LOGS_TOPIC"] || "logs";
+
+
+// const logger: ILogger = new ConsoleLogger();
+
+// kafka logger
+const kafkaProducerOptions = {
+    kafkaBrokerList: KAFKA_URL
+}
+
+const logger:KafkaLogger = new KafkaLogger(
+        BC_NAME,
+        APP_NAME,
+        APP_VERSION,
+        kafkaProducerOptions,
+        KAFKA_LOGS_TOPIC,
+        LOGLEVEL
+);
+
 const app = express();
 let iam:IAMAuthenticationAdapter;
 let crypto:ICryptoAuthenticationAdapter;
@@ -69,14 +98,15 @@ function setupRoutes() {
         const username = req.body.username;
         const password = req.body.password;
         const audience  = req.body.audience;
+        const scope  = req.body.scope;
 
         // TODO check existing client_id first
 
         let loginResp: TokenEndpointResponse | null;
         if(grant_type.toUpperCase() === "password".toUpperCase()) {
-            loginResp = await authAgg.loginUser(client_id, client_secret, username, password);
+            loginResp = await authAgg.loginUser(client_id, client_secret, username, password, audience, scope);
         }else if(grant_type.toUpperCase() === "client_credentials".toUpperCase()) {
-            loginResp = await authAgg.loginApp(client_id, client_secret);
+            loginResp = await authAgg.loginApp(client_id, client_secret, audience, scope);
         }else {
             return res.status(401).send("Unsupported grant_type");
         }
@@ -201,7 +231,8 @@ function setupRoutes() {
 }
 
 async function start():Promise<void>{
-    iam = new FileIAMAdapter("./dist/iamTempStorageFile");
+    await logger.start();
+    iam = new FileIAMAdapter("./dist/authN_TempStorageFile");
     await iam.init();
 
     crypto = new SimpleCryptoAdapter("./test_keys/private.pem", "./test_keys/public.pem", ISSUER_NAME, logger);
@@ -220,7 +251,15 @@ async function start():Promise<void>{
     setupExpress();
     setupRoutes();
 
-    const server = app.listen(3000, () =>console.log(`🚀 Server ready at: http://localhost:3000`))
+    let portNum = SVC_DEFAULT_HTTP_PORT;
+    if(process.env["SVC_HTTP_PORT"] && !isNaN(parseInt(process.env["SVC_HTTP_PORT"]))) {
+        portNum = parseInt(process.env["SVC_HTTP_PORT"])
+    }
+
+    const server = app.listen(portNum, () => {
+        console.log(`🚀 Server ready at: http://localhost:${portNum}`);
+        logger.info("Authentication service started");
+    });
 }
 
 

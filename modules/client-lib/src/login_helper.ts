@@ -33,7 +33,7 @@ import axios, { AxiosResponse, AxiosInstance } from "axios";
 import * as jwt from "jsonwebtoken";
 import {Jwt} from "jsonwebtoken";
 import {AuthToken} from "./types";
-import {ILogger} from "@mojaloop/logging-bc-client-lib";
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {TokenEndpointResponse} from "@mojaloop/security-bc-public-types-lib";
 
 const AUTH_HTTPCLIENT_TIMEOUT_MS = 5000;

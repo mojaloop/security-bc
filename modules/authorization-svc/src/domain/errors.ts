@@ -44,3 +44,4 @@ export class PrivilegeNotFoundError extends Error{}
 export class PlatformRoleNotFoundError extends Error{}
 export class DuplicatePrivilegeInPlatformRoleError extends Error{}
 
+export class ApplicationsPrivilegesNotFoundError extends Error{}

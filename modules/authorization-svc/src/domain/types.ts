@@ -39,3 +39,9 @@ export type AllPrivilegesResp = {
     applicationVersion: string;
 }
 
+export type PrivilegesByRole = {
+    [roleId: string]: {
+        roleName: string;
+        privileges: string[]
+    }
+}

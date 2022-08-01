@@ -41,6 +41,7 @@ const FIXED_EXPIRES_IN_SECS = 3600;
 class UserRecord{
     username: string;
     password: string;
+    roles: string[];
 }
 
 class AppRecord{
@@ -76,6 +77,7 @@ export class FileIAMAdapter implements IAMAuthenticationAdapter{
                 const userRec = new UserRecord();
                 userRec.username = rec.username;
                 userRec.password = rec.password;
+                userRec.roles = rec.roles;
 
                 if (userRec.username && userRec.password && !this._users.has(userRec.username)) {
                     this._users.set(userRec.username, userRec);
@@ -202,7 +204,7 @@ export class FileIAMAdapter implements IAMAuthenticationAdapter{
         if(rec && rec.password && rec.password === password){
             resp.success = true;
             resp.expires_in_secs = FIXED_EXPIRES_IN_SECS;
-            resp.roles = [];
+            resp.roles = rec.roles || [];
 
             return resp;
         }

@@ -29,9 +29,10 @@
  ******/
 
 "use strict"
-
+import * as Semver from "semver";
 import express from "express";
 import {
+    ApplicationsPrivilegesNotFoundError,
     CannotCreateDuplicateAppPrivilegesError,
     CannotCreateDuplicateRoleError,
     CannotOverrideAppPrivilegesError, CannotStorePlatformRoleError,
@@ -40,8 +41,8 @@ import {
     InvalidPlatformRoleError,
     NewRoleWithPrivsUsersOrAppsError, PlatformRoleNotFoundError, PrivilegeNotFoundError
 } from "../domain/errors";
-import {AllPrivilegesResp} from "../domain/types";
-import {ILogger} from "@mojaloop/logging-bc-client-lib";
+import {AllPrivilegesResp, PrivilegesByRole} from "../domain/types";
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
 import {AuthorizationAggregate} from "../domain/authorization_agg";
 
@@ -58,7 +59,8 @@ export class ExpressRoutes {
         this._authorizationAggregate = authorizationAggregate;
 
         // main
-        this._mainRouter.post("/appbootstrap", this.postAppbootstrap.bind(this));
+        this._mainRouter.post("/bootstrap", this.postBootstrap.bind(this));
+        this._mainRouter.get("/appRoles", this.getAppRoles.bind(this));
 
         // privileges
         this._privilegesRouter.get("/", this.getAllAppPrivileges.bind(this));
@@ -67,7 +69,6 @@ export class ExpressRoutes {
         this._rolesRouter.get("/", this.getAllPlatformRole.bind(this));
         this._rolesRouter.post("/", this.postPlatformRole.bind(this));
         this._rolesRouter.post("/:roleId/associatePrivileges", this.postAssociatePrivsToPlatformRole.bind(this));
-
     }
 
     get MainRouter():express.Router{
@@ -80,7 +81,7 @@ export class ExpressRoutes {
         return this._rolesRouter;
     }
 
-    private async postAppbootstrap(req: express.Request, res: express.Response, next: express.NextFunction){
+    private async postBootstrap(req: express.Request, res: express.Response, next: express.NextFunction){
         const data: AppPrivileges = req.body as AppPrivileges;
         this._logger.debug(data);
 
@@ -93,7 +94,7 @@ export class ExpressRoutes {
                     msg: "Received invalid AppPrivileges"
                 });
             } else if (error instanceof CannotCreateDuplicateAppPrivilegesError) {
-                return res.status(400).json({
+                return res.status(409).json({
                     status: "error",
                     msg: "Received duplicate AppPrivileges"
                 });
@@ -115,6 +116,38 @@ export class ExpressRoutes {
             }
         });
     }
+
+
+    private async getAppRoles(req: express.Request, res: express.Response, next: express.NextFunction){
+        const bcName = req.query["bcName"] ?? null;
+        const appName = req.query["appName"] ?? null;
+
+        if(!bcName || !appName){
+            return res.status(400).json({
+                status: "error",
+                msg: "invalid bcName or appName"
+            });
+        }
+
+        await this._authorizationAggregate.getAppPrivilegesByRole(bcName.toString(), appName.toString()).then((resp:PrivilegesByRole)=>{
+            return res.send(resp);
+        }).catch((error)=>{
+            if (error instanceof ApplicationsPrivilegesNotFoundError) {
+                return res.status(404).json({
+                    status: "error",
+                    msg: "Application Privileges not found"
+                });
+            }else{
+                this._logger.error("error in getAppRoles route")
+                return res.status(500).json({
+                    status: "error",
+                    msg: "unknown error"
+                });
+            }
+        });
+        return;
+    }
+
 
     private async getAllAppPrivileges(req: express.Request, res: express.Response, next: express.NextFunction){
         await this._authorizationAggregate.getAllPrivileges().then((resp:AllPrivilegesResp[])=>{

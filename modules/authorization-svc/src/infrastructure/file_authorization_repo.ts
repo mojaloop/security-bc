@@ -32,7 +32,7 @@
 import semver from "semver";
 import fs from "fs";
 import {readFile, stat, writeFile} from "fs/promises";
-import {ILogger} from "@mojaloop/logging-bc-client-lib";
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Privilege, AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
 import {IAuthorizationRepository} from "../domain/interfaces";
 
@@ -95,7 +95,7 @@ export class FileAuthorizationRepo implements IAuthorizationRepository{
                     memberUsers: rec.memberUsers
                 }
 
-                if (role.id && role.labelName && role.description ){
+                if (role.id && role.labelName ){
                     if(!this._roles.has(role.id)) {
                         this._roles.set(role.id, role);
                     }

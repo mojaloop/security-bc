@@ -94,3 +94,7 @@ export type PlatformApp = {
     applicationName:string;
     boundedContextName: string;
 }
+
+export interface IAuthorizationClient{
+    roleHasPrivilege(roleId:string, privilegeId:string):boolean;
+}
