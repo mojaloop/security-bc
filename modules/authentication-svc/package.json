@@ -16,33 +16,26 @@
   "files": [
     "/dist"
   ],
-  "pre-commit": [
-    "dep:check",
-    "build",
-    "lint",
-    "test:unit"
-  ],
   "scripts": {
-    "start": "yarn run service",
+    "start": "npm run service",
     "service": "tsc && node dist/application/index.js",
     "build": "tsc",
     "watch": "tsc -w",
     "clean": "rm -Rf dist",
-    "pretest": "yarn run build",
-    "standard": "yarn run lint",
-    "lint": "yarn run build && npx eslint ./src",
-    "lint:fix": "yarn run build && npx eslint ./src --fix",
-    "test:unit": "jest --passWithNoTests --testMatch '**/test/unit/**/*.test.ts'",
-    "test:integration": "jest --passWithNoTests --testMatch '**/test/integration/**/*.test.ts'",
-    "test:coverage": "jest --passWithNoTests --coverage --testMatch '**/test/unit/**/*.test.ts'",
+    "pretest": "npm run build",
+    "standard": "npm run lint",
+    "docker:build": "npm run build && docker build . -t \"mojaloop/security-bc-authentication-svc\"",
+    "lint": "npm run build && npx eslint ./src",
+    "lint:fix": "npm run build && npx eslint ./src --fix",
+    "test:unit": "jest",
     "audit:resolve": "SHELL=sh resolve-audit",
     "audit:check": "SHELL=sh check-audit",
-    "dep:check": "yarn run ncu -e 2",
-    "dep:update": "yarn run ncu -u"
+    "dep:check": "npm exec ncu -e 2",
+    "dep:update": "npm exec ncu -u"
   },
   "dependencies": {
     "@mojaloop/logging-bc-client-lib": "^0.0.10",
-    "@mojaloop/security-bc-public-types-lib": "workspace:*",
+    "@mojaloop/security-bc-public-types-lib": "~0.0.5",
     "asn1": "^0.2.6",
     "express": "^4.17.2",
     "jsonwebtoken": "^8.5.1",
@@ -57,7 +50,8 @@
     "@types/uuid": "^8.3.4",
     "eslint": "^8.14.0",
     "jest": "^27.3.1",
-    "npm-check-updates": "^12.5.11",
+    "npm-check-updates": "~16.3.3",
+    "tslib": "^2.4.0",
     "ts-jest": "^27.0.7",
     "typescript": "^4.6.4"
   }

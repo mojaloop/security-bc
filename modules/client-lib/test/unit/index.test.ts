@@ -31,15 +31,19 @@
 
 import nock from "nock";
 import { URL } from "url";
-import {LoginHelper, TokenHelper} from "../../src/index";
+import {LoginHelper, TokenHelper} from "../../dist/";
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
 const logger: ILogger = new ConsoleLogger();
 
 // This token lasts for 100 years, so if the keys are ok, then should verify
 const TEST_ACCESS_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Inp1MGR4WXErTllrWHpPWmZsak5hU1F3MEVXMVQ1KzJ1ZHByQy9Vekt4aGc9In0.eyJ0ZXN0T2JqIjoicGVkcm8xIiwiaWF0IjoxNjQ3NDUyMDM5LCJleHAiOjQ4MDEwNTIwMzksImF1ZCI6InZOZXh0IHBsYXRmb3JtIiwiaXNzIjoidk5leHQgU2VjdXJpdHkgQkMgLSBBdXRob3JpemF0aW9uIFN2YyIsInN1YiI6InVzZXIiLCJqdGkiOiJ6dTBkeFlxK05Za1h6T1pmbGpOYVNRdzBFVzFUNSsydWRwckMvVXpLeGhnPSJ9.d_BXmofxhYr_WbxAte8RgbCQEZcMKiUeEeOLJRR2QaFjg7Wbz_QlgpZzRphFZWQYACIXrrpw4C7xg1NxA4fvokw6DrI41MTzOVd2dk79Le1hK1JotPMpscFiUCOED8Vurv_s-AnxoeHWv5RdB00-nlSB1HkFmArT3TOAVdsOMaiTGhBjI0phhcVo0UuY6f9qYpUcS-rYVW7zf0pAWDhYg_rfX6-ntHxpc6wuq8fQDJs-I-nRzdlS1yrBp9cWN5cDC9qAxXLC4f8ZVl5PSZl-V07MBivPk1zUXm1j62e5tF2MIVyoRSKf2h90J2hAdR-4MAb9wP5_HOhUw12w4YQyAQ";
+
+// these must match the token
 const ISSUER_NAME = "vNext Security BC - Authorization Svc";
-const TEST_AUDIENCE = "mojaloop.vnext.default_audience";
+const TEST_AUDIENCE = "vNext platform";
+
+
 const LOGIN_USERNAME = "user";
 const LOGIN_PASSWORD = "superPass2";
 const LOGIN_WRONG_PASSWORD = "WrongPass";

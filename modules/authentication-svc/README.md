@@ -32,30 +32,23 @@ More information on how to install NVM: https://github.com/nvm-sh/nvm
 ## Build
 
 ```bash
-yarn build
-```
-
-## Run
-
-Anywhere in the repo structure:
-```bash
-yarn modules/authentication-svc start
+npm run build
 ```
 
 ## Auto build (watch)
 
 ```bash
-yarn watch
+npm run watch
 ```
 
 ## Unit Tests
 
 ```bash
-yarn test:unit
+npm run test:unit
 ```
 
-## Integration Tests
+## Run
 
 ```bash
-yarn test:integration
+npm run start
 ```

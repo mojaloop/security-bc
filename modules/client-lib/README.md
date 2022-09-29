@@ -14,41 +14,25 @@ Mojaloop vNext Authentication Service
 
 More information on how to install NVM: https://github.com/nvm-sh/nvm
 
-```bash
-nvm install
-nvm use
-```
+### Install
+See nodes in root dir of this repository
 
-### Install Yarn
-
-```bash
-npm -g yarn
-```
-
-### Install Dependencies
-
-```bash
-yarn
-```
+More information on how to install NVM: https://github.com/nvm-sh/nvm
 
 ## Build
 
 ```bash
-yarn build
+npm run build
 ```
 
-## Run
+## Auto build (watch)
 
 ```bash
-yarn start
+npm run watch
 ```
 
 ## Unit Tests
 
 ```bash
-yarn test:unit
+npm run test:unit
 ```
-
-## Known Issues
-
-- added `typescript` to [.ncurc.json](./.ncurc.json) as the `dep:update` script will install a non-supported version of typescript

@@ -22,49 +22,38 @@ More information on how to install NVM: https://github.com/nvm-sh/nvm
 nvm install
 nvm use
 ```
-### Install Yarn
-
-```bash
-npm -g yarn
-```
-
-Set yarn to v3
-```bash
-yarn set version berry
-```
-
-Confirm with
-```bash
-yarn --version
-```
-
-### Install Yarn Plugins
-
-```bash
-yarn plugin import workspace-tools
-```
 
 ### Install Dependencies
 
 ```bash
-yarn
+npm install
 ```
 
 ## Build
 
 ```bash
-yarn build
-```
-
-## Run
-
-```bash
-yarn start
+npm run build
 ```
 
 ## Unit Tests
 
 ```bash
-yarn test:unit
+npm run test:unit
 ```
 
+## Integration Tests
+
+```bash
+npm run test:integration
+```
+
+
+## Run the services 
+
+```bash
+# start the authentication service
+npm run start:authentication-svc 
+
+# start the authorization service
+npm run start:authorization-svc 
+```

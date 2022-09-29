@@ -82,8 +82,8 @@ export class AuthorizationClient implements IAuthorizationClient{
             if(err.response && err.response.status === 409 && ignoreDuplicateError === true){
                 return true;
             }
-            this._logger.error(err);
-            return false;
+            this._logger.error(err, "Could not bootstrap privileges to Authentication Service");
+            throw err;
         });
         return false; // linter pleaser
     }
@@ -96,8 +96,8 @@ export class AuthorizationClient implements IAuthorizationClient{
             this._lastFetchTimestamp = Date.now();
             return;
         }).catch((err:AxiosError) => {
-            this._logger.error(err);
-            return;
+            this._logger.error(err, "Could not fetch role privileges association from Authentication Service");
+            throw err;
         });
     }
 

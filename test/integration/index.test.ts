@@ -30,7 +30,7 @@
 
 "use strict"
 
-import {AuthorizationClient} from "../../src/index";
+import {AuthorizationClient} from "@mojaloop/security-bc-client-lib";
 import {ConsoleLogger} from "@mojaloop/logging-bc-public-types-lib";
 
 

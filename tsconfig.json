@@ -1,7 +1,4 @@
 {
-  "include": [
-    "src"
-  ],
   "exclude": [
     "node_modules",
     "**/*.spec.ts",
@@ -10,6 +7,7 @@
     "coverage"
   ],
   "compilerOptions": {
+    "outDir": ".", // prevents this tsconfig from compiling any files
     "target": "es2020",
     "module": "commonjs",
     "lib": [
@@ -30,6 +28,8 @@
     "noUnusedParameters": false,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
+    // Needed for CommonJS modules
+    "allowSyntheticDefaultImports": true,
     "moduleResolution": "node",
     "baseUrl": "./",
     "paths": {
@@ -39,5 +39,6 @@
       ]
     },
     "esModuleInterop": true
-  }
+  },
+
 }
