@@ -28,7 +28,7 @@
     "audit:check": "SHELL=sh check-audit",
     "dep:check": "npm exec ncu -e 2",
     "dep:update": "npm exec ncu -u",
-    "publish": "npm run build && npm version patch && npm npm publish --tag=latest --access public"
+    "pub": "npm run build && npm version patch && npm publish --tag=latest --access public"
   },
   "devDependencies": {
     "eslint": "^8.14.0",
