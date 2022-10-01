@@ -28,16 +28,15 @@
  --------------
  ******/
 
-'use strict'
-import semver from "semver";
+"use strict";
+
 import fs from "fs";
 import {readFile, stat, writeFile} from "fs/promises";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Privilege, AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
 import {IAuthorizationRepository} from "../domain/interfaces";
+import {watch} from "node:fs";
 
-
-type ConfigSetMap = Map<string, AppPrivileges[]>;
 
 export class FileAuthorizationRepo implements IAuthorizationRepository{
     private _filePath: string;
@@ -46,11 +45,16 @@ export class FileAuthorizationRepo implements IAuthorizationRepository{
     private _roles : Map<string, PlatformRole> = new Map<string, PlatformRole>();
 
     constructor(filePath:string, logger: ILogger) {
-        this._logger = logger;
+        this._logger = logger.createChild(this.constructor.name);
         this._filePath = filePath;
+
+        this._logger.info(`Starting FileAuthorizationRepo with file path: "${this._filePath}"`);
     }
 
     private async _loadFromFile():Promise<boolean>{
+        this._appPrivs.clear();
+        this._roles.clear();
+
         let fileData: any;
         try{
             const strContents = await readFile(this._filePath, "utf8");
@@ -103,6 +107,7 @@ export class FileAuthorizationRepo implements IAuthorizationRepository{
             }
         }
 
+        this._logger.info(`Successfully read file contents - app privileges count: ${this._appPrivs.size} and platform roles count: ${this._roles.size}`);
         return true;
     }
 
@@ -140,6 +145,18 @@ export class FileAuthorizationRepo implements IAuthorizationRepository{
                 this._logger.info(`FileAuthorizationRepo - loaded ${this._appPrivs.size} appPrivileges and ${this._roles.size} roles at init`);
             }
         }
+
+        let fsWait:NodeJS.Timeout | undefined; // debounce wait
+        watch(this._filePath, async (eventType, filename) => {
+            if (eventType === "change") {
+                if (fsWait) return;
+                fsWait = setTimeout(() => {
+                    fsWait = undefined;
+                }, 100);
+                this._logger.info(`FileAuthorizationRepo file changed,  with file path: "${this._filePath}" - reloading...`);
+                await this._loadFromFile();
+            }
+        });
     }
 
 

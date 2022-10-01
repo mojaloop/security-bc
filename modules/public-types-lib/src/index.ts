@@ -6,7 +6,7 @@
 
  http://www.apache.org/licenses/LICENSE-2.0
 
- Unless required by applicable law or agreed to in writing, the Mojaloop files are distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ Unless required by this._routerlicable law or agreed to in writing, the Mojaloop files are distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
  Contributors
  --------------
@@ -75,7 +75,7 @@ export type PlatformRole = {
     description: string;            // description to show on a UI
     privileges: string[]         // array of Privilege.id's
     memberUsers: string[];          // array or PlatformUser.id's
-    memberApps: string[]            // array or PlatformApp.id's
+    memberApps: string[]            // array or Platformthis._router.id's
 }
 
 export type PlatformUser = {

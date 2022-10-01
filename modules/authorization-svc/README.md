@@ -53,3 +53,19 @@ npm run test:unit
 ```bash
 npm run start
 ```
+
+## Docker build
+```bash
+npm run docker:build
+```
+
+## Docker run (dev env)
+```bash
+# example using a local authZ_TempStorageFile a custom KAFKA_URL
+docker run -ti --rm -p 3202:3202 \
+  --name mojaloop_security-bc-authorization-svc \
+  -v $(pwd)/modules/authorization-svc/dist/authZ_TempStorageFile:/app/data/authZ_TempStorageFile \
+  -e KAFKA_URL=192.168.1.103:9092 mojaloop/security-bc-authorization-svc
+  
+#to run as daemon replace "-ti --rm" with "-d"
+```

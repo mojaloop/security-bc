@@ -55,7 +55,7 @@ export class ExpressRoutes {
     private _rolesRouter = express.Router();
 
     constructor(authorizationAggregate: AuthorizationAggregate, logger:ILogger) {
-        this._logger = logger;
+        this._logger = logger.createChild(this.constructor.name);
         this._authorizationAggregate = authorizationAggregate;
 
         // main

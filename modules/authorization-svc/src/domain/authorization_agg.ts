@@ -31,7 +31,7 @@
 "use strict"
 
 import semver from "semver";
-import * as uuid from "uuid";
+import * as Crypto from "crypto";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Privilege, AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
 import {IAMAuthorizationAdapter, IAuthorizationRepository} from "./interfaces";
@@ -56,7 +56,7 @@ export class AuthorizationAggregate{
 
     // constructor(authzRepo:IAuthorizationRepository, iamAuthN:IAMAuthorizationAdapter, logger:ILogger) {
     constructor(authzRepo:IAuthorizationRepository, logger:ILogger) {
-        this._logger = logger;
+        this._logger = logger.createChild(this.constructor.name);
         this._authzRepo = authzRepo;
         //this._iamAuthNAdapter = iamAuthN;
     }
@@ -221,7 +221,7 @@ export class AuthorizationAggregate{
         }
 
         if(!role.id){
-            role.id = uuid.v4();
+            role.id = Crypto.randomUUID();
         }
 
         const existingRole = await this._authzRepo.fetchPlatformRole(role.id);

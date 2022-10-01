@@ -47,5 +47,5 @@ export interface ICryptoAuthenticationAdapter {
     init(): Promise<void>;
     generateJWT(additionalPayload:any, sub:string, aud:string, lifeInSecs:number):Promise<string>;
     getJwsKeys():Promise<any[]>; // returns an JWS object array, no need to type it
-    generateRandomToken(length:number):Promise<string>;
+    // generateRandomToken(length:number):Promise<string>;
 }

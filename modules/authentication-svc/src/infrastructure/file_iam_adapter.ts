@@ -30,11 +30,13 @@
 
 'use strict'
 
-
+import { watch } from "node:fs";
 import {IAMAuthenticationAdapter} from "../domain/interfaces";
 import {readFile, stat, writeFile} from "fs/promises";
 import fs from "fs";
 import {IAMLoginResponse} from "@mojaloop/security-bc-public-types-lib";
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import {log} from "util";
 
 const FIXED_EXPIRES_IN_SECS = 3600;
 
@@ -51,22 +53,28 @@ class AppRecord{
 
 
 export class FileIAMAdapter implements IAMAuthenticationAdapter{
+    private _logger:ILogger;
     private _filePath: string;
     private _users:Map<string, UserRecord> = new Map<string, UserRecord>();
     private _apps:Map<string, AppRecord> = new Map<string, AppRecord>();
 
-    constructor(filePath:string) {
+    constructor(filePath:string, logger:ILogger) {
+        this._logger = logger.createChild(this.constructor.name);
         this._filePath = filePath;
+
+        this._logger.info(`Starting FileIAMAdapter with file path: "${this._filePath}"`);
     }
 
     private async _loadFromFile():Promise<boolean>{
+        this._users.clear();
+        this._apps.clear();
+
         let fileData: any;
         try{
             const strContents = await readFile(this._filePath, "utf8");
             if(!strContents || !strContents.length){
                 return false;
             }
-
             fileData = JSON.parse(strContents);
         }catch (e) {
             throw new Error("cannot read FileIAMAdapter storage file");
@@ -91,11 +99,13 @@ export class FileIAMAdapter implements IAMAuthenticationAdapter{
                 appRecord.client_id = rec.client_id;
                 appRecord.client_secret = rec.client_secret;
 
-                if (appRecord.client_id && appRecord.client_secret && !this._apps.has(appRecord.client_id)) {
+                if (appRecord.client_id && !this._apps.has(appRecord.client_id)) {
                     this._apps.set(appRecord.client_id, appRecord);
                 }
             }
         }
+
+        this._logger.info(`Successfully read file contents - userCount: ${this._users.size} and appCount: ${this._apps.size}`);
 
         return true;
     }
@@ -109,7 +119,8 @@ export class FileIAMAdapter implements IAMAuthenticationAdapter{
             const strContents = JSON.stringify(obj, null, 4);
             await writeFile(this._filePath, strContents, "utf8");
         }catch (e) {
-            throw new Error("cannot rewrite FileIAMAdapter storage file");
+            this._logger.error(e, "cannot write FileIAMAdapter storage file");
+            throw new Error("cannot write FileIAMAdapter storage file");
         }
     }
 
@@ -122,6 +133,18 @@ export class FileIAMAdapter implements IAMAuthenticationAdapter{
                 throw new Error("Error loading FileIAMAdapter file")
             }
         }
+
+        let fsWait:NodeJS.Timeout | undefined; // debounce wait
+        watch(this._filePath, async (eventType, filename) => {
+            if (eventType === "change") {
+                if (fsWait) return;
+                fsWait = setTimeout(() => {
+                    fsWait = undefined;
+                }, 100);
+               this._logger.info(`FileIAMAdapter file changed,  with file path: "${this._filePath}" - reloading...`);
+               await this._loadFromFile();
+            }
+        });
 
     }
 
@@ -154,6 +177,18 @@ export class FileIAMAdapter implements IAMAuthenticationAdapter{
         userRec.username = username;
         userRec.password = password;
         this._users.set(userRec.username, userRec);
+
+        await this._saveToFile();
+        return true;
+    }
+
+    async addRolesToUser(username:string, roleIds:string[]):Promise<boolean>{
+        const user = this._users.get(username);
+        if(!user){
+            return false;
+        }
+
+        user.roles.push(...roleIds);
 
         await this._saveToFile();
         return true;

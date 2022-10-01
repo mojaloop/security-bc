@@ -36,19 +36,25 @@ import {TokenEndpointResponse} from "@mojaloop/security-bc-public-types-lib";
 
 // These should later be put in configurations
 const ISSUER_NAME = "vNext Security BC - Authorization Svc";
-const DEFAULT_AUDIENCE = "mojaloop.vnext.default_audience";
-const TOKEN_LIFE_SECS = 3600;
+
+
 const REFRESH_TOKEN_LENGTH = 128;
+
+const SUPPORTED_GRANTS = ["password","client_credentials"];
 
 export class AuthenticationAggregate{
     private _logger:ILogger
     private _iam:IAMAuthenticationAdapter;
     private _crypto:ICryptoAuthenticationAdapter;
+    private readonly _tokenLifeSecs:number;
+    private readonly _defaultAudience:string;
 
-    constructor(iam:IAMAuthenticationAdapter, crypto:ICryptoAuthenticationAdapter, logger:ILogger) {
-        this._logger = logger;
+    constructor(iam:IAMAuthenticationAdapter, crypto:ICryptoAuthenticationAdapter, tokenLifeSecs:number, defaultAudience:string, logger:ILogger) {
+        this._logger = logger.createChild(this.constructor.name);
         this._iam = iam;
         this._crypto = crypto;
+        this._tokenLifeSecs = tokenLifeSecs;
+        this._defaultAudience = defaultAudience;
     }
 
     async loginUser(client_id:string, client_secret:string | null, username:string, password:string, audience?:string, scope?:string):Promise<TokenEndpointResponse | null> {
@@ -60,6 +66,7 @@ export class AuthenticationAggregate{
         const loginOk = await this._iam.loginUser(client_id, client_secret, username, password);
 
         if (!loginOk.success) {
+            this._logger.info(`User Login FAILED for username: ${username} and client_id: ${client_id}`);
             return null;
         }
 
@@ -78,8 +85,8 @@ export class AuthenticationAggregate{
         const accessCode = await this._crypto.generateJWT(
                 additionalPayload,
                 `user::${username}`,
-                audience || DEFAULT_AUDIENCE,
-                TOKEN_LIFE_SECS
+                audience || this._defaultAudience,
+                this._tokenLifeSecs
         );
 
         // TODO verify return
@@ -87,10 +94,11 @@ export class AuthenticationAggregate{
             token_type: "Bearer",
             scope: null,
             access_token: accessCode,
-            expires_in: TOKEN_LIFE_SECS,
+            expires_in: this._tokenLifeSecs,
             refresh_token: null,
             refresh_token_expires_in: null
         }
+        this._logger.info(`App Login successful for username: ${username}`);
         return ret;
     }
 
@@ -103,6 +111,7 @@ export class AuthenticationAggregate{
         const loginOk = await this._iam.loginApp(client_id, client_secret);
 
         if (!loginOk.success) {
+            this._logger.info(`App Login FAILED for client_id: ${client_id}`);
             return null;
         }
 
@@ -119,8 +128,8 @@ export class AuthenticationAggregate{
         const accessCode = await this._crypto.generateJWT(
                 additionalPayload,
                 `app::${client_id}`,
-                audience || DEFAULT_AUDIENCE,
-                TOKEN_LIFE_SECS
+                audience || this._defaultAudience,
+                this._tokenLifeSecs
         );
 
         // TODO verify return
@@ -128,10 +137,17 @@ export class AuthenticationAggregate{
             token_type: "Bearer",
             scope: null,
             access_token: accessCode,
-            expires_in: TOKEN_LIFE_SECS,
+            expires_in: this._tokenLifeSecs,
             refresh_token: null,
             refresh_token_expires_in: null
         }
+
+        this._logger.info(`App Login successful for client_id: ${client_id}`);
+
         return ret;
+    }
+
+    getSupportedGrants():string[]{
+        return SUPPORTED_GRANTS;
     }
 }
