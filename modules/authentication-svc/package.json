@@ -1,6 +1,6 @@
 {
   "name": "@mojaloop/security-bc-authentication-svc",
-  "version": "0.0.1",
+  "version": "0.0.4",
   "description": "mojaloop security authentication service",
   "license": "Apache-2.0",
   "homepage": "https://github.com/mojaloop/security-bc/tree/main/modules/authentication-svc",
@@ -17,8 +17,8 @@
     "/dist"
   ],
   "scripts": {
-    "start": "npm run service",
-    "service": "tsc && node dist/application/index.js",
+    "start": "tsc && npm run service",
+    "service": "node dist/application/index.js",
     "build": "tsc",
     "watch": "tsc -w",
     "clean": "rm -Rf dist",

@@ -44,7 +44,7 @@ import {ExpressRoutes} from "./routes";
 
 const BC_NAME = "security-bc";
 const APP_NAME = "authorization-svc";
-const APP_VERSION = "0.0.1";
+const APP_VERSION = process.env.npm_package_version || "0.0.1";
 const PRODUCTION_MODE = process.env["PRODUCTION_MODE"] || false;
 const LOG_LEVEL:LogLevel = process.env["LOG_LEVEL"] as LogLevel || LogLevel.DEBUG;
 

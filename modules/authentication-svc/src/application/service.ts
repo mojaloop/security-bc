@@ -47,7 +47,7 @@ import {SimpleCryptoAdapter2} from "../infrastructure/simple_crypto_adapter2";
 const BC_NAME = "security-bc";
 
 const APP_NAME = "authentication-svc";
-const APP_VERSION = "0.0.1";
+const APP_VERSION = process.env.npm_package_version || "0.0.1";
 const PRODUCTION_MODE = process.env["PRODUCTION_MODE"] || false;
 const LOG_LEVEL:LogLevel = process.env["LOG_LEVEL"] as LogLevel || LogLevel.DEBUG;
 
@@ -164,7 +164,7 @@ export class Service {
 
         this.expressServer = app.listen(portNum, () => {
             console.log(`🚀 Server ready at: http://localhost:${portNum}`);
-            this.logger.info("Authentication service started");
+            this.logger.info("Authentication service started - debug 1");
         }).on("error", err => {
             this.logger.fatal(err);
             process.exit(9);

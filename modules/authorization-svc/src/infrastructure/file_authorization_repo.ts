@@ -137,13 +137,17 @@ export class FileAuthorizationRepo implements IAuthorizationRepository{
     async init(): Promise<void>{
         const exists = fs.existsSync(this._filePath);
 
-        if(fs.existsSync(this._filePath)){
-            const loadSuccess = await this._loadFromFile();
-            if(!loadSuccess){
-                throw new Error("Error loading FileAuthorizationRepo file")
-            }else{
-                this._logger.info(`FileAuthorizationRepo - loaded ${this._appPrivs.size} appPrivileges and ${this._roles.size} roles at init`);
-            }
+        // if not exists we skip, it will be loaded after
+        if(!exists){
+            this._logger.warn("FileAuthorizationRepo data file does not exist, will be created at first write - filepath: "+this._filePath);
+            return;
+        }
+
+        const loadSuccess = await this._loadFromFile();
+        if(!loadSuccess){
+            throw new Error("Error loading FileAuthorizationRepo file")
+        }else{
+            this._logger.info(`FileAuthorizationRepo - loaded ${this._appPrivs.size} appPrivileges and ${this._roles.size} roles at init`);
         }
 
         let fsWait:NodeJS.Timeout | undefined; // debounce wait

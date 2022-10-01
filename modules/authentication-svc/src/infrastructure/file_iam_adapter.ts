@@ -33,7 +33,7 @@
 import { watch } from "node:fs";
 import {IAMAuthenticationAdapter} from "../domain/interfaces";
 import {readFile, stat, writeFile} from "fs/promises";
-import fs from "fs";
+import fs, {existsSync} from "fs";
 import {IAMLoginResponse} from "@mojaloop/security-bc-public-types-lib";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {log} from "util";
@@ -127,12 +127,18 @@ export class FileIAMAdapter implements IAMAuthenticationAdapter{
     async init(): Promise<void>{
         const exists = fs.existsSync(this._filePath);
 
-        if(fs.existsSync(this._filePath)){
-            const loadSuccess = await this._loadFromFile();
-            if(!loadSuccess){
-                throw new Error("Error loading FileIAMAdapter file")
-            }
+        // if not exists we skip, it will be loaded after
+        if(!exists){
+            this._logger.warn("FileIAMAdapter data file does not exist, will be created at first write - filepath: "+this._filePath);
+            return;
         }
+
+
+        const loadSuccess = await this._loadFromFile();
+        if(!loadSuccess){
+            throw new Error("Error loading FileIAMAdapter file")
+        }
+
 
         let fsWait:NodeJS.Timeout | undefined; // debounce wait
         watch(this._filePath, async (eventType, filename) => {

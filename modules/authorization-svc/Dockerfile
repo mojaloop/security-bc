@@ -33,4 +33,4 @@ COPY --from=builder /app .
 # kafka handler, no http server yet
 EXPOSE 3202
 
-CMD [ "node", "dist/application/index.js" ]
+CMD [ "npm", "run", "service" ]
