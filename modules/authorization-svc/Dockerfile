@@ -31,6 +31,6 @@ WORKDIR /app
 COPY --from=builder /app .
 
 # kafka handler, no http server yet
-EXPOSE 3201
+EXPOSE 3202
 
 CMD [ "node", "dist/application/index.js" ]
