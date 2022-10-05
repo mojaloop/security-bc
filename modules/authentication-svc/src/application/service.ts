@@ -57,7 +57,7 @@ const KAFKA_URL = process.env["KAFKA_URL"] || "localhost:9092";
 //const KAFKA_AUDITS_TOPIC = process.env["KAFKA_AUDITS_TOPIC"] || "audits";
 const KAFKA_LOGS_TOPIC = process.env["KAFKA_LOGS_TOPIC"] || "logs";
 
-const IAM_STORAGE_FILE_PATH = process.env["IAM_STORAGE_FILE_PATH"] || "/app/data/authN_TempStorageFile";
+const IAM_STORAGE_FILE_PATH = process.env["IAM_STORAGE_FILE_PATH"] || "/app/data/authN_TempStorageFile.json";
 const PRIVATE_CERT_PEM_FILE_PATH = process.env["PRIVATE_CERT_PEM_FILE_PATH"] || "/app/data/private.pem";
 const TOKEN_LIFE_SECS = process.env["TOKEN_LIFE_SECS"] ? parseInt(process.env["TOKEN_LIFE_SECS"]) : 3600;
 const DEFAULT_AUDIENCE = process.env["DEFAULT_AUDIENCE"] || "mojaloop.vnext.default_audience";

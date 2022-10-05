@@ -54,7 +54,7 @@ const KAFKA_URL = process.env["KAFKA_URL"] || "localhost:9092";
 //const KAFKA_AUDITS_TOPIC = process.env["KAFKA_AUDITS_TOPIC"] || "audits";
 const KAFKA_LOGS_TOPIC = process.env["KAFKA_LOGS_TOPIC"] || "logs";
 
-const AUTHZ_STORAGE_FILE_PATH = process.env["AUTHZ_STORAGE_FILE_PATH"] || "/app/data/authZ_TempStorageFile";
+const AUTHZ_STORAGE_FILE_PATH = process.env["AUTHZ_STORAGE_FILE_PATH"] || "/app/data/authZ_TempStorageFile.json";
 
 
 // kafka logger
