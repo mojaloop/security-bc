@@ -67,7 +67,7 @@ export IAM_STORAGE_FILE_PATH=dist/authN_TempStorageFile
 
 ## Troubleshoot 
 
-### unable to load dlfcn_load
+### Unable to load dlfcn_load
 ```bash
 error:25066067:DSO support routines:dlfcn_load:could not load the shared library
 ```
