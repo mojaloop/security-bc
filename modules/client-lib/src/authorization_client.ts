@@ -118,4 +118,11 @@ export class AuthorizationClient implements IAuthorizationClient{
         this._privileges.push( { id:privId, labelName, description });
     }
 
+
+    addPrivilegesArray(privsArray:{privId: string, labelName: string, description: string}[]): void{
+        for(const privObj of privsArray){
+            this.addPrivilege(privObj.privId, privObj.labelName, privObj.description);
+        }
+    }
+
 }

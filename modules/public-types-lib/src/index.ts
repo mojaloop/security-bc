@@ -97,4 +97,6 @@ export type PlatformApp = {
 
 export interface IAuthorizationClient{
     roleHasPrivilege(roleId:string, privilegeId:string):boolean;
+    addPrivilege(privId: string, labelName: string, description: string): void;
+    addPrivilegesArray(privsArray:{privId: string, labelName: string, description: string}[]): void;
 }
