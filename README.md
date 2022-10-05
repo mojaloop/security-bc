@@ -57,3 +57,10 @@ npm run start:authentication-svc
 # start the authorization service
 npm run start:authorization-svc 
 ```
+
+To run those services locally, you need to pass 2 env vars like this (executed in modules/authentication-svc):
+
+```bash
+export PRIVATE_CERT_PEM_FILE_PATH=test_keys/private.pem
+export IAM_STORAGE_FILE_PATH=dist/authN_TempStorageFile
+```
