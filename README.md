@@ -64,3 +64,11 @@ To run those services locally, you need to pass 2 env vars like this (executed i
 export PRIVATE_CERT_PEM_FILE_PATH=test_keys/private.pem
 export IAM_STORAGE_FILE_PATH=dist/authN_TempStorageFile
 ```
+
+## Troubleshoot 
+
+### unable to load dlfcn_load
+```bash
+error:25066067:DSO support routines:dlfcn_load:could not load the shared library
+```
+Fix: auth0/node-jsonwebtoken/issues/826  `export OPENSSL_CONF=/dev/null`
