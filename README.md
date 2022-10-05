@@ -71,4 +71,4 @@ export IAM_STORAGE_FILE_PATH=dist/authN_TempStorageFile
 ```bash
 error:25066067:DSO support routines:dlfcn_load:could not load the shared library
 ```
-Fix: auth0/node-jsonwebtoken/issues/826  `export OPENSSL_CONF=/dev/null`
+Fix: https://github.com/mojaloop/security-bc.git  `export OPENSSL_CONF=/dev/null`
