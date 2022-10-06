@@ -41,13 +41,6 @@ npm run build
 npm run test:unit
 ```
 
-## Integration Tests
-
-```bash
-npm run test:integration
-```
-
-
 ## Run the services 
 
 ```bash
@@ -63,6 +56,12 @@ To run those services locally, you need to pass 2 env vars like this (executed i
 ```bash
 export PRIVATE_CERT_PEM_FILE_PATH=test_keys/private.pem
 export IAM_STORAGE_FILE_PATH=dist/authN_TempStorageFile
+```
+
+## Integration Tests
+
+```bash
+npm run test:integration
 ```
 
 ## Troubleshoot 
