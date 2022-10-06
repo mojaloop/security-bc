@@ -81,7 +81,7 @@ export class AuthorizationClient implements IAuthorizationClient{
                 resolve(true);
             }).catch((err:AxiosError) => {
                 if(err.response && err.response.status === 409 && ignoreDuplicateError === true){
-                    resolve(true);
+                    return resolve(true);
                 }
                 this._logger.error(err, "Could not bootstrap privileges to Authentication Service");
                 reject(err);
