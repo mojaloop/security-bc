@@ -75,29 +75,34 @@ export class AuthorizationClient implements IAuthorizationClient{
             privileges: this._privileges
         }
 
-        await this._client.post("/bootstrap", appPrivileges).then((resp:AxiosResponse)=>{
-            this._logger.debug(resp.data);
-            return true;
-        }).catch((err:AxiosError) => {
-            if(err.response && err.response.status === 409 && ignoreDuplicateError === true){
-                return true;
-            }
-            this._logger.error(err, "Could not bootstrap privileges to Authentication Service");
-            throw err;
+        return await new Promise<boolean>((resolve, reject) => {
+            this._client.post("/bootstrap", appPrivileges).then((resp:AxiosResponse)=>{
+                this._logger.debug(resp.data);
+                resolve(true);
+            }).catch((err:AxiosError) => {
+                if(err.response && err.response.status === 409 && ignoreDuplicateError === true){
+                    resolve(true);
+                }
+                this._logger.error(err, "Could not bootstrap privileges to Authentication Service");
+                reject(err);
+            });
         });
-        return false; // linter pleaser
+
     }
 
     async fetch(): Promise<void>{
         const url = `/appRoles?bcName=${this._boundedContextName}&appName=${this._applicationName}`;
-        await this._client.get(url).then((resp:AxiosResponse)=>{
-            this._logger.debug(resp.data);
-            this._rolePrivileges = resp.data;
-            this._lastFetchTimestamp = Date.now();
-            return;
-        }).catch((err:AxiosError) => {
-            this._logger.error(err, "Could not fetch role privileges association from Authentication Service");
-            throw err;
+
+        return await new Promise<void>((resolve, reject) => {
+            this._client.get(url).then((resp: AxiosResponse) => {
+                this._logger.debug(resp.data);
+                this._rolePrivileges = resp.data;
+                this._lastFetchTimestamp = Date.now();
+                resolve();
+            }).catch((err: AxiosError) => {
+                this._logger.error(err, "Could not fetch role privileges association from Authentication Service");
+                reject(err);
+            });
         });
     }
 
