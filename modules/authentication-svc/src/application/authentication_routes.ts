@@ -33,7 +33,7 @@ import express from "express";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {TokenEndpointResponse} from "@mojaloop/security-bc-public-types-lib";
 import {AuthenticationAggregate} from "../domain/authentication_agg";
-import {ICryptoAuthenticationAdapter} from "domain/interfaces";
+import {ICryptoAuthenticationAdapter} from "../domain/interfaces";
 
 export class AuthenticationRoutes {
     private _logger: ILogger;
