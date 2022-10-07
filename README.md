@@ -60,23 +60,22 @@ export IAM_STORAGE_FILE_PATH=dist/authN_TempStorageFile
 
 ## Integration Tests
 
-## Startup supporting services
+### Startup supporting services
 
 Use https://github.com/mojaloop/platform-shared-tools/tree/main/packages/deployment/docker-compose-infra
 
 
-To startup Kafka, MongoDB, Elasticsearch and Kibana, follow the steps below(in docker-compose-infra/):   
+To startup Kafka, MongoDB, Elasticsearch and Kibana, follow the steps below(executed in docker-compose-infra/):   
 
-1. Create a directory called `exec` inside the `docker-compose-infra` (this) directory, and go to that directory.
+1. Create a sub-directory called `exec` inside the `docker-compose-infra` (this) directory, and navigate to that directory.
 
-_This `exec` directory is ignored by gitignore, so can't be pushed to GitHub._
 
 ```shell
 mkdir exec 
 cd exec
 ```
 
-2. Create the following directories as children of the `docker-compose/exec` directory:
+2. Create the following directories as sub-directories of the `docker-compose/exec` directory:
 * `certs`
 * `esdata01`
 * `kibanadata`
@@ -98,7 +97,7 @@ cp ../.env.sample ./.env
 sysctl -w vm.max_map_count=262144 # might require sudo
 ```
 
-## Start Infrastructure Containers
+### Start Infrastructure Containers
 
 Start the docker containers using docker-compose up (in the exec dir)
 ```shell
