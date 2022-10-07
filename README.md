@@ -60,7 +60,7 @@ export IAM_STORAGE_FILE_PATH=dist/authN_TempStorageFile
 
 ## Integration Tests
 
-Startup supporting services
+## Startup supporting services
 
 Use https://github.com/mojaloop/platform-shared-tools/tree/main/packages/deployment/docker-compose-infra
 
@@ -98,7 +98,7 @@ cp ../.env.sample ./.env
 sysctl -w vm.max_map_count=262144 # might require sudo
 ```
 
-# Start Infrastructure Containers
+## Start Infrastructure Containers
 
 Start the docker containers using docker-compose up (in the exec dir)
 ```shell
