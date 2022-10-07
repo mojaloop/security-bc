@@ -60,7 +60,7 @@ export IAM_STORAGE_FILE_PATH=dist/authN_TempStorageFile
 
 ## Integration Tests
 
-# Startup supporting services
+Startup supporting services
 
 Use https://github.com/mojaloop/platform-shared-tools/tree/main/packages/deployment/docker-compose-infra
 
