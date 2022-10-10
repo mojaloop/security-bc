@@ -43,23 +43,6 @@ npm run test:unit
 
 ## Run the services 
 
-```bash
-# start the authentication service
-npm run start:authentication-svc 
-
-# start the authorization service
-npm run start:authorization-svc 
-```
-
-To run those services locally, you need to pass 2 env vars like this (executed in modules/authentication-svc):
-
-```bash
-export PRIVATE_CERT_PEM_FILE_PATH=test_keys/private.pem
-export IAM_STORAGE_FILE_PATH=dist/authN_TempStorageFile
-```
-
-## Integration Tests
-
 ### Startup supporting services
 
 Use https://github.com/mojaloop/platform-shared-tools/tree/main/packages/deployment/docker-compose-infra
@@ -115,8 +98,24 @@ To stop the infrastructure containers, run:
 docker-compose -f ../docker-compose-infra.yml --env-file ./.env stop
 ```
 
+After running the docker-compose-infra we can start authentication and authorization services:
 
-After running the services we can run the integration test:
+```bash
+# start the authentication service
+npm run start:authentication-svc 
+
+# start the authorization service
+npm run start:authorization-svc 
+```
+
+To run those services locally, you need to pass 2 env vars like this (executed in modules/authentication-svc):
+
+```bash
+export PRIVATE_CERT_PEM_FILE_PATH=test_keys/private.pem
+export IAM_STORAGE_FILE_PATH=dist/authN_TempStorageFile
+```
+
+## Integration Tests
 
 ```bash
 npm run test:integration
