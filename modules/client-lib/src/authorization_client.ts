@@ -53,10 +53,10 @@ export class AuthorizationClient implements IAuthorizationClient{
     private _privileges:Privilege[] = [];
 
     constructor(boundedContext: string, application: string, version: string, authSvcBaseUrl:string, logger:ILogger) {
+        this._logger = logger.createChild(this.constructor.name);
         this._boundedContextName = boundedContext;
         this._applicationName = application;
         this._applicationVersion = version;
-        this._logger = logger;
         this._authSvcBaseUrl = authSvcBaseUrl;
 
         axios.defaults.baseURL = authSvcBaseUrl;
@@ -77,7 +77,8 @@ export class AuthorizationClient implements IAuthorizationClient{
 
         return await new Promise<boolean>((resolve, reject) => {
             this._client.post("/bootstrap", appPrivileges).then((resp:AxiosResponse)=>{
-                this._logger.debug(resp.data);
+                //this._logger.debug(resp.data);
+                this._logger.info("Boostrap completed successfully");
                 resolve(true);
             }).catch((err:AxiosError) => {
                 if(err.response && err.response.status === 409 && ignoreDuplicateError === true){

@@ -93,11 +93,13 @@ export class AuthorizationAggregate{
 
         if(foundAppPrivs) {
             if (semver.compare(foundAppPrivs.applicationVersion, appPrivs.applicationVersion)==0) {
-                this._logger.warn(`received duplicate AppPrivileges set for BC: ${foundAppPrivs.boundedContextName}, APP: ${foundAppPrivs.applicationName}, version: ${foundAppPrivs.applicationVersion}, IGNORING with error`);
-                throw new CannotCreateDuplicateAppPrivilegesError();
+                const err = new CannotCreateDuplicateAppPrivilegesError(`Received duplicate AppPrivileges set for BC: ${foundAppPrivs.boundedContextName}, APP: ${foundAppPrivs.applicationName}, version: ${foundAppPrivs.applicationVersion}, IGNORING with error`);
+                this._logger.warn(err.message);
+                throw err;
             } else if (semver.compare(foundAppPrivs.applicationVersion, appPrivs.applicationVersion)==1) {
-                this._logger.error(`received AppPrivileges with lower version than latest for BC: ${foundAppPrivs.boundedContextName}, APP: ${foundAppPrivs.applicationName}, version: ${foundAppPrivs.applicationVersion}, IGNORING with error`);
-                throw new CannotOverrideAppPrivilegesError();
+                const err = new CannotOverrideAppPrivilegesError(`received AppPrivileges with lower version than latest for BC: ${foundAppPrivs.boundedContextName}, APP: ${foundAppPrivs.applicationName}, version: ${foundAppPrivs.applicationVersion}, IGNORING with error`);
+                this._logger.error(err);
+                throw err;
             }
         }
 
