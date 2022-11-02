@@ -49,6 +49,7 @@ class UserRecord{
 class AppRecord{
     client_id: string;
     client_secret: string | null;
+    roles: string[];
 }
 
 
@@ -98,6 +99,7 @@ export class FileIAMAdapter implements IAMAuthenticationAdapter{
                 const appRecord = new AppRecord();
                 appRecord.client_id = rec.client_id;
                 appRecord.client_secret = rec.client_secret;
+                appRecord.roles = rec.roles;
 
                 if (appRecord.client_id && !this._apps.has(appRecord.client_id)) {
                     this._apps.set(appRecord.client_id, appRecord);
@@ -228,8 +230,7 @@ export class FileIAMAdapter implements IAMAuthenticationAdapter{
         // this is a mock implementation, no encryption needed or desired - but pass must not be empty
         resp.success = true;
         resp.expires_in_secs = FIXED_EXPIRES_IN_SECS;
-        resp.roles = [];
-        // resp.roles = appRec.roles || [];
+        resp.roles = appRec.roles || [];
 
         return resp;
     }
