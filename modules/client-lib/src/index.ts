@@ -33,3 +33,4 @@ export * from "./login_helper";
 export * from "./token_helper";
 export * from "./authorization_client";
 export * from "./types";
+export * from "./auth_http_requester";
