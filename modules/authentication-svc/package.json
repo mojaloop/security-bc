@@ -39,7 +39,7 @@
     "@mojaloop/security-bc-public-types-lib": "~0.1.0",
     "asn1": "^0.2.6",
     "express": "^4.17.2",
-    "jsonwebtoken": "^8.5.1",
+    "jsonwebtoken": "^9.0.0",
     "node-jose": "^2.1.1"
   },
   "devDependencies": {

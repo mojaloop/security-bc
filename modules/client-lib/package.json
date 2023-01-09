@@ -37,7 +37,7 @@
     "@mojaloop/logging-bc-public-types-lib": "^0.0.3",
     "@mojaloop/security-bc-public-types-lib": "~0.1.0",
     "axios": "^0.25.0",
-    "jsonwebtoken": "^8.5.1",
+    "jsonwebtoken": "^9.0.0",
     "jwks-rsa": "^2.0.5"
   },
   "devDependencies": {
