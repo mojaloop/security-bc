@@ -99,8 +99,8 @@ export class AuthenticatedHttpRequester implements IAuthenticatedHttpRequester{
 	private _refresh_token_expires_at: number | null = null;
 
 	private _queue: AuthenticatedHttpRequesterQueueItem[] = []
-	private _queue_processing: boolean = false;
-	private _initialised: boolean = false;
+	private _queue_processing = false;
+	private _initialised = false;
 
 	constructor(
 		logger: ILogger,
@@ -150,10 +150,10 @@ export class AuthenticatedHttpRequester implements IAuthenticatedHttpRequester{
 
 	private async _processQueue():Promise<void>{
 
-		let shifted: AuthenticatedHttpRequesterQueueItem | undefined = this._queue.shift();
+		const shifted: AuthenticatedHttpRequesterQueueItem | undefined = this._queue.shift();
 		if (!shifted) return;
 
-		let item: AuthenticatedHttpRequesterQueueItem = shifted;
+		const item: AuthenticatedHttpRequesterQueueItem = shifted;
 
 		await this._checkAndFetchToken().catch((err:Error) => {
 			item.callback(err, null);
@@ -238,7 +238,7 @@ export class AuthenticatedHttpRequester implements IAuthenticatedHttpRequester{
 		headers.append("Accept", "application/json");
 		headers.append("Content-Type", "application/json");
 
-		return new Promise<void>(async (resolve, reject)=>{
+		return new Promise<void>((resolve, reject)=>{
 			const reqInit: RequestInit = {
 				method: "POST",
 				headers: headers,
