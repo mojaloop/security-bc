@@ -36,7 +36,7 @@
   },
   "dependencies": {
     "@mojaloop/logging-bc-client-lib": "^0.0.10",
-    "@mojaloop/security-bc-public-types-lib": "~0.0.5",
+    "@mojaloop/security-bc-public-types-lib": "~0.1.0",
     "express": "^4.17.2",
     "semver": "^7.3.5"
   },
