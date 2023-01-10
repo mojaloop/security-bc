@@ -28,9 +28,9 @@
  --------------
  ******/
 'use strict'
-import * as jwt from "jsonwebtoken";
-import * as jwks from "jwks-rsa";
+import jwt from "jsonwebtoken";
 import {Jwt} from "jsonwebtoken";
+import jwks from "jwks-rsa";
 import {JwksClient} from "jwks-rsa";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 

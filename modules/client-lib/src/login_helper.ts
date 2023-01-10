@@ -30,7 +30,7 @@
 "use strict"
 
 import axios, { AxiosResponse, AxiosInstance } from "axios";
-import * as jwt from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import {Jwt} from "jsonwebtoken";
 import {AuthToken} from "./types";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
