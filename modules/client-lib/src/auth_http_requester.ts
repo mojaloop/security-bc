@@ -42,16 +42,16 @@ import {randomUUID} from "crypto";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
 import {TokenEndpointResponse} from "@mojaloop/security-bc-public-types-lib";
+import {
+	ConnectionRefusedError,
+	MaxRetriesReachedError,
+	RequestTimeoutError,
+	UnauthorizedError
+} from "./types";
 
 const MAX_RETRIES = 3;
 const DEFAULT_TIMEOUT_MS = 5000;
 
-
-// for public types
-export class UnauthorizedError extends Error {}
-export class MaxRetriesReachedError extends Error {}
-export class RequestTimeoutError extends Error {}
-export class ConnectionRefusedError extends Error {}
 
 export interface IAuthenticatedHttpRequester {
 	initialised: boolean;
@@ -254,7 +254,7 @@ export class AuthenticatedHttpRequester implements IAuthenticatedHttpRequester{
 					if(respObj.expires_in)
 						this._access_token_expires_at = Date.now() + respObj.expires_in * 1000;
 
-					this._refreshToken = respObj.access_token;
+					this._refreshToken = respObj.refresh_token;
 					this._refresh_token_expires_in = respObj.refresh_token_expires_in;
 					if (respObj.access_token && respObj.refresh_token_expires_in)
 						this._refresh_token_expires_at = Date.now() + respObj.refresh_token_expires_in * 1000;
@@ -274,7 +274,7 @@ export class AuthenticatedHttpRequester implements IAuthenticatedHttpRequester{
 				const err = new Error("Unknown error fetching token - err: " + (reason instanceof Error) ? reason.message:reason);
 				this._logger.error(err);
 				reject(err);
-			})
+			});
 
 		});
 	}

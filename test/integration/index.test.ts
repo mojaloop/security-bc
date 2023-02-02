@@ -28,16 +28,38 @@
  --------------
  ******/
 
-"use strict"
+"use strict";
 
-import {AuthorizationClient} from "@mojaloop/security-bc-client-lib";
+import {
+    AuthorizationClient,
+    ConnectionRefusedError,
+    LoginHelper,
+    TokenHelper,
+    UnauthorizedError
+} from "@mojaloop/security-bc-client-lib";
 import {ConsoleLogger} from "@mojaloop/logging-bc-public-types-lib";
-
+import nock from "nock";
 
 const BC_NAME = "test-bc";
 const APP_NAME = "test-app1";
 const APP_VERSION = "0.0.1";
 const AUTH_N_SVC_BASEURL = "http://localhost:3202";
+
+const AUTH_Z_SVC_BASE_URL = "http://localhost:3201";
+const TOKEN_URL = `${AUTH_Z_SVC_BASE_URL}/token`;
+const JWKS_URL = `${AUTH_Z_SVC_BASE_URL}/.well-known/jwks.json`;
+
+// these must match the token
+const AUTH_Z_DEFAULT_ISSUER_NAME = "http://localhost:3201/";
+const AUTH_Z_DEFAULT_AUDIENCE = "mojaloop.vnext.default_audience";
+
+const APP_CLIENT_ID = "user";
+const APP_CLIENT_SECRET = "participants-bc-participants-svc";
+
+const CLIENT_ID = "security-bc-ui";
+const LOGIN_USERNAME = "user";
+const LOGIN_PASSWORD = "superPass";
+const LOGIN_WRONG_PASSWORD = "WrongPass";
 
 // TODO make sure this test role has the privileges below associated with it
 const TEST_ROLE_ID = "fc3455e0-469f-4221-8cd0-5bae2deb99f1";
@@ -74,4 +96,65 @@ describe("authorization-client-lib tests", () => {
         const hasPriv = await authorizationClient.roleHasPrivilege("fc3455e0-469f-4221-8cd0-5bae2deb99f1", "inexistent_priv");
         expect(hasPriv).toBe(false);
     });
+});
+
+
+describe('authentication-client-lib tests', () => {
+
+    test("User Login - login and verify token", async () => {
+        const loginHelper = new LoginHelper(TOKEN_URL, logger);
+        await loginHelper.init();
+
+        const accessToken = await loginHelper.loginUser(CLIENT_ID, LOGIN_USERNAME, LOGIN_PASSWORD);
+
+        expect(accessToken).not.toBeNull();
+
+        const tokenHelper = new TokenHelper(AUTH_Z_DEFAULT_ISSUER_NAME, JWKS_URL, AUTH_Z_DEFAULT_AUDIENCE, logger);
+        await tokenHelper.init();
+
+        const verified = await tokenHelper.verifyToken(accessToken!.accessToken);
+        expect(verified).toBe(true);
+    });
+
+    test("User Login - wrong pass", async () => {
+        const loginHelper = new LoginHelper(TOKEN_URL, logger);
+        await loginHelper.init();
+
+        await expect(loginHelper.loginUser(CLIENT_ID, LOGIN_USERNAME, LOGIN_WRONG_PASSWORD)).rejects.toThrow(UnauthorizedError);
+    });
+
+    test("User Login - wrong client_id", async () => {
+        const loginHelper = new LoginHelper(TOKEN_URL, logger);
+        await loginHelper.init();
+
+        await expect(loginHelper.loginUser("wrong_client_id", LOGIN_USERNAME, LOGIN_WRONG_PASSWORD)).rejects.toThrow(UnauthorizedError);
+    });
+
+    test("User Login - wrong username", async () => {
+        const loginHelper = new LoginHelper(TOKEN_URL, logger);
+        await loginHelper.init();
+
+        await expect(loginHelper.loginUser(CLIENT_ID, "wrong_username", LOGIN_WRONG_PASSWORD)).rejects.toThrow(UnauthorizedError);
+    });
+
+    test("Test login wrong api address", async () => {
+        nock.cleanAll();
+        const loginHelper = new LoginHelper("http://nowaythiscan.exist.just_to_be_sure.void", logger);
+        await loginHelper.init();
+
+        await expect(loginHelper.loginUser(CLIENT_ID, LOGIN_USERNAME, LOGIN_WRONG_PASSWORD)).rejects.toThrow(Error("getaddrinfo ENOTFOUND nowaythiscan.exist.just_to_be_sure.void"));
+    });
+
+    test("Test login ConnectionRefusedError", async () => {
+        nock.cleanAll();
+        const loginHelper = new LoginHelper("http://127.0.0.1:0", logger);
+        await loginHelper.init();
+
+        await expect(loginHelper.loginUser(CLIENT_ID, LOGIN_USERNAME, LOGIN_WRONG_PASSWORD)).rejects.toThrow(ConnectionRefusedError);
+    });
+
+    // TODO client_credentials tests
+
+
+
 });

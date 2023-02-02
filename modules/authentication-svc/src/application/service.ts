@@ -109,6 +109,7 @@ export class Service {
 
                 if(!(iamAdapter as FileIAMAdapter).appCount()) {
                     await (iamAdapter as FileIAMAdapter).createApp("security-bc-ui", null);
+                    await (iamAdapter as FileIAMAdapter).createApp("participants-bc-participants-svc", "superServiceSecret");
                 }
             }
         }

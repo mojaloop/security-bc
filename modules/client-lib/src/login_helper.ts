@@ -29,10 +29,8 @@
  ******/
 "use strict"
 
-import axios, { AxiosResponse, AxiosInstance } from "axios";
-import jwt from "jsonwebtoken";
-import {Jwt} from "jsonwebtoken";
-import {AuthToken} from "./types";
+import jwt, {Jwt} from "jsonwebtoken";
+import {AuthToken, ConnectionRefusedError, UnauthorizedError} from "./types";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {TokenEndpointResponse} from "@mojaloop/security-bc-public-types-lib";
 
@@ -41,68 +39,112 @@ const AUTH_HTTPCLIENT_TIMEOUT_MS = 5000;
 export class LoginHelper{
     private _logger:ILogger;
     private _authBaseUrl:string;
-    private _httpClient: AxiosInstance;
 
     constructor(authBaseUrl:string, logger:ILogger) {
         this._logger = logger;
         this._authBaseUrl = authBaseUrl;
-
-        this._httpClient = axios.create({
-            baseURL: this._authBaseUrl,
-            timeout: AUTH_HTTPCLIENT_TIMEOUT_MS,
-        });
     }
 
     async init():Promise<void> {
-        return;
+        return Promise.resolve();
     }
 
     /**
-     * Login using username and password
+     * Tries to login and return a valid user token using the password flow (user to service)
      * @param username
      * @param password
      * @returns Promise with access token
      */
-    async loginUser(username:string, password:string):Promise<AuthToken|null>{
-        try {
-            const resp: AxiosResponse<any> = await this._httpClient.post("/login", {
-                username: username,
-                password: password
-            }, {
-                validateStatus: (status) => {
-                    // Resolve only if the status code is 200 or 404, everything else throws
-                    return status == 200 || status == 404;
-                }
-            });
-            if(resp.status != 200){
-                return null;
-            }
-
-            const tokenResp: TokenEndpointResponse = resp.data as TokenEndpointResponse;
-            if(!tokenResp || ! tokenResp.access_token || !tokenResp.token_type || tokenResp.expires_in == undefined){
-                return null;
-            }
-
-            const token = jwt.decode(tokenResp.access_token, {complete: true}) as Jwt;
-            if(!token){
-                return null;
-            }
-
-            return {
-                accessToken: tokenResp.access_token,
-                refreshToken: tokenResp.refresh_token ?? null,
-                payload: token.payload,
-                scope: tokenResp.scope
-            }
-        }catch(err){
-            this._logger.error(err);
-            return null;
-        }
+    async loginUser(client_id: string, username: string, password: string):Promise<AuthToken>{
+        return this._requestToken({
+            grant_type: "password",
+            client_id: client_id,
+            username: username,
+            password: password
+            // audience
+            // scope
+        });
     }
 
-    // loginApp(username:string, password:string):Promise<AuthToken|null>{
-    //     throw new Error("not implemented");
-    // }
+    /**
+     * Tries to login and return a valid application token using the client_credentials flow (service to service)
+     * @param client_id
+     * @param client_secret
+     * @param scope (optional)
+     */
 
+    async loginApp(client_id: string, client_secret: string, scope?:string):Promise<AuthToken>{
+        return this._requestToken({
+            grant_type: "client_credentials",
+            client_id: client_id,
+            client_secret: client_secret,
+            // audience
+            // scope
+        });
+    }
+
+    private _requestToken(payload: any): Promise<AuthToken> {
+        return new Promise<AuthToken>((resolve, reject) => {
+            const headers = new Headers();
+            headers.append("Accept", "application/json");
+            headers.append("Content-Type", "application/json");
+
+            const reqInit: RequestInit = {
+                method: "POST",
+                headers: headers,
+                body: JSON.stringify(payload)//body
+            };
+
+            fetch(this._authBaseUrl, reqInit).then(async resp => {
+                if (resp.status===200) {
+                    const respObj: TokenEndpointResponse = await resp.json();
+                    const accessToken = respObj.access_token;
+
+                    let token: jwt.Jwt;
+                    try {
+                        token = jwt.decode(accessToken, {complete: true}) as Jwt;
+                        if (!token) {
+                            return reject(new UnauthorizedError("Error decoding received token"));
+                        }
+                    } catch (err) {
+                        // don't care, it's not a valid token
+                        return reject(new UnauthorizedError("Error decoding received token"));
+                    }
+
+                    const respAuthToken: AuthToken = {
+                        accessToken: respObj.access_token,
+                        accessTokenExpiresIn: respObj.expires_in,
+                        refreshToken: respObj.refresh_token,
+                        refreshTokenExpiresIn: respObj.refresh_token_expires_in,
+                        payload: token.payload,
+                        scope: respObj.scope
+                    };
+
+                    return resolve(respAuthToken);
+                } else if (resp.status===401) {
+                    // login failed
+                    this._logger.warn("Login failed");
+                    return reject(new UnauthorizedError("Login failed"));
+                } else {
+                    //generic error
+                    const err = new Error("Unsupported response in fetching token - status code: " + resp.status);
+                    this._logger.error(err);
+                    return reject(err);
+                }
+            }).catch(reason => {
+                if (reason && reason.cause && (reason.cause.code==="ECONNREFUSED" || reason.cause.code==="UND_ERR_SOCKET")) {
+                    const err = new ConnectionRefusedError();
+                    this._logger.error(err);
+                    return reject(err);
+                }else if(reason && reason.cause && reason.cause.code ==="ENOTFOUND"){
+                    this._logger.error(reason.cause);
+                    return reject(reason.cause); // reason.cause is an Error obj
+                }
+                const err = new Error("Unknown error fetching token - err: " + (reason instanceof Error) ? reason.message:reason);
+                this._logger.error(err);
+                reject(err);
+            });
+        });
+    }
 
 }

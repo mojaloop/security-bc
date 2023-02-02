@@ -29,11 +29,22 @@
  ******/
 "use strict"
 
+// for public types
+export class UnauthorizedError extends Error {}
+
+export class MaxRetriesReachedError extends Error {}
+
+export class RequestTimeoutError extends Error {}
+
+export class ConnectionRefusedError extends Error {}
+
 export type AuthToken = {
-    payload:any;
+    payload: any;
     accessToken: string; // original access token
-    refreshToken: string | null; // original refresh token
-    scope: string | null;
+    accessTokenExpiresIn: number; // timestamp
+    refreshToken: string | null | undefined; // original refresh token
+    refreshTokenExpiresIn: number | null | undefined; // timestamp
+    scope: string | null | undefined;
 }
 
 export type CallSecurityContext = {

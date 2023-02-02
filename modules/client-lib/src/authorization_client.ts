@@ -85,7 +85,8 @@ export class AuthorizationClient implements IAuthorizationClient{
                     return resolve(true);
                 }
                 this._logger.error(err, "Could not bootstrap privileges to Authentication Service");
-                reject(err);
+                // axios errors are too verbose for the caller, already logged line above
+                reject(new Error(err.message));
             });
         });
 
@@ -102,7 +103,8 @@ export class AuthorizationClient implements IAuthorizationClient{
                 resolve();
             }).catch((err: AxiosError) => {
                 this._logger.error(err, "Could not fetch role privileges association from Authentication Service");
-                reject(err);
+                // axios errors are too verbose for the caller, already logged line above
+                reject(new Error(err.message));
             });
         });
     }
