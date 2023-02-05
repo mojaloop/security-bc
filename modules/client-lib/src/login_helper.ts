@@ -30,61 +30,141 @@
 "use strict"
 
 import jwt, {Jwt} from "jsonwebtoken";
+import {DEFAULT_JWKS_PATH, TokenHelper} from "./token_helper";
+
 import {AuthToken, ConnectionRefusedError, UnauthorizedError} from "./types";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {TokenEndpointResponse} from "@mojaloop/security-bc-public-types-lib";
 
-const AUTH_HTTPCLIENT_TIMEOUT_MS = 5000;
+
+// private
+declare type AuthMode = "APP" | "USER";
 
 export class LoginHelper{
-    private _logger:ILogger;
-    private _authBaseUrl:string;
+    private readonly _logger: ILogger;
+    private readonly _authTokenUrl: string;
+    private readonly _tokenHelper: TokenHelper;
+    private _authMode: AuthMode;
 
-    constructor(authBaseUrl:string, logger:ILogger) {
-        this._logger = logger;
-        this._authBaseUrl = authBaseUrl;
+    private _client_id: string | null = null;
+    private _client_secret: string | null = null;
+    private _username: string | null = null;
+    private _password: string | null = null;
+
+    private _responseObj: TokenEndpointResponse | null = null;
+    private _decodedToken:jwt.Jwt | null = null;
+    private _access_token: string | null = null;
+    private _access_token_expires_in: number | null = null;
+    private _access_token_expires_at: number | null = null;
+    private _refreshToken: string | null = null;
+    private _refresh_token_expires_in: number | null = null;
+    private _refresh_token_expires_at: number | null = null;
+
+    private _initialised = false;
+    private _tokenHelperNeedsInit = true;
+
+    constructor(authTokenUrl: string, logger: ILogger) {
+        this._logger = logger.createChild(this.constructor.name);
+        this._authTokenUrl = authTokenUrl;
+
+        const url = new URL(authTokenUrl);
+
+        this._tokenHelper = new TokenHelper(`${url.protocol}//${url.hostname}:${url.port}${DEFAULT_JWKS_PATH}`, this._logger);
     }
 
-    async init():Promise<void> {
-        return Promise.resolve();
+    get initialised(): boolean {
+        return this._initialised;
     }
 
-    /**
-     * Tries to login and return a valid user token using the password flow (user to service)
-     * @param username
-     * @param password
-     * @returns Promise with access token
-     */
-    async loginUser(client_id: string, username: string, password: string):Promise<AuthToken>{
-        return this._requestToken({
-            grant_type: "password",
-            client_id: client_id,
-            username: username,
-            password: password
-            // audience
-            // scope
+    setUserCredentials(client_id: string, username: string, password: string): void {
+        this._authMode = "USER";
+        this._client_id = client_id;
+        this._username = username;
+        this._password = password;
+        this._initialised = true;
+    }
+
+    setAppCredentials(client_id: string, client_secret: string): void {
+        this._authMode = "APP";
+        this._client_id = client_id;
+        this._client_secret = client_secret;
+        this._initialised = true;
+    }
+
+    async getToken():Promise<AuthToken>{
+        if (!this._initialised) {
+            return Promise.reject(new Error("Uninitialised, please call setUserCredentials() or setAppCredentials() before using getToken()"));
+        }
+
+        if(this._tokenHelperNeedsInit){
+            await this._tokenHelper.init();
+            this._tokenHelperNeedsInit = false;
+        }
+
+        if(await this._haveValidToken()){
+            return Promise.resolve(this._constructAuthTokenObj());
+        }
+
+        await this._requestToken().catch(reason => {
+            return Promise.reject(reason);
         });
+
+        return Promise.resolve(this._constructAuthTokenObj());
     }
 
-    /**
-     * Tries to login and return a valid application token using the client_credentials flow (service to service)
-     * @param client_id
-     * @param client_secret
-     * @param scope (optional)
-     */
-
-    async loginApp(client_id: string, client_secret: string, scope?:string):Promise<AuthToken>{
-        return this._requestToken({
-            grant_type: "client_credentials",
-            client_id: client_id,
-            client_secret: client_secret,
-            // audience
-            // scope
-        });
+    private _constructAuthTokenObj(): AuthToken{
+        return {
+            payload: this._decodedToken!.payload,
+            accessToken: this._access_token!,
+            accessTokenExpiresIn: this._access_token_expires_in!,
+            refreshToken: this._refreshToken,
+            refreshTokenExpiresIn: this._refresh_token_expires_in,
+            scope: this._responseObj!.scope
+        };
     }
 
-    private _requestToken(payload: any): Promise<AuthToken> {
-        return new Promise<AuthToken>((resolve, reject) => {
+    private async _haveValidToken():Promise<boolean> {
+        if (!this._decodedToken || !this._access_token) return false;
+
+        return this._tokenHelper.verifyToken(this._access_token);
+    }
+
+    private _resetPrivDate(){
+        this._responseObj = null;
+        this._decodedToken = null;
+        this._access_token = null;
+        this._access_token_expires_in = null;
+        this._access_token_expires_at = null;
+        this._refreshToken = null;
+        this._refresh_token_expires_in = null;
+        this._refresh_token_expires_at = null;
+    }
+
+    private _requestToken(): Promise<void> {
+        // make sure old values are not kept
+        this._resetPrivDate();
+
+        let payload:any;
+        if (this._authMode==="USER") {
+            payload = {
+                grant_type: "password",
+                client_id: this._client_id,
+                username: this._username,
+                password: this._password
+                // audience
+                // scope
+            };
+        } else if (this._authMode==="APP") {
+            payload = {
+                grant_type: "client_credentials",
+                client_id: this._client_id,
+                client_secret: this._client_secret,
+                // audience
+                // scope
+            };
+        }
+
+        return new Promise<void>((resolve, reject) => {
             const headers = new Headers();
             headers.append("Accept", "application/json");
             headers.append("Content-Type", "application/json");
@@ -95,7 +175,7 @@ export class LoginHelper{
                 body: JSON.stringify(payload)//body
             };
 
-            fetch(this._authBaseUrl, reqInit).then(async resp => {
+            fetch(this._authTokenUrl, reqInit).then(async resp => {
                 if (resp.status===200) {
                     const respObj: TokenEndpointResponse = await resp.json();
                     const accessToken = respObj.access_token;
@@ -111,16 +191,20 @@ export class LoginHelper{
                         return reject(new UnauthorizedError("Error decoding received token"));
                     }
 
-                    const respAuthToken: AuthToken = {
-                        accessToken: respObj.access_token,
-                        accessTokenExpiresIn: respObj.expires_in,
-                        refreshToken: respObj.refresh_token,
-                        refreshTokenExpiresIn: respObj.refresh_token_expires_in,
-                        payload: token.payload,
-                        scope: respObj.scope
-                    };
+                    this._responseObj = respObj;
+                    this._decodedToken = token;
 
-                    return resolve(respAuthToken);
+                    this._access_token = respObj.access_token;
+                    this._access_token_expires_in = respObj.expires_in;
+                    if (respObj.expires_in)
+                        this._access_token_expires_at = Date.now() + respObj.expires_in * 1000;
+
+                    this._refreshToken = respObj.refresh_token;
+                    this._refresh_token_expires_in = respObj.refresh_token_expires_in;
+                    if (respObj.access_token && respObj.refresh_token_expires_in)
+                        this._refresh_token_expires_at = Date.now() + respObj.refresh_token_expires_in * 1000;
+
+                    return resolve();
                 } else if (resp.status===401) {
                     // login failed
                     this._logger.warn("Login failed");

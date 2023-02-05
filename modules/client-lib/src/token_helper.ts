@@ -27,25 +27,28 @@
 
  --------------
  ******/
-'use strict'
+"use strict";
+
 import jwt from "jsonwebtoken";
 import {Jwt} from "jsonwebtoken";
 import jwks from "jwks-rsa";
 import {JwksClient} from "jwks-rsa";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
+export const DEFAULT_JWKS_PATH = "/.well-known/jwks.json";
+
 export class TokenHelper {
     private _logger:ILogger;
     private _jwksUrl: string;
-    private _issuerName: string;
-    private _audience: string;
+    private _issuerName: string | null;
+    private _audience: string | null;
     private _jwksClient: JwksClient;
 
-    constructor(issuerName: string, jwksUrl: string, audience:string, logger:ILogger) {
-        this._logger = logger;
-        this._issuerName = issuerName;
-        this._audience = audience;
+    constructor( jwksUrl: string, logger:ILogger, issuerName?: string, audience?: string) {
         this._jwksUrl = jwksUrl;
+        this._logger = logger.createChild(this.constructor.name);
+        this._issuerName = issuerName || null;
+        this._audience = audience || null;
 
         this._jwksClient = new jwks.JwksClient({
             jwksUri: jwksUrl,
@@ -83,12 +86,9 @@ export class TokenHelper {
      * @param audience
      */
     async verifyToken(accessToken: string): Promise<boolean> {
-        const verify_opts: jwt.VerifyOptions = {
-            complete: true,
-            issuer: this._issuerName,
-            audience: this._audience,
-
-        };
+        const verify_opts: jwt.VerifyOptions = {complete: true};
+        if(this._issuerName) verify_opts.issuer = this._issuerName;
+        if(this._audience) verify_opts.audience = this._audience;
 
         const token = jwt.decode(accessToken, {complete: true}) as Jwt;
         if(!token || !token.header || !token.header || !token.header.kid){

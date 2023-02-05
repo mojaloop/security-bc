@@ -223,7 +223,7 @@ describe('authentication-client-lib tests', () => {
     test("TokenHelper - decode token", async () => {
         const accessToken = TEST_USER_ACCESS_TOKEN;
 
-        const tokenHelper = new TokenHelper(ISSUER_NAME, "http://not.used/", TEST_AUDIENCE, logger);
+        const tokenHelper = new TokenHelper(JWKS_URL, logger, "http://not.used/", TEST_AUDIENCE);
         // not intialised to avoid calling jwks.json url
         const payload = tokenHelper.decodeToken(accessToken);
         expect(payload).not.toBeNull();
@@ -231,7 +231,7 @@ describe('authentication-client-lib tests', () => {
     });
 
     test("Verify invalid token", async () => {
-        const tokenHelper = new TokenHelper(ISSUER_NAME, JWKS_URL, TEST_AUDIENCE, logger);
+        const tokenHelper = new TokenHelper(JWKS_URL, logger, ISSUER_NAME, TEST_AUDIENCE);
         await tokenHelper.init();
 
         const verified = await tokenHelper.verifyToken("blablabnot agoodtoken");
