@@ -36,6 +36,7 @@ import {AuthToken, ConnectionRefusedError, UnauthorizedError} from "./types";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {TokenEndpointResponse} from "@mojaloop/security-bc-public-types-lib";
 
+const JWKS_FETCH_KEYS_TIMEOUT_MS = 5*1000*60; // 5 mins
 
 // private
 declare type AuthMode = "APP_CREDS" | "USER_CREDS" | "PROVIDED_TOKEN";
@@ -70,6 +71,9 @@ export class LoginHelper {
 		const url = new URL(authTokenUrl);
 
 		this._tokenHelper = new TokenHelper(`${url.protocol}//${url.hostname}:${url.port}${DEFAULT_JWKS_PATH}`, this._logger);
+
+		// fetch new jwks every 5 mins
+
 	}
 
 	get initialised(): boolean {
@@ -84,12 +88,14 @@ export class LoginHelper {
      */
 
 	setToken(accessToken: string): void {
+		this._resetPrivateData();
 		this._authMode = "PROVIDED_TOKEN";
         this._parseAndLoadAccessToken(accessToken);
 		this._initialised = true;
 	}
 
 	setUserCredentials(client_id: string, username: string, password: string): void {
+		this._resetPrivateData();
 		this._authMode = "USER_CREDS";
 		this._client_id = client_id;
 		this._username = username;
@@ -98,6 +104,7 @@ export class LoginHelper {
 	}
 
 	setAppCredentials(client_id: string, client_secret: string): void {
+		this._resetPrivateData();
 		this._authMode = "APP_CREDS";
 		this._client_id = client_id;
 		this._client_secret = client_secret;
@@ -112,6 +119,11 @@ export class LoginHelper {
 		if (this._tokenHelperNeedsInit) {
 			await this._tokenHelper.init();
 			this._tokenHelperNeedsInit = false;
+
+			// schedule flag reset in JWKS_FETCH_KEYS_TIMEOUT_MS
+			setTimeout(()=>{
+				this._tokenHelperNeedsInit = true;
+			}, JWKS_FETCH_KEYS_TIMEOUT_MS);
 		}
 
 		if (await this._haveValidToken()) {
@@ -145,7 +157,7 @@ export class LoginHelper {
 		return this._tokenHelper.verifyToken(this._access_token);
 	}
 
-	private _resetPrivDate() {
+	private _resetPrivateData() {
 		this._responseObj = null;
 		this._decodedToken = null;
 		this._access_token = null;
@@ -181,7 +193,7 @@ export class LoginHelper {
 
 	private _requestToken(): Promise<void> {
 		// make sure old values are not kept
-		this._resetPrivDate();
+		this._resetPrivateData();
 
 		let payload: any;
 		if (this._authMode==="USER_CREDS") {
