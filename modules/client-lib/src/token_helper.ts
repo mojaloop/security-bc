@@ -104,13 +104,17 @@ export class TokenHelper {
 
         const signingKey = key.getPublicKey();
 
-        const decoded = jwt.verify(accessToken, signingKey, verify_opts) as Jwt;
+        try {
+            const decoded = jwt.verify(accessToken, signingKey, verify_opts) as Jwt;
 
-        if (!decoded) {
+            if (!decoded) {
+                return false;
+            }
+            return true;
+        }catch(err){
             return false;
         }
 
-        return true;
     }
 
 
