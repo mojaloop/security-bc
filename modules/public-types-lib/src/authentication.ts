@@ -29,6 +29,22 @@
  ******/
 "use strict"
 
-export * from "./errors";
-export * from "./authorization";
-export * from "./authentication";
+/*
+Authentication specific
+*/
+
+export type IAMLoginResponse = {
+    success: boolean;
+    scope: string | null;
+    roles: string[];
+    expires_in_secs: number;
+}
+
+export type TokenEndpointResponse = {
+    token_type: string; // "Bearer"
+    scope: string | null;
+    access_token: string;
+    expires_in: number;
+    refresh_token: string | null;
+    refresh_token_expires_in: number | null;
+}

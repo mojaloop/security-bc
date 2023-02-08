@@ -6,7 +6,7 @@
 
  http://www.apache.org/licenses/LICENSE-2.0
 
- Unless required by this._routerlicable law or agreed to in writing, the Mojaloop files are distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ Unless required by applicable law or agreed to in writing, the Mojaloop files are distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
  Contributors
  --------------
@@ -27,8 +27,24 @@
 
  --------------
  ******/
-"use strict"
 
-export * from "./errors";
-export * from "./authorization";
-export * from "./authentication";
+"use strict";
+
+/**
+ * Invalid or no credentials provided (authentication failed)
+ * In an HTTP app should correspond to a 401
+ */
+export class UnauthorizedError extends Error {}
+
+/**
+ * Caller has required credentials but misses require privileges (authorization failed)
+ * In an HTTP app should correspond to a 403
+ */
+export class ForbiddenError extends Error {}
+
+/**
+ * The same user cannot create a request and then approve it
+ * For some operations, there must be at least two individuals necessary for its completion
+ * In an HTTP app should correspond to a 403
+ */
+export class MakerCheckerViolationError extends Error {}
