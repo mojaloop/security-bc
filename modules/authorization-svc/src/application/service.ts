@@ -30,6 +30,7 @@
 
 "use strict"
 
+import {defaultDevRoles} from "../dev_defaults";
 import {existsSync} from "fs";
 import {Server} from "http";
 import express from "express";
@@ -90,10 +91,24 @@ export class Service {
             }
             authNRepo = new FileAuthorizationRepo(AUTHZ_STORAGE_FILE_PATH, logger);
             await authNRepo.init();
+
+            // hard insert dev defaults into the repository
+            if (!PRODUCTION_MODE) {
+                if((await authNRepo.fetchAllPlatformRoles()).length <=0 ){
+                    this.logger.warn("In PRODUCTION_MODE and no platformRoles found - creating default platformRole(s)...");
+                    for(const role of defaultDevRoles){
+                        await authNRepo.storePlatformRole(role);
+                    }
+                }
+            }
         }
         this.authNRepo = authNRepo;
 
         this.authorizationAggregate = new AuthorizationAggregate(this.authNRepo, this.logger);
+
+        if (!PRODUCTION_MODE && ! await this.authorizationAggregate.getAllRoles()) {
+            // create default roles
+        }
 
         this.setupAndStartExpress();
     }

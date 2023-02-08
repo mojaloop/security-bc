@@ -27,36 +27,45 @@
 
  --------------
  ******/
+"use strict";
 
-"use strict"
+import { ConfigParameterTypes } from "@mojaloop/platform-configuration-bc-public-types-lib";
+import {
+    ConfigurationClient,
+    DefaultConfigProvider
+} from "@mojaloop/platform-configuration-bc-client-lib";
 
-
-import {IAMLoginResponse} from "@mojaloop/security-bc-public-types-lib";
-
-export interface IAMAuthenticationAdapter {
-    init(): Promise<void>;
-    loginUser(client_id:string, client_secret:string|null, username:string, password:string): Promise<IAMLoginResponse>;
-    loginApp(client_id:string, client_secret:string): Promise<IAMLoginResponse>;
-
-    userExists(username:string):Promise<boolean>;
-    appExists(client_id:string):Promise<boolean>;
+if(!process.env.npm_package_version){
+    throw new Error("This application must be launched by npm");
 }
 
+// configs - constants / code dependent
+const BC_NAME = "security-bc";
+const APP_NAME = "authentication-svc";
+const APP_VERSION = process.env.npm_package_version || "0.0.0";
+const CONFIGSET_VERSION = "0.0.3";
 
-export interface ICryptoAuthenticationAdapter {
-    init(): Promise<void>;
-    generateJWT(additionalPayload:any, sub:string, aud:string, lifeInSecs:number):Promise<string>;
-    getJwsKeys():Promise<any[]>; // returns an JWS object array, no need to type it
-    // generateRandomToken(length:number):Promise<string>;
+// configs - non-constants
+const ENV_NAME = process.env["ENV_NAME"] || "dev";
+
+// use default url from PLATFORM_CONFIG_BASE_SVC_URL env var
+const defaultConfigProvider: DefaultConfigProvider = new DefaultConfigProvider();
+const configClient = new ConfigurationClient(ENV_NAME, BC_NAME, APP_NAME, APP_VERSION, CONFIGSET_VERSION, defaultConfigProvider);
+
+export const configKeys = {
+    "ROLES_FROM_IAM_PROVIDER": "ROLES_FROM_IAM_PROVIDER"
 }
 
+/*
+* Add application parameters here
+* */
+configClient.appConfigs.addNewParam(
+        configKeys.ROLES_FROM_IAM_PROVIDER,
+        ConfigParameterTypes.BOOL,
+        false,
+        "Enable fetching of role association from the connected IAM prodiver (instead of the builtin authorization service)"
+);
 
-export interface ILocalRoleAssociationRepo {
-    init(): Promise<void>;
 
-    fetchUserRoles(username:string): Promise<string[]>;
-    fetchApplicationRoles(clientId: string): Promise<string[]>;
+export default configClient;
 
-    storeUserRoles(username: string, roles: string[]): Promise<void>;
-    storeApplicationRoles(clientId: string, roles: string[]): Promise<void>;
-}

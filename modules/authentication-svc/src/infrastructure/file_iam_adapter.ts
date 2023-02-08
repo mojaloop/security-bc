@@ -28,15 +28,14 @@
  --------------
  ******/
 
-'use strict'
+"use strict";
 
 import { watch } from "node:fs";
 import {IAMAuthenticationAdapter} from "../domain/interfaces";
-import {readFile, stat, writeFile} from "fs/promises";
-import fs, {existsSync} from "fs";
+import {readFile, writeFile} from "fs/promises";
+import fs from "fs";
 import {IAMLoginResponse} from "@mojaloop/security-bc-public-types-lib";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {log} from "util";
 
 const FIXED_EXPIRES_IN_SECS = 3600;
 
@@ -52,12 +51,12 @@ class AppRecord{
     roles: string[];
 }
 
-
 export class FileIAMAdapter implements IAMAuthenticationAdapter{
-    private _logger:ILogger;
-    private _filePath: string;
-    private _users:Map<string, UserRecord> = new Map<string, UserRecord>();
-    private _apps:Map<string, AppRecord> = new Map<string, AppRecord>();
+    private readonly _logger:ILogger;
+    private readonly _filePath: string;
+    private readonly _users:Map<string, UserRecord> = new Map<string, UserRecord>();
+    private readonly _apps:Map<string, AppRecord> = new Map<string, AppRecord>();
+    private _watching = false;
 
     constructor(filePath:string, logger:ILogger) {
         this._logger = logger.createChild(this.constructor.name);
@@ -120,6 +119,7 @@ export class FileIAMAdapter implements IAMAuthenticationAdapter{
             };
             const strContents = JSON.stringify(obj, null, 4);
             await writeFile(this._filePath, strContents, "utf8");
+            this._ensureIsWatching();
         }catch (e) {
             this._logger.error(e, "cannot write FileIAMAdapter storage file");
             throw new Error("cannot write FileIAMAdapter storage file");
@@ -142,32 +142,40 @@ export class FileIAMAdapter implements IAMAuthenticationAdapter{
         }
 
 
-        let fsWait:NodeJS.Timeout | undefined; // debounce wait
+        this._ensureIsWatching();
+    }
+
+    private _ensureIsWatching(){
+        if (this._watching) return;
+
+        let fsWait: NodeJS.Timeout | undefined; // debounce wait
         watch(this._filePath, async (eventType, filename) => {
-            if (eventType === "change") {
+            if (eventType==="change") {
                 if (fsWait) return;
                 fsWait = setTimeout(() => {
                     fsWait = undefined;
                 }, 100);
-               this._logger.info(`FileIAMAdapter file changed,  with file path: "${this._filePath}" - reloading...`);
-               await this._loadFromFile();
+                this._logger.info(`FileIAMAdapter file changed,  with file path: "${this._filePath}" - reloading...`);
+                await this._loadFromFile();
             }
         });
-
+        this._watching = true;
     }
 
-    async createApp(client_id: string, client_secret: string | null):Promise<boolean>{
-        if(this._users.has(client_id)){
+    async createApp(client_id: string, client_secret: string | null, roles?: string[]):Promise<boolean>{
+        if(this._apps.has(client_id)){
             return false;
         }
         const appRec = new AppRecord();
         appRec.client_id = client_id;
         appRec.client_secret = client_secret;
+        if (roles) appRec.roles = roles;
         this._apps.set(client_id, appRec);
 
         await this._saveToFile();
         return true;
     }
+
 
     appCount():number{
         return this._apps.size;
@@ -177,26 +185,15 @@ export class FileIAMAdapter implements IAMAuthenticationAdapter{
         return this._apps.has(client_id);
     }
 
-    async createUser(username: string, password: string):Promise<boolean>{
+    async createUser(username: string, password: string, roles?:string[]):Promise<boolean>{
         if(this._users.has(username)){
             return false;
         }
         const userRec = new UserRecord();
         userRec.username = username;
         userRec.password = password;
+        if(roles) userRec.roles = roles;
         this._users.set(userRec.username, userRec);
-
-        await this._saveToFile();
-        return true;
-    }
-
-    async addRolesToUser(username:string, roleIds:string[]):Promise<boolean>{
-        const user = this._users.get(username);
-        if(!user){
-            return false;
-        }
-
-        user.roles.push(...roleIds);
 
         await this._saveToFile();
         return true;

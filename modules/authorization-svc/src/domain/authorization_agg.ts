@@ -217,8 +217,9 @@ export class AuthorizationAggregate{
         }
 
         if((role.privileges && role.privileges.length>0)
-                || (role.memberUsers && role.memberUsers.length>0)
-                || (role.memberApps && role.memberApps.length>0)){
+                // || (role.memberUserIds && role.memberUserIds.length>0)
+                // || (role.memberAppIds && role.memberAppIds.length>0)
+        ){
             throw new NewRoleWithPrivsUsersOrAppsError();
         }
 

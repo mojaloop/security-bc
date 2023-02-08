@@ -1,11 +1,11 @@
-FROM node:16.13-alpine as builder
+FROM node:18.13-alpine as builder
 
 # Create app directory
 WORKDIR /app
 
 # build requirements
 RUN apk --no-cache add git
-RUN apk add --no-cache -t build-dependencies make gcc g++ python3 libtool libressl-dev openssl-dev autoconf automake \
+RUN apk add --no-cache -t build-dependencies bash make gcc g++ python3 libtool lz4-dev librdkafka openssl-dev autoconf automake \
     && cd $(npm root -g)/npm \
     && npm config set unsafe-perm true \
     && npm install -g node-gyp
@@ -17,15 +17,18 @@ COPY package*.json ./
 #RUN npm ci --only=production
 RUN npm install
 
-# Bundle app source
-COPY tsconfig.json ./
-COPY src ./src
+# Bundle tsconfig.json from the root of the monorepo (per package files use extends)
+COPY ../../tsconfig.json ./
+CMD ls -la
 
+# Bundle app source
+COPY src ./src
+CMD ls -la
 # build
 RUN npm run build
 
 
-FROM node:16.13-alpine
+FROM node:18.13-alpine
 WORKDIR /app
 
 COPY --from=builder /app .

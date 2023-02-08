@@ -28,35 +28,18 @@
  --------------
  ******/
 
-"use strict"
+"use strict";
 
+export const defaultDevUsers = [
+	{id:"user", username: "user", password: "superPass", roles: ["hub_operator"]},
+	{id: "admin", username: "admin", password: "superMegaPass", roles:["admin"]},
+];
 
-import {IAMLoginResponse} from "@mojaloop/security-bc-public-types-lib";
-
-export interface IAMAuthenticationAdapter {
-    init(): Promise<void>;
-    loginUser(client_id:string, client_secret:string|null, username:string, password:string): Promise<IAMLoginResponse>;
-    loginApp(client_id:string, client_secret:string): Promise<IAMLoginResponse>;
-
-    userExists(username:string):Promise<boolean>;
-    appExists(client_id:string):Promise<boolean>;
-}
-
-
-export interface ICryptoAuthenticationAdapter {
-    init(): Promise<void>;
-    generateJWT(additionalPayload:any, sub:string, aud:string, lifeInSecs:number):Promise<string>;
-    getJwsKeys():Promise<any[]>; // returns an JWS object array, no need to type it
-    // generateRandomToken(length:number):Promise<string>;
-}
-
-
-export interface ILocalRoleAssociationRepo {
-    init(): Promise<void>;
-
-    fetchUserRoles(username:string): Promise<string[]>;
-    fetchApplicationRoles(clientId: string): Promise<string[]>;
-
-    storeUserRoles(username: string, roles: string[]): Promise<void>;
-    storeApplicationRoles(clientId: string, roles: string[]): Promise<void>;
-}
+// Applications that can't login on their own have a null secret and no roles
+// Ex: UIs or API's that always call other services using the caller/user token
+export const defaultDevApplications = [
+	{client_id: "security-bc-ui", client_secret: null},
+	{client_id: "participants-bc-participants-svc", client_secret: "superServiceSecret", roles:["participants-bc-participants-svc"]},
+	{client_id: "accounts-and-balances-bc-coa-grpc-svc", client_secret: "superServiceSecret", roles:["accounts-and-balances-bc-coa-grpc-svc"]},
+	{client_id: "accounts-and-balances-bc-builtinledger-grpc-svc", client_secret: "superServiceSecret", roles:["accounts-and-balances-bc-builtinledger-grpc-svc"]},
+]

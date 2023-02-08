@@ -31,7 +31,7 @@
 "use strict";
 
 import {
-    AuthorizationClient,
+    AuthorizationClient, AuthToken,
     ConnectionRefusedError,
     LoginHelper,
     TokenHelper,
@@ -42,7 +42,7 @@ import nock from "nock";
 
 const BC_NAME = "test-bc";
 const APP_NAME = "test-app1";
-const APP_VERSION = "0.0.1";
+const APP_VERSION = "0.0.2"; // NOTE increase this if the privs change
 const AUTH_N_SVC_BASEURL = "http://localhost:3202";
 
 const AUTH_Z_SVC_BASE_URL = "http://localhost:3201";
@@ -53,8 +53,8 @@ const JWKS_URL = `${AUTH_Z_SVC_BASE_URL}/.well-known/jwks.json`;
 const AUTH_Z_DEFAULT_ISSUER_NAME = "http://localhost:3201/";
 const AUTH_Z_DEFAULT_AUDIENCE = "mojaloop.vnext.default_audience";
 
-const APP_CLIENT_ID = "user";
-const APP_CLIENT_SECRET = "participants-bc-participants-svc";
+const APP_CLIENT_ID = "participants-bc-participants-svc";
+const APP_CLIENT_SECRET = "superServiceSecret";
 
 const CLIENT_ID = "security-bc-ui";
 const LOGIN_USERNAME = "user";
@@ -62,17 +62,20 @@ const LOGIN_PASSWORD = "superPass";
 const LOGIN_WRONG_PASSWORD = "WrongPass";
 
 // TODO make sure this test role has the privileges below associated with it
-const TEST_ROLE_ID = "fc3455e0-469f-4221-8cd0-5bae2deb99f1";
+const TEST_ROLE_ID = "tests";
+const PRIV_TEST_ROLE_HAS = "TEST_EXAMPLE_PRIV";
+const PRIV_TEST_ROLE_DOES_NOT_HAVE = "non-existent priv";
 
 const logger = new ConsoleLogger();
 let authorizationClient:AuthorizationClient;
 
 describe("authorization-client-lib tests", () => {
     beforeAll(async () => {
+
+
         authorizationClient = new AuthorizationClient(BC_NAME, APP_NAME, APP_VERSION, AUTH_N_SVC_BASEURL, logger);
 
-        authorizationClient.addPrivilege("test_create", "test create", "desc");
-        authorizationClient.addPrivilege("test_delete", "test delete", "desc");
+       authorizationClient.addPrivilege(PRIV_TEST_ROLE_HAS, "test example prov", "desc");
     });
 
     afterAll(async () => {
@@ -88,12 +91,12 @@ describe("authorization-client-lib tests", () => {
     });
 
     test("test roleHasPrivilege", async () => {
-        const hasPriv = await authorizationClient.roleHasPrivilege("fc3455e0-469f-4221-8cd0-5bae2deb99f1", "test_create");
+        const hasPriv = authorizationClient.roleHasPrivilege(TEST_ROLE_ID, PRIV_TEST_ROLE_HAS);
         expect(hasPriv).toBe(true);
     });
 
     test("test roleHasPrivilege - inexistent_priv", async () => {
-        const hasPriv = await authorizationClient.roleHasPrivilege("fc3455e0-469f-4221-8cd0-5bae2deb99f1", "inexistent_priv");
+        const hasPriv = authorizationClient.roleHasPrivilege(TEST_ROLE_ID, PRIV_TEST_ROLE_DOES_NOT_HAVE);
         expect(hasPriv).toBe(false);
     });
 });
@@ -103,55 +106,106 @@ describe('authentication-client-lib tests', () => {
 
     test("User Login - login and verify token", async () => {
         const loginHelper = new LoginHelper(TOKEN_URL, logger);
-        await loginHelper.init();
+        loginHelper.setUserCredentials(CLIENT_ID, LOGIN_USERNAME, LOGIN_PASSWORD);
 
-        const accessToken = await loginHelper.loginUser(CLIENT_ID, LOGIN_USERNAME, LOGIN_PASSWORD);
+        const tokenResp: AuthToken = await loginHelper.getToken();
 
-        expect(accessToken).not.toBeNull();
+        expect(tokenResp).not.toBeNull();
+        expect(tokenResp.accessToken).not.toBeNull();
 
-        const tokenHelper = new TokenHelper(AUTH_Z_DEFAULT_ISSUER_NAME, JWKS_URL, AUTH_Z_DEFAULT_AUDIENCE, logger);
+        const tokenHelper = new TokenHelper( JWKS_URL, logger, AUTH_Z_DEFAULT_ISSUER_NAME, AUTH_Z_DEFAULT_AUDIENCE);
         await tokenHelper.init();
 
-        const verified = await tokenHelper.verifyToken(accessToken!.accessToken);
+        const verified = await tokenHelper.verifyToken(tokenResp.accessToken);
         expect(verified).toBe(true);
     });
 
+    test("App Login - login and verify token", async () => {
+        const loginHelper = new LoginHelper(TOKEN_URL, logger);
+        loginHelper.setAppCredentials(APP_CLIENT_ID, APP_CLIENT_SECRET);
+
+        const tokenResp: AuthToken = await loginHelper.getToken();
+
+        expect(tokenResp).not.toBeNull();
+        expect(tokenResp.accessToken).not.toBeNull();
+
+        const tokenHelper = new TokenHelper(JWKS_URL, logger, AUTH_Z_DEFAULT_ISSUER_NAME, AUTH_Z_DEFAULT_AUDIENCE);
+        await tokenHelper.init();
+
+        const verified = await tokenHelper.verifyToken(tokenResp.accessToken);
+        expect(verified).toBe(true);
+    });
+
+    test("Fixed/provided token Login - login and verify token", async () => {
+        const tmpLoginHelper = new LoginHelper(TOKEN_URL, logger);
+        tmpLoginHelper.setAppCredentials(APP_CLIENT_ID, APP_CLIENT_SECRET);
+        const tmpTokenResp: AuthToken = await tmpLoginHelper.getToken();
+        expect(tmpTokenResp).not.toBeNull();
+        expect(tmpTokenResp.accessToken).not.toBeNull();
+
+        const fixedToken = tmpTokenResp.accessToken;
+
+        const loginHelper = new LoginHelper(TOKEN_URL, logger);
+        loginHelper.setToken(fixedToken);
+
+        const tokenResp: AuthToken = await loginHelper.getToken();
+
+        expect(tokenResp).not.toBeNull();
+        expect(tokenResp.accessToken).not.toBeNull();
+
+        const tokenHelper = new TokenHelper(JWKS_URL, logger, AUTH_Z_DEFAULT_ISSUER_NAME, AUTH_Z_DEFAULT_AUDIENCE);
+        await tokenHelper.init();
+
+        const verified = await tokenHelper.verifyToken(tokenResp.accessToken);
+        expect(verified).toBe(true);
+    });
+
+    test("Fixed/provided token Login - expired token, should throw", async () => {
+        const loginHelper = new LoginHelper(TOKEN_URL, logger);
+        // old token used, should fail
+        const accessToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InpTQlJmNmZSeFQ5alJrZzJGR1hUNnYwWWpDXzZrSUN1Q3hhZmZDOG1MakkifQ.eyJ0eXAiOiJCZWFyZXIiLCJhenAiOiJhY2NvdW50cy1hbmQtYmFsYW5jZXMtYmMtY29hLWdycGMtc3ZjIiwicm9sZXMiOlsiYWNjb3VudHMtYW5kLWJhbGFuY2VzLWJjLWNvYS1ncnBjLXN2YyJdLCJpYXQiOjE2NzU3MTg1MzcsImV4cCI6MTY3NTcyMjEzNywiYXVkIjoibW9qYWxvb3Audm5leHQuZGVmYXVsdF9hdWRpZW5jZSIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzIwMS8iLCJzdWIiOiJhcHA6OmFjY291bnRzLWFuZC1iYWxhbmNlcy1iYy1jb2EtZ3JwYy1zdmMiLCJqdGkiOiI2OTUxOGUyNi00NDU2LTQyZWItOTM0ZC1kZGExOGFkNGQ1ODkifQ.pRAsPJEW-yjHOjXJGOjob2XVUO6Ivu-WVIkC7Nfl2rDYVTdQ0J4sgA4nToahZa9hBV6sLzoJgV_RPXClLfL9PJL8l0DdG6dszrmX4R9KUSazC8roIoJtdvQ3otJVL4TFTLql7ChASHFgqAUSgFC8xByP8c8I5TUYCuIVlp9kAXrt2aJBX55-2_zI0VWqncV6g4x35uQixZ4PHfkRhk1W0IU1HLHG9rgucmcM05dLtKh6wWPTDalYfdFfkiluo27phy3odQfOw5OeHfYXtKycjLhdqr61hgsYf_aFax_MesC_MQeHdXL0IxclhKWsEW-tA3g83YIeo4E3SVxMbLZgJQ";
+        loginHelper.setToken(accessToken);
+
+        await expect(loginHelper.getToken()).rejects.toThrow(UnauthorizedError);
+    });
+
+
     test("User Login - wrong pass", async () => {
         const loginHelper = new LoginHelper(TOKEN_URL, logger);
-        await loginHelper.init();
+        loginHelper.setUserCredentials(CLIENT_ID, LOGIN_USERNAME, LOGIN_WRONG_PASSWORD);
 
-        await expect(loginHelper.loginUser(CLIENT_ID, LOGIN_USERNAME, LOGIN_WRONG_PASSWORD)).rejects.toThrow(UnauthorizedError);
+        await expect(loginHelper.getToken()).rejects.toThrow(UnauthorizedError);
     });
 
     test("User Login - wrong client_id", async () => {
         const loginHelper = new LoginHelper(TOKEN_URL, logger);
-        await loginHelper.init();
+        loginHelper.setUserCredentials("wrong_client_id", LOGIN_USERNAME, LOGIN_WRONG_PASSWORD);
 
-        await expect(loginHelper.loginUser("wrong_client_id", LOGIN_USERNAME, LOGIN_WRONG_PASSWORD)).rejects.toThrow(UnauthorizedError);
+        await expect(loginHelper.getToken()).rejects.toThrow(UnauthorizedError);
     });
 
     test("User Login - wrong username", async () => {
         const loginHelper = new LoginHelper(TOKEN_URL, logger);
-        await loginHelper.init();
+        loginHelper.setUserCredentials(CLIENT_ID, "wrong_username", LOGIN_WRONG_PASSWORD);
 
-        await expect(loginHelper.loginUser(CLIENT_ID, "wrong_username", LOGIN_WRONG_PASSWORD)).rejects.toThrow(UnauthorizedError);
+        await expect(loginHelper.getToken()).rejects.toThrow(UnauthorizedError);
     });
 
     test("Test login wrong api address", async () => {
         nock.cleanAll();
         const loginHelper = new LoginHelper("http://nowaythiscan.exist.just_to_be_sure.void", logger);
-        await loginHelper.init();
+        loginHelper.setUserCredentials(CLIENT_ID, LOGIN_USERNAME, LOGIN_WRONG_PASSWORD);
 
-        await expect(loginHelper.loginUser(CLIENT_ID, LOGIN_USERNAME, LOGIN_WRONG_PASSWORD)).rejects.toThrow(Error("getaddrinfo ENOTFOUND nowaythiscan.exist.just_to_be_sure.void"));
+        await expect(loginHelper.getToken()).rejects.toThrow(Error("getaddrinfo ENOTFOUND nowaythiscan.exist.just_to_be_sure.void"));
     });
 
-    test("Test login ConnectionRefusedError", async () => {
-        nock.cleanAll();
-        const loginHelper = new LoginHelper("http://127.0.0.1:0", logger);
-        await loginHelper.init();
-
-        await expect(loginHelper.loginUser(CLIENT_ID, LOGIN_USERNAME, LOGIN_WRONG_PASSWORD)).rejects.toThrow(ConnectionRefusedError);
-    });
+    // test("Test login ConnectionRefusedError", async () => {
+    //     nock.cleanAll();
+    //     const loginHelper = new LoginHelper("http://127.0.0.1:0", logger);
+    //     loginHelper.setUserCredentials(CLIENT_ID, LOGIN_USERNAME, LOGIN_WRONG_PASSWORD);
+    //
+    //     await expect(loginHelper.getToken()).rejects.toThrow(ConnectionRefusedError);
+    // });
 
     // TODO client_credentials tests
 

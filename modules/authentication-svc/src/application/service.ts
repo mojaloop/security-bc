@@ -30,24 +30,24 @@
 
 "use strict";
 
-
+import {Server} from "http";
+import {existsSync} from "fs";
 import express from "express";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {IAMAuthenticationAdapter, ICryptoAuthenticationAdapter} from "../domain/interfaces";
+import {LocalRolesAssociationRepo} from "../infrastructure/local_roles_repo";
+import {IAMAuthenticationAdapter, ICryptoAuthenticationAdapter, ILocalRoleAssociationRepo} from "../domain/interfaces";
 import {FileIAMAdapter} from "../infrastructure/file_iam_adapter";
-import {SimpleCryptoAdapter} from "../infrastructure/simple_crypto_adapter";
-import {AuthenticationAggregate} from "../domain/authentication_agg";
+import {AuthenticationAggregate, AuthenticationAggregateOptions} from "../domain/authentication_agg";
 import {LogLevel} from "@mojaloop/logging-bc-public-types-lib/dist/index";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib/dist/index";
 import {AuthenticationRoutes} from "./authentication_routes";
-import {Server} from "http";
-import {existsSync} from "fs";
 import {SimpleCryptoAdapter2} from "../infrastructure/simple_crypto_adapter2";
 
-const BC_NAME = "security-bc";
+// get configClient from dedicated file
+import configClient, {configKeys} from "./config";
+import {defaultDevApplications, defaultDevUsers} from "../dev_defaults";
 
-const APP_NAME = "authentication-svc";
-const APP_VERSION = process.env.npm_package_version || "0.0.1";
+// service constants
 const PRODUCTION_MODE = process.env["PRODUCTION_MODE"] || false;
 const LOG_LEVEL:LogLevel = process.env["LOG_LEVEL"] as LogLevel || LogLevel.DEBUG;
 
@@ -57,8 +57,10 @@ const KAFKA_URL = process.env["KAFKA_URL"] || "localhost:9092";
 //const KAFKA_AUDITS_TOPIC = process.env["KAFKA_AUDITS_TOPIC"] || "audits";
 const KAFKA_LOGS_TOPIC = process.env["KAFKA_LOGS_TOPIC"] || "logs";
 
-const IAM_STORAGE_FILE_PATH = process.env["IAM_STORAGE_FILE_PATH"] || "/app/data/authN_TempStorageFile.json";
+const IAM_STORAGE_FILE_PATH = process.env["IAM_STORAGE_FILE_PATH"] || "/app/data/authN_TempIAMStorageFile.json";
+const ROLES_STORAGE_FILE_PATH = process.env["ROLES_STORAGE_FILE_PATH"] || "/app/data/authN_TempRolesStorageFile.json";
 const PRIVATE_CERT_PEM_FILE_PATH = process.env["PRIVATE_CERT_PEM_FILE_PATH"] || "/app/data/private.pem";
+
 const TOKEN_LIFE_SECS = process.env["TOKEN_LIFE_SECS"] ? parseInt(process.env["TOKEN_LIFE_SECS"]) : 3600;
 const DEFAULT_AUDIENCE = process.env["DEFAULT_AUDIENCE"] || "mojaloop.vnext.default_audience";
 
@@ -75,22 +77,44 @@ export class Service {
     static logger: ILogger;
     static iam:IAMAuthenticationAdapter;
     static crypto:ICryptoAuthenticationAdapter;
+    static localRoleAssociationRepo: ILocalRoleAssociationRepo | null;
     static authAgg: AuthenticationAggregate;
     static expressServer: Server;
 
-    static async start(logger?: ILogger, iamAdapter?:IAMAuthenticationAdapter, cryptoAdapter?:ICryptoAuthenticationAdapter):Promise<void>{
+    static async start(
+        logger?: ILogger, iamAdapter?:IAMAuthenticationAdapter,
+        cryptoAdapter?:ICryptoAuthenticationAdapter, localRoleAssociationRepo?: ILocalRoleAssociationRepo
+    ):Promise<void>{
+        console.log(`Service starting with PID: ${process.pid}`);
+
+        /// start config client - this is not mockable (can use STANDALONE MODE if desired)
+        await configClient.init();
+        await configClient.bootstrap(true);
+        await configClient.fetch();
+
         if (!logger) {
             logger = new KafkaLogger(
-                    BC_NAME,
-                    APP_NAME,
-                    APP_VERSION,
-                    kafkaProducerOptions,
-                    KAFKA_LOGS_TOPIC,
-                    LOG_LEVEL
+                configClient.boundedContextName,
+                configClient.applicationName,
+                configClient.applicationVersion,
+                kafkaProducerOptions,
+                KAFKA_LOGS_TOPIC,
+                LOG_LEVEL
             );
-            await (logger as KafkaLogger).start();
+            await (logger as KafkaLogger).init();
         }
         globalLogger = this.logger = logger.createChild("Service");
+
+        // construct the aggregate options first, other things might need these options
+        const aggregateOptions: AuthenticationAggregateOptions = {
+            tokenLifeSecs: TOKEN_LIFE_SECS,
+            defaultAudience: DEFAULT_AUDIENCE
+        };
+
+        const rolesFromIamProviderParam = configClient.appConfigs.getParam(configKeys.ROLES_FROM_IAM_PROVIDER);
+        if (rolesFromIamProviderParam) {
+            aggregateOptions.rolesFromIamProvider = rolesFromIamProviderParam.currentValue;
+        }
 
         if(!iamAdapter){
             // not sure why we would be running this FileIAMAdapter in production, but...
@@ -101,15 +125,19 @@ export class Service {
             iamAdapter = new FileIAMAdapter(IAM_STORAGE_FILE_PATH, this.logger);
             await iamAdapter.init();
 
+            // hard insert dev defaults into the repository
             if(!PRODUCTION_MODE){
                 if(!(iamAdapter as FileIAMAdapter).userCount()) {
-                    await (iamAdapter as FileIAMAdapter).createUser("user", "superPass");
-                    await (iamAdapter as FileIAMAdapter).createUser("admin", "superMegaPass");
+                    this.logger.warn("In PRODUCTION_MODE and no users found - creating default users...");
+                    for(const user of defaultDevUsers){
+                        await (iamAdapter as FileIAMAdapter).createUser(user.username, user.password, user.roles);
+                    }
                 }
-
                 if(!(iamAdapter as FileIAMAdapter).appCount()) {
-                    await (iamAdapter as FileIAMAdapter).createApp("security-bc-ui", null);
-                    await (iamAdapter as FileIAMAdapter).createApp("participants-bc-participants-svc", "superServiceSecret");
+                    this.logger.warn("In PRODUCTION_MODE and no apps found - creating default apps...");
+                    for (const app of defaultDevApplications) {
+                        await (iamAdapter as FileIAMAdapter).createApp(app.client_id, app.client_secret, app.roles);
+                    }
                 }
             }
         }
@@ -128,9 +156,22 @@ export class Service {
         }
         this.crypto = cryptoAdapter;
 
-        // construct the aggregate
-        this.authAgg = new AuthenticationAggregate(this.iam, this.crypto, TOKEN_LIFE_SECS, DEFAULT_AUDIENCE, this.logger);
+        if(!localRoleAssociationRepo && aggregateOptions.rolesFromIamProvider){
+            if (!existsSync(ROLES_STORAGE_FILE_PATH) && PRODUCTION_MODE) {
+                throw new Error("PRODUCTION_MODE and non existing IAM_STORAGE_FILE_PATH in: " + ROLES_STORAGE_FILE_PATH);
+            }
 
+            localRoleAssociationRepo = new LocalRolesAssociationRepo(ROLES_STORAGE_FILE_PATH, this.logger);
+            await localRoleAssociationRepo!.init();
+        }
+        this.localRoleAssociationRepo = localRoleAssociationRepo || null;
+
+        // construct the aggregate
+        try {
+            this.authAgg = new AuthenticationAggregate(this.iam, this.crypto, this.logger, this.localRoleAssociationRepo, aggregateOptions);
+        }catch(err){
+            await Service.stop();
+        }
 
         this.setupAndStartExpress();
     }

@@ -30,31 +30,58 @@
 
 "use strict"
 
-import {IAMAuthenticationAdapter, ICryptoAuthenticationAdapter} from "./interfaces";
+import {defaultDevApplications} from "../dev_defaults";
+import {IAMAuthenticationAdapter, ICryptoAuthenticationAdapter, ILocalRoleAssociationRepo} from "./interfaces";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {TokenEndpointResponse} from "@mojaloop/security-bc-public-types-lib";
 
 // These should later be put in configurations
 const ISSUER_NAME = "vNext Security BC - Authorization Svc";
-
-
 const REFRESH_TOKEN_LENGTH = 128;
 
 const SUPPORTED_GRANTS = ["password","client_credentials"];
+
+export type AuthenticationAggregateOptions = {
+    tokenLifeSecs?: number;
+    defaultAudience?: string;
+    rolesFromIamProvider?: boolean;
+}
+
+const AuthenticationAggregateDefaultOptions: AuthenticationAggregateOptions = {
+    tokenLifeSecs: 3600,
+    defaultAudience: "",
+    rolesFromIamProvider: false
+};
 
 export class AuthenticationAggregate{
     private _logger:ILogger
     private _iam:IAMAuthenticationAdapter;
     private _crypto:ICryptoAuthenticationAdapter;
-    private readonly _tokenLifeSecs:number;
-    private readonly _defaultAudience:string;
+    private readonly _localRolesRepo: ILocalRoleAssociationRepo | null;
+    private readonly _options: AuthenticationAggregateOptions;
 
-    constructor(iam:IAMAuthenticationAdapter, crypto:ICryptoAuthenticationAdapter, tokenLifeSecs:number, defaultAudience:string, logger:ILogger) {
+    constructor(iam:IAMAuthenticationAdapter, crypto:ICryptoAuthenticationAdapter, logger: ILogger, localRolesRepo: ILocalRoleAssociationRepo | null, options?: AuthenticationAggregateOptions) {
         this._logger = logger.createChild(this.constructor.name);
         this._iam = iam;
         this._crypto = crypto;
-        this._tokenLifeSecs = tokenLifeSecs;
-        this._defaultAudience = defaultAudience;
+        this._options = options || AuthenticationAggregateDefaultOptions;
+
+        // apply individual defaults if options were provided
+        if(options) {
+            if (!this._options.tokenLifeSecs){
+                this._options.tokenLifeSecs = AuthenticationAggregateDefaultOptions.tokenLifeSecs;
+            }
+            if (!this._options.defaultAudience){
+                this._options.defaultAudience = AuthenticationAggregateDefaultOptions.defaultAudience;
+            }
+            if (!this._options.rolesFromIamProvider) {
+                this._options.rolesFromIamProvider = AuthenticationAggregateDefaultOptions.rolesFromIamProvider;
+            }
+        }
+
+        if(this._options.rolesFromIamProvider && !this._localRolesRepo){
+            throw new Error("If using rolesFromIamProvider option, a valid ILocalRoleAssociationRepo must be provided");
+        }
     }
 
     async loginUser(client_id:string, client_secret:string | null, username:string, password:string, audience?:string, scope?:string):Promise<TokenEndpointResponse | null> {
@@ -63,18 +90,17 @@ export class AuthenticationAggregate{
             return null;
         }
 
-        const loginOk = await this._iam.loginUser(client_id, client_secret, username, password);
+        const loginResponse = await this._iam.loginUser(client_id, client_secret, username, password);
 
-        if (!loginOk.success) {
-            this._logger.info(`User Login FAILED for username: ${username} and client_id: ${client_id}`);
+        if (!loginResponse.success) {
+            this._logger.debug(`User Login FAILED for username: ${username} and client_id: ${client_id}`);
             return null;
         }
 
-        // TODO get roles from AuthN svc
+        // TODO get role association from AuthN if rolesFromIamProvider true
         const additionalPayload:any = {
             typ: "Bearer",
             azp: client_id,
-            roles: loginOk.roles,
             //testObj: "pedro1",
         };
 
@@ -82,11 +108,18 @@ export class AuthenticationAggregate{
             additionalPayload.scope = scope;
         }
 
+        if(this._options.rolesFromIamProvider){
+            const roles = await this._localRolesRepo!.fetchUserRoles(username);
+            additionalPayload.roles = roles;
+        }else{
+            additionalPayload.roles = loginResponse.roles;
+        }
+
         const accessCode = await this._crypto.generateJWT(
                 additionalPayload,
                 `user::${username}`,
-                audience || this._defaultAudience,
-                this._tokenLifeSecs
+                audience || this._options.defaultAudience!,
+                this._options.tokenLifeSecs!
         );
 
         // TODO verify return
@@ -94,7 +127,7 @@ export class AuthenticationAggregate{
             token_type: "Bearer",
             scope: null,
             access_token: accessCode,
-            expires_in: this._tokenLifeSecs,
+            expires_in: this._options.tokenLifeSecs!,
             refresh_token: null,
             refresh_token_expires_in: null
         }
@@ -108,9 +141,9 @@ export class AuthenticationAggregate{
             return null;
         }
 
-        const loginOk = await this._iam.loginApp(client_id, client_secret);
+        const loginResponse = await this._iam.loginApp(client_id, client_secret);
 
-        if (!loginOk.success) {
+        if (!loginResponse.success) {
             this._logger.info(`App Login FAILED for client_id: ${client_id}`);
             return null;
         }
@@ -118,18 +151,24 @@ export class AuthenticationAggregate{
         // TODO get roles from AuthN svc
         const additionalPayload:any = {
             typ: "Bearer",
-            azp: client_id,
-            roles: loginOk.roles,
+            azp: client_id
         };
         if(scope){
             additionalPayload.scope = scope;
         }
 
+        if (this._options.rolesFromIamProvider) {
+            const roles = await this._localRolesRepo!.fetchApplicationRoles(client_id);
+            additionalPayload.roles = roles;
+        } else {
+            additionalPayload.roles = loginResponse.roles;
+        }
+
         const accessCode = await this._crypto.generateJWT(
                 additionalPayload,
                 `app::${client_id}`,
-                audience || this._defaultAudience,
-                this._tokenLifeSecs
+                audience || this._options.defaultAudience!,
+                this._options.tokenLifeSecs!
         );
 
         // TODO verify return
@@ -137,7 +176,7 @@ export class AuthenticationAggregate{
             token_type: "Bearer",
             scope: null,
             access_token: accessCode,
-            expires_in: this._tokenLifeSecs,
+            expires_in: this._options.tokenLifeSecs!,
             refresh_token: null,
             refresh_token_expires_in: null
         }

@@ -43,6 +43,7 @@ export class FileAuthorizationRepo implements IAuthorizationRepository{
     private _logger: ILogger;
     private _appPrivs : Map<string, AppPrivileges> = new Map<string, AppPrivileges>();
     private _roles : Map<string, PlatformRole> = new Map<string, PlatformRole>();
+    private _watching = false;
 
     constructor(filePath:string, logger: ILogger) {
         this._logger = logger.createChild(this.constructor.name);
@@ -95,8 +96,8 @@ export class FileAuthorizationRepo implements IAuthorizationRepository{
                     labelName: rec.labelName,
                     description: rec.description,
                     privileges: rec.privileges,
-                    memberApps: rec.memberApps,
-                    memberUsers: rec.memberUsers
+                    // memberAppIds: rec.memberApps,
+                    // memberUserIds: rec.memberUsers
                 }
 
                 if (role.id && role.labelName ){
@@ -119,6 +120,7 @@ export class FileAuthorizationRepo implements IAuthorizationRepository{
             };
             const strContents = JSON.stringify(obj, null, 4);
             await writeFile(this._filePath, strContents, "utf8");
+            this._ensureIsWatching();
         }catch (e) {
             throw new Error("cannot rewrite FileConfigSetRepo storage file");
         }
@@ -133,6 +135,22 @@ export class FileAuthorizationRepo implements IAuthorizationRepository{
         return boundedContextName.toUpperCase()+"::"+applicationName.toUpperCase();
     }
 
+    private _ensureIsWatching() {
+        if(this._watching) return;
+
+        let fsWait: NodeJS.Timeout | undefined; // debounce wait
+        watch(this._filePath, async (eventType, filename) => {
+            if (eventType==="change") {
+                if (fsWait) return;
+                fsWait = setTimeout(() => {
+                    fsWait = undefined;
+                }, 100);
+                this._logger.info(`FileAuthorizationRepo file changed,  with file path: "${this._filePath}" - reloading...`);
+                await this._loadFromFile();
+            }
+        });
+        this._watching = true;
+    }
 
     async init(): Promise<void>{
         const exists = fs.existsSync(this._filePath);
@@ -150,17 +168,7 @@ export class FileAuthorizationRepo implements IAuthorizationRepository{
             this._logger.info(`FileAuthorizationRepo - loaded ${this._appPrivs.size} appPrivileges and ${this._roles.size} roles at init`);
         }
 
-        let fsWait:NodeJS.Timeout | undefined; // debounce wait
-        watch(this._filePath, async (eventType, filename) => {
-            if (eventType === "change") {
-                if (fsWait) return;
-                fsWait = setTimeout(() => {
-                    fsWait = undefined;
-                }, 100);
-                this._logger.info(`FileAuthorizationRepo file changed,  with file path: "${this._filePath}" - reloading...`);
-                await this._loadFromFile();
-            }
-        });
+        this._ensureIsWatching();
     }
 
 

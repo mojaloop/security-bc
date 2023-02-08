@@ -54,8 +54,9 @@ npm run start
 ```
 
 ## Docker build
+(Must be executed at the root of the monorepo)
 ```bash
-npm run docker:build
+docker build -f modules/authentication-svc/Dockerfile -t mojaloop/security-bc-authentication-svc:0.1.0 .
 ```
 
 ## Docker run (dev env)
