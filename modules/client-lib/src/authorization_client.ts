@@ -28,7 +28,8 @@
  --------------
  ******/
 
-"use strict"
+"use strict";
+
 import axios, { AxiosResponse, AxiosInstance, AxiosError } from "axios";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {AppPrivileges, IAuthorizationClient, Privilege} from "@mojaloop/security-bc-public-types-lib";

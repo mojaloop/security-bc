@@ -27,7 +27,7 @@
 
  --------------
  ******/
-"use strict"
+"use strict";
 
 export * from "./login_helper";
 export * from "./token_helper";

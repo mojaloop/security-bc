@@ -27,10 +27,7 @@
 
  --------------
  ******/
-"use strict"
-
-// for public types
-export class UnauthorizedError extends Error {}
+"use strict";
 
 export class MaxRetriesReachedError extends Error {}
 

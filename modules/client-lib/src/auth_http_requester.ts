@@ -41,12 +41,11 @@ NOTES on Fetch API usage and node version
 import {randomUUID} from "crypto";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
-import {TokenEndpointResponse} from "@mojaloop/security-bc-public-types-lib";
+import {TokenEndpointResponse, UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
 import {
 	ConnectionRefusedError,
 	MaxRetriesReachedError,
-	RequestTimeoutError,
-	UnauthorizedError
+	RequestTimeoutError
 } from "./types";
 
 const MAX_RETRIES = 3;
