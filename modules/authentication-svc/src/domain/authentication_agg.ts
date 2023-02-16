@@ -30,7 +30,7 @@
 
 "use strict"
 
-import {defaultDevApplications} from "../dev_defaults";
+
 import {IAMAuthenticationAdapter, ICryptoAuthenticationAdapter, ILocalRoleAssociationRepo} from "./interfaces";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {TokenEndpointResponse} from "@mojaloop/security-bc-public-types-lib";

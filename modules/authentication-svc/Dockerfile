@@ -1,32 +1,18 @@
-FROM node:18.13-alpine as builder
+FROM node:18.13.0-alpine AS builder
 
-# librdkafka build ref from https://gist.github.com/jaihind213/e82d41dc79f52cfa64ca32350bdb27df
-ENV LIBRD_VER=2.0.2
-
-# Create app directory
+# Create the project directory inside the container.
 WORKDIR /app
 
-# install main requirements
-RUN apk add --no-cache -t build-dependencies bash make wget git gcc g++ python3 libtool libgcc \
-	 musl-dev zlib-dev zstd zstd-libs zstd-dev libc-dev autoconf automake openssl pkgconfig
+RUN apk add --no-cache -t build-dependencies git make gcc g++ python3 libtool autoconf pkgconfig automake bash # wget tar xz
 
-## build and install librdkafka (removing unnecessary libs after)
-#RUN apk add --no-cache --virtual .make-deps musl-dev zlib-dev zstd-dev libc-dev \
-#    && wget https://github.com/edenhill/librdkafka/archive/v${LIBRD_VER}.tar.gz \
-#    && tar -xvf v${LIBRD_VER}.tar.gz && cd librdkafka-${LIBRD_VER} && ./configure --prefix /usr \
-#    && make && make install && make clean && rm -rf librdkafka-${LIBRD_VER} && rm -rf v${LIBRD_VER}.tar.gz \
-#    && apk del .make-deps
-
-#RUN cd $(npm root -g)/npm \
-#    && npm config set unsafe-perm true \
-#    && npm install -g node-gyp
-
-RUN npm config set unsafe-perm true && npm install -g node-gyp
+RUN cd $(npm root -g)/npm
+RUN npm config set unsafe-perm true
+RUN npm install -g node-gyp
 
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
 COPY package*.json ./
-COPY modules/authentication-svc/package*.json ./modules/authentication-svc/
 COPY modules/public-types-lib/package*.json ./modules/public-types-lib/
+COPY modules/authentication-svc/package*.json ./modules/authentication-svc/
 
 # If you are building your code for production
 #RUN npm ci --only=production

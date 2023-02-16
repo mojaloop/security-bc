@@ -1,31 +1,39 @@
-FROM node:18.13-alpine as builder
+FROM node:18.13.0-alpine AS builder
 
-# Create app directory
+# Create the project directory inside the container.
 WORKDIR /app
 
-# build requirements
-RUN apk --no-cache add git
-RUN apk add --no-cache -t build-dependencies bash make gcc g++ python3 libtool lz4-dev librdkafka openssl-dev autoconf automake \
-    && cd $(npm root -g)/npm \
-    && npm config set unsafe-perm true \
-    && npm install -g node-gyp
+RUN apk add --no-cache -t build-dependencies git make gcc g++ python3 libtool autoconf pkgconfig automake bash # wget tar xz
+
+RUN cd $(npm root -g)/npm
+RUN npm config set unsafe-perm true
+RUN npm install -g node-gyp
 
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
 COPY package*.json ./
+COPY modules/public-types-lib/package*.json ./modules/public-types-lib/
+COPY modules/authorization-svc/package*.json ./modules/authorization-svc/
 
 # If you are building your code for production
 #RUN npm ci --only=production
 RUN npm install
 
-# Bundle tsconfig.json from the root of the monorepo (per package files use extends)
-COPY ../../tsconfig.json ./
-CMD ls -la
+########################################
+# Copy code and build
 
-# Bundle app source
-COPY src ./src
-CMD ls -la
+# root tsconfig.json
+COPY tsconfig.json ./
+
+# copy required supporting modules/packages (especially private ones not published to npm)
+COPY modules/public-types-lib ./modules/public-types-lib
+
+# copy service code
+COPY modules/authorization-svc ./modules/authorization-svc
+
 # build
 RUN npm run build
+
+RUN ls -la ./modules/authorization-svc/dist
 
 
 FROM node:18.13-alpine
@@ -36,4 +44,4 @@ COPY --from=builder /app .
 # kafka handler, no http server yet
 EXPOSE 3202
 
-CMD [ "npm", "run", "service" ]
+CMD [ "npm", "run", "start:authorization-svc" ]

@@ -136,7 +136,7 @@ export class Service {
 
         this.expressServer = app.listen(portNum, () => {
             console.log(`🚀 Server ready at: http://localhost:${portNum}`);
-            this.logger.info("Authentication service started");
+            this.logger.info("Authorization service started");
         }).on("error", err => {
             this.logger.fatal(err);
             process.exit(9);
