@@ -108,10 +108,12 @@ export class TokenHelper {
             const decoded = jwt.verify(accessToken, signingKey, verify_opts) as Jwt;
 
             if (!decoded) {
+                this._logger.warn("Error verifying token, could not decode access token");
                 return false;
             }
             return true;
-        }catch(err){
+        }catch(err:any){
+            this._logger.warn(`Error verifying token: ${err.message}`);
             return false;
         }
 
