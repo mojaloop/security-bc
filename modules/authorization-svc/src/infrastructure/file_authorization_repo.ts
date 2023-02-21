@@ -44,6 +44,7 @@ export class FileAuthorizationRepo implements IAuthorizationRepository{
     private _appPrivs : Map<string, AppPrivileges> = new Map<string, AppPrivileges>();
     private _roles : Map<string, PlatformRole> = new Map<string, PlatformRole>();
     private _watching = false;
+    private _saving = false;
 
     constructor(filePath:string, logger: ILogger) {
         this._logger = logger.createChild(this.constructor.name);
@@ -114,6 +115,7 @@ export class FileAuthorizationRepo implements IAuthorizationRepository{
 
     private async _saveToFile():Promise<void>{
         try{
+            this._saving = true;
             const obj = {
                 appPrivileges: Array.from(this._appPrivs.values()),
                 platformRoles: Array.from(this._roles.values())
@@ -123,6 +125,8 @@ export class FileAuthorizationRepo implements IAuthorizationRepository{
             this._ensureIsWatching();
         }catch (e) {
             throw new Error("cannot rewrite FileConfigSetRepo storage file");
+        } finally {
+            this._saving = false;
         }
     }
 
@@ -140,6 +144,7 @@ export class FileAuthorizationRepo implements IAuthorizationRepository{
 
         let fsWait: NodeJS.Timeout | undefined; // debounce wait
         watch(this._filePath, async (eventType, filename) => {
+            if(this._saving) return;
             if (eventType==="change") {
                 if (fsWait) return;
                 fsWait = setTimeout(() => {

@@ -57,6 +57,7 @@ export class FileIAMAdapter implements IAMAuthenticationAdapter{
     private readonly _users:Map<string, UserRecord> = new Map<string, UserRecord>();
     private readonly _apps:Map<string, AppRecord> = new Map<string, AppRecord>();
     private _watching = false;
+    private _saving = false;
 
     constructor(filePath:string, logger:ILogger) {
         this._logger = logger.createChild(this.constructor.name);
@@ -113,6 +114,7 @@ export class FileIAMAdapter implements IAMAuthenticationAdapter{
 
     private async _saveToFile():Promise<void>{
         try{
+            this._saving = true;
             const obj = {
                 users: Array.from(this._users.values()),
                 apps: Array.from(this._apps.values())
@@ -123,6 +125,8 @@ export class FileIAMAdapter implements IAMAuthenticationAdapter{
         }catch (e) {
             this._logger.error(e, "cannot write FileIAMAdapter storage file");
             throw new Error("cannot write FileIAMAdapter storage file");
+        }finally {
+            this._saving = false;
         }
     }
 
@@ -150,6 +154,7 @@ export class FileIAMAdapter implements IAMAuthenticationAdapter{
 
         let fsWait: NodeJS.Timeout | undefined; // debounce wait
         watch(this._filePath, async (eventType, filename) => {
+            if (this._saving) return;
             if (eventType==="change") {
                 if (fsWait) return;
                 fsWait = setTimeout(() => {

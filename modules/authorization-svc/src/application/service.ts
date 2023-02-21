@@ -45,7 +45,7 @@ import {ExpressRoutes} from "./routes";
 
 const BC_NAME = "security-bc";
 const APP_NAME = "authorization-svc";
-const APP_VERSION = process.env.npm_package_version || "0.0.1";
+const APP_VERSION = process.env.npm_package_version || "0.0.0";
 const PRODUCTION_MODE = process.env["PRODUCTION_MODE"] || false;
 const LOG_LEVEL:LogLevel = process.env["LOG_LEVEL"] as LogLevel || LogLevel.DEBUG;
 
@@ -95,10 +95,12 @@ export class Service {
             // hard insert dev defaults into the repository
             if (!PRODUCTION_MODE) {
                 if((await authNRepo.fetchAllPlatformRoles()).length <=0 ){
-                    this.logger.warn("In PRODUCTION_MODE and no platformRoles found - creating default platformRole(s)...");
+                    this.logger.warn("In PRODUCTION_MODE and no platformRoles found - creating dev default platformRole(s)...");
                     for(const role of defaultDevRoles){
                         await authNRepo.storePlatformRole(role);
                     }
+                    const newCount = (await authNRepo.fetchAllPlatformRoles()).length;
+                    this.logger.info(`Created ${newCount} dev default platformRole(s)`);
                 }
             }
         }
@@ -136,7 +138,7 @@ export class Service {
 
         this.expressServer = app.listen(portNum, () => {
             console.log(`🚀 Server ready at: http://localhost:${portNum}`);
-            this.logger.info("Authorization service started");
+            this.logger.info(`Authorization service v: ${APP_VERSION} started`);
         }).on("error", err => {
             this.logger.fatal(err);
             process.exit(9);

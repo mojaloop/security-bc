@@ -62,6 +62,10 @@ export const defaultDevRoles:PlatformRole[] = [
 			"CREATE_FUNDS_WITHDRAWAL",
 			"APPROVE_FUNDS_DEPOSIT",
 			"APPROVE_FUNDS_WITHDRAWAL",
+			"COA_VIEW_ACCOUNT",
+			"COA_CREATE_ACCOUNT",
+			"BUILTIN_LEDGER_VIEW_ACCOUNT",
+			"BUILTIN_LEDGER_CREATE_ACCOUNT"
 		]
 	},
 	{
@@ -83,6 +87,17 @@ export const defaultDevRoles:PlatformRole[] = [
 			"CREATE_FUNDS_WITHDRAWAL",
 			"APPROVE_FUNDS_DEPOSIT",
 			"APPROVE_FUNDS_WITHDRAWAL",
+			"COA_CREATE_ACCOUNT",
+			"COA_CREATE_JOURNAL_ENTRY",
+			"COA_VIEW_ACCOUNT",
+			"COA_VIEW_JOURNAL_ENTRY",
+			"BUILTIN_LEDGER_CREATE_ACCOUNT",
+			"BUILTIN_LEDGER_CREATE_JOURNAL_ENTRY",
+			"BUILTIN_LEDGER_VIEW_ACCOUNT",
+			"BUILTIN_LEDGER_VIEW_JOURNAL_ENTRY",
+			"BUILTIN_LEDGER_DEACTIVATE_ACCOUNT",
+			"BUILTIN_LEDGER_REACTIVATE_ACCOUNT",
+			"BUILTIN_LEDGER_DELETE_ACCOUNT"
 		]
 	},{
 		id: "participants-bc-participants-svc",
@@ -95,7 +110,10 @@ export const defaultDevRoles:PlatformRole[] = [
 			"COA_CREATE_ACCOUNT",
 			"COA_CREATE_JOURNAL_ENTRY",
 			"COA_VIEW_ACCOUNT",
-			"COA_VIEW_JOURNAL_ENTRY"
+			"COA_VIEW_JOURNAL_ENTRY",
+			"BUILTIN_LEDGER_VIEW_ACCOUNT",
+			"BUILTIN_LEDGER_CREATE_ACCOUNT",
+
 		]
 	}, {
 		id: "accounts-and-balances-bc-coa-grpc-svc",
@@ -112,6 +130,24 @@ export const defaultDevRoles:PlatformRole[] = [
 			"BUILTIN_LEDGER_DEACTIVATE_ACCOUNT",
 			"BUILTIN_LEDGER_REACTIVATE_ACCOUNT",
 			"BUILTIN_LEDGER_DELETE_ACCOUNT"
+		]
+	}, {
+		id: "transfers-bc-command-handler-svc",
+		description: "transfers-bc-command-handler-svc roles",
+		labelName: "transfers-bc-command-handler-svc roles",
+		isExternal: false,
+		externalId: undefined,
+		isApplicationRole: true,
+		privileges: [
+			"VIEW_PARTICIPANT",
+			"COA_VIEW_ACCOUNT",
+			"COA_VIEW_JOURNAL_ENTRY",
+			"COA_CREATE_ACCOUNT",
+			"COA_CREATE_JOURNAL_ENTRY",
+			"BUILTIN_LEDGER_VIEW_ACCOUNT",
+			"BUILTIN_LEDGER_VIEW_JOURNAL_ENTRY",
+			"BUILTIN_LEDGER_CREATE_ACCOUNT",
+			"BUILTIN_LEDGER_CREATE_JOURNAL_ENTRY",
 		]
 	}
 

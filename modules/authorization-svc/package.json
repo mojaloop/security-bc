@@ -1,6 +1,6 @@
 {
   "name": "@mojaloop/security-bc-authorization-svc",
-  "version": "0.1.0",
+  "version": "0.1.4",
   "description": "mojaloop security authorization service",
   "license": "Apache-2.0",
   "homepage": "https://github.com/mojaloop/security-bc/tree/main/modules/authorization-svc",
@@ -19,7 +19,7 @@
 
   "scripts": {
     "start": "npm run service",
-    "start:dev": "npm run build && PLATFORM_CONFIG_BASE_SVC_URL=http://localhost:3100 AUTHZ_STORAGE_FILE_PATH=dist/authZ_TempStorageFile npm start",
+    "start:dev": "npm run build && PLATFORM_CONFIG_BASE_SVC_URL=http://localhost:3100 AUTHZ_STORAGE_FILE_PATH=dist/authZ_TempStorageFile.json npm start",
     "service": "node dist/application/index.js",
     "build": "tsc",
     "watch": "tsc -w --pretty",

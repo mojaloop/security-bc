@@ -61,10 +61,9 @@ const IAM_STORAGE_FILE_PATH = process.env["IAM_STORAGE_FILE_PATH"] || "/app/data
 const ROLES_STORAGE_FILE_PATH = process.env["ROLES_STORAGE_FILE_PATH"] || "/app/data/authN_TempRolesStorageFile.json";
 const PRIVATE_CERT_PEM_FILE_PATH = process.env["PRIVATE_CERT_PEM_FILE_PATH"] || "/app/data/private.pem";
 
-const TOKEN_LIFE_SECS = process.env["TOKEN_LIFE_SECS"] ? parseInt(process.env["TOKEN_LIFE_SECS"]) : 3600;
-const DEFAULT_AUDIENCE = process.env["DEFAULT_AUDIENCE"] || "mojaloop.vnext.default_audience";
-
-const ISSUER_NAME = "http://localhost:3201/";
+const AUTH_N_TOKEN_LIFE_SECS = process.env["AUTH_N_TOKEN_LIFE_SECS"] ? parseInt(process.env["AUTH_N_TOKEN_LIFE_SECS"]) : 3600;
+const AUTH_N_DEFAULT_AUDIENCE = process.env["AUTH_N_DEFAULT_AUDIENCE"] || "mojaloop.vnext.default_audience";
+const AUTH_N_ISSUER_NAME = process.env["AUTH_N_ISSUER_NAME"] || "http://localhost:3201";
 
 // kafka logger
 const kafkaProducerOptions = {
@@ -107,8 +106,8 @@ export class Service {
 
         // construct the aggregate options first, other things might need these options
         const aggregateOptions: AuthenticationAggregateOptions = {
-            tokenLifeSecs: TOKEN_LIFE_SECS,
-            defaultAudience: DEFAULT_AUDIENCE
+            tokenLifeSecs: AUTH_N_TOKEN_LIFE_SECS,
+            defaultAudience: AUTH_N_DEFAULT_AUDIENCE
         };
 
         const rolesFromIamProviderParam = configClient.appConfigs.getParam(configKeys.ROLES_FROM_IAM_PROVIDER);
@@ -122,24 +121,29 @@ export class Service {
                 throw new Error("PRODUCTION_MODE and non existing IAM_STORAGE_FILE_PATH in: "+IAM_STORAGE_FILE_PATH);
             }
 
-            iamAdapter = new FileIAMAdapter(IAM_STORAGE_FILE_PATH, this.logger);
-            await iamAdapter.init();
+            const fileIAMAdapter = new FileIAMAdapter(IAM_STORAGE_FILE_PATH, this.logger);
+            await fileIAMAdapter.init();
+
 
             // hard insert dev defaults into the repository
             if(!PRODUCTION_MODE){
-                if(!(iamAdapter as FileIAMAdapter).userCount()) {
-                    this.logger.warn("In PRODUCTION_MODE and no users found - creating default users...");
+                if(!fileIAMAdapter.userCount()) {
+                    this.logger.warn("In PRODUCTION_MODE and no users found - creating dev default users...");
                     for(const user of defaultDevUsers){
-                        await (iamAdapter as FileIAMAdapter).createUser(user.username, user.password, user.roles);
+                        await fileIAMAdapter.createUser(user.username, user.password, user.roles);
                     }
+                    this.logger.info(`Created ${fileIAMAdapter.userCount()} dev default users`);
                 }
-                if(!(iamAdapter as FileIAMAdapter).appCount()) {
-                    this.logger.warn("In PRODUCTION_MODE and no apps found - creating default apps...");
+                if(!fileIAMAdapter.appCount()) {
+                    this.logger.warn("In PRODUCTION_MODE and no apps found - creating dev default apps...");
                     for (const app of defaultDevApplications) {
-                        await (iamAdapter as FileIAMAdapter).createApp(app.client_id, app.client_secret, app.roles);
+                        await fileIAMAdapter.createApp(app.client_id, app.client_secret, app.roles);
                     }
+                    this.logger.info(`Created ${fileIAMAdapter.appCount()} dev default apps`);
                 }
             }
+
+            iamAdapter = fileIAMAdapter;
         }
         this.iam = iamAdapter;
 
@@ -151,7 +155,7 @@ export class Service {
                 }
             }
 
-            cryptoAdapter = new SimpleCryptoAdapter2(PRIVATE_CERT_PEM_FILE_PATH, ISSUER_NAME, logger);
+            cryptoAdapter = new SimpleCryptoAdapter2(PRIVATE_CERT_PEM_FILE_PATH, AUTH_N_ISSUER_NAME, logger);
             await cryptoAdapter.init();
         }
         this.crypto = cryptoAdapter;
@@ -189,7 +193,7 @@ export class Service {
             next();
         });
 
-        const globalConfigsRoutes = new AuthenticationRoutes(this.authAgg, this.crypto, ISSUER_NAME, this.logger);
+        const globalConfigsRoutes = new AuthenticationRoutes(this.authAgg, this.crypto, AUTH_N_ISSUER_NAME, this.logger);
         app.use(globalConfigsRoutes.Router);
 
         // catch all rule
@@ -206,7 +210,7 @@ export class Service {
 
         this.expressServer = app.listen(portNum, () => {
             console.log(`🚀 Server ready at: http://localhost:${portNum}`);
-            this.logger.info("Authentication service started - debug 1");
+            this.logger.info(`Authentication service v: ${configClient.applicationVersion} started - with IssuerName: ${AUTH_N_ISSUER_NAME} tokenLifeSecs: ${AUTH_N_TOKEN_LIFE_SECS}`);
         }).on("error", err => {
             this.logger.fatal(err);
             process.exit(9);
