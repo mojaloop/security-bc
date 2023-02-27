@@ -149,6 +149,54 @@ export const defaultDevRoles:PlatformRole[] = [
 			"BUILTIN_LEDGER_CREATE_ACCOUNT",
 			"BUILTIN_LEDGER_CREATE_JOURNAL_ENTRY",
 		]
+	}, {
+		id: "account-lookup-bc-account-lookup-svc",
+		description: "account-lookup-bc-account-lookup-svc roles",
+		labelName: "account-lookup-bc-account-lookup-svc roles",
+		isExternal: false,
+		externalId: undefined,
+		isApplicationRole: true,
+		privileges: [
+			"VIEW_PARTICIPANT"
+		]
+	}, {
+		id: "interop-api-bc-fspiop-api-svc",
+		description: "interop-api-bc-fspiop-api-svc roles",
+		labelName: "interop-api-bc-fspiop-api-svc roles",
+		isExternal: false,
+		externalId: undefined,
+		isApplicationRole: true,
+		privileges: [
+			"VIEW_PARTICIPANT"
+		]
+	}, {
+		id: "quoting-bc-quoting-svc",
+		description: "quoting-bc-quoting-svc roles",
+		labelName: "quoting-bc-quoting-svc roles",
+		isExternal: false,
+		externalId: undefined,
+		isApplicationRole: true,
+		privileges: [
+			"VIEW_PARTICIPANT"
+		]
+	}, {
+		id: "settlements-bc-command-handler-svc",
+		description: "settlements-bc-command-handler-svc roles",
+		labelName: "settlements-bc-command-handler-svc roles",
+		isExternal: false,
+		externalId: undefined,
+		isApplicationRole: true,
+		privileges: [
+			"VIEW_PARTICIPANT",
+			"COA_VIEW_ACCOUNT",
+			"COA_VIEW_JOURNAL_ENTRY",
+			"COA_CREATE_ACCOUNT",
+			"COA_CREATE_JOURNAL_ENTRY",
+			"BUILTIN_LEDGER_VIEW_ACCOUNT",
+			"BUILTIN_LEDGER_VIEW_JOURNAL_ENTRY",
+			"BUILTIN_LEDGER_CREATE_ACCOUNT",
+			"BUILTIN_LEDGER_CREATE_JOURNAL_ENTRY"
+		]
 	}
 
 ];

@@ -3,7 +3,8 @@ FROM node:18.13.0-alpine AS builder
 # Create the project directory inside the container.
 WORKDIR /app
 
-RUN apk add --no-cache -t build-dependencies git make gcc g++ python3 libtool autoconf pkgconfig automake bash # wget tar xz
+RUN apk add --no-cache -t build-dependencies git make gcc g++ python3 \
+    libtool autoconf pkgconfig automake librdkafka-dev bash # wget tar xz
 
 RUN cd $(npm root -g)/npm
 RUN npm config set unsafe-perm true
@@ -38,6 +39,8 @@ RUN ls -la ./modules/authentication-svc/dist
 
 FROM node:18.13-alpine
 WORKDIR /app
+
+RUN apk add librdkafka
 
 COPY --from=builder /app .
 

@@ -43,4 +43,8 @@ export const defaultDevApplications = [
 	{client_id: "accounts-and-balances-bc-coa-grpc-svc", client_secret: "superServiceSecret", roles:["accounts-and-balances-bc-coa-grpc-svc"]},
 	{client_id: "accounts-and-balances-bc-builtinledger-grpc-svc", client_secret: "superServiceSecret", roles:["accounts-and-balances-bc-builtinledger-grpc-svc"]},
 	{client_id: "transfers-bc-command-handler-svc", client_secret: "superServiceSecret", roles:["transfers-bc-command-handler-svc"]},
+	{client_id: "account-lookup-bc-account-lookup-svc", client_secret: "superServiceSecret", roles:["account-lookup-bc-account-lookup-svc"]},
+	{client_id: "interop-api-bc-fspiop-api-svc", client_secret: "superServiceSecret", roles:["interop-api-bc-fspiop-api-svc"]},
+	{client_id: "quoting-bc-quoting-svc", client_secret: "superServiceSecret", roles: ["quoting-bc-quoting-svc"]},
+	{client_id: "settlements-bc-command-handler-svc", client_secret: "superServiceSecret", roles: ["settlements-bc-command-handler-svc"]},
 ]
