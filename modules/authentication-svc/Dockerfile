@@ -17,7 +17,11 @@ COPY modules/authentication-svc/package*.json ./modules/authentication-svc/
 
 # If you are building your code for production
 #RUN npm ci --only=production
-RUN npm install
+RUN BUILD_LIBRDKAFKA=0 npm install
+
+# Note on BUILD_LIBRDKAFKA:
+#   Use BUILD_LIBRDKAFKA=0 only if we have installed librdkafka-dev in
+#   the builder image and librdkafka in the final image
 
 ########################################
 # Copy code and build

@@ -48,3 +48,9 @@ export type TokenEndpointResponse = {
     refresh_token: string | null;
     refresh_token_expires_in: number | null;
 }
+
+export interface ITokenHelper {
+    init(): Promise<void>;
+    decodeToken(accessToken: string): any | null;
+    verifyToken(accessToken: string): Promise<boolean>;
+}

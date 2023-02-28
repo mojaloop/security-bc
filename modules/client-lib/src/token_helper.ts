@@ -27,17 +27,17 @@
 
  --------------
  ******/
-"use strict";
+ "use strict";
 
-import jwt from "jsonwebtoken";
-import {Jwt} from "jsonwebtoken";
-import jwks from "jwks-rsa";
-import {JwksClient} from "jwks-rsa";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import {ITokenHelper} from "@mojaloop/security-bc-public-types-lib";
+import jwt, {Jwt} from "jsonwebtoken";
+import jwks, {JwksClient} from "jwks-rsa";
 
 export const DEFAULT_JWKS_PATH = "/.well-known/jwks.json";
 
-export class TokenHelper {
+
+export class TokenHelper implements ITokenHelper {
     private _logger:ILogger;
     private _jwksUrl: string;
     private _issuerName: string | null;
@@ -63,7 +63,7 @@ export class TokenHelper {
 
         // do an initial request to test it works and cache it
         const keys = await this._jwksClient.getSigningKeys();
-        for(const k of keys){
+        for (const k of keys) {
             k.getPublicKey();
         }
         // TODO setup timer
@@ -73,10 +73,10 @@ export class TokenHelper {
      * Decode an access token string to return the payload
      * @param accessToken string
      */
-    decodeToken(accessToken: string):any|null{
+    decodeToken(accessToken: string): any | null {
         const token = jwt.decode(accessToken, {complete: true}) as Jwt;
 
-        return token && token.payload ? token.payload : null;
+        return token && token.payload ? token.payload:null;
     }
 
     /**
@@ -87,17 +87,17 @@ export class TokenHelper {
      */
     async verifyToken(accessToken: string): Promise<boolean> {
         const verify_opts: jwt.VerifyOptions = {complete: true};
-        if(this._issuerName) verify_opts.issuer = this._issuerName;
-        if(this._audience) verify_opts.audience = this._audience;
+        if (this._issuerName) verify_opts.issuer = this._issuerName;
+        if (this._audience) verify_opts.audience = this._audience;
 
         const token = jwt.decode(accessToken, {complete: true}) as Jwt;
-        if(!token || !token.header || !token.header || !token.header.kid){
+        if (!token || !token.header || !token.header || !token.header.kid) {
             this._logger.warn("could not decode token or token without kid");
             return false;
         }
 
         const key = await this._jwksClient.getSigningKey(token.header.kid);
-        if(!key){
+        if (!key) {
             this._logger.warn(`public signing key not found for kid: ${token.header.kid}`);
             return false;
         }
@@ -112,7 +112,7 @@ export class TokenHelper {
                 return false;
             }
             return true;
-        }catch(err:any){
+        } catch (err: any) {
             this._logger.warn(`Error verifying token: ${err.message}`);
             return false;
         }
