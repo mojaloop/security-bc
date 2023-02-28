@@ -27,14 +27,13 @@
 
  --------------
  ******/
-"use strict";
+ "use strict";
 
 import jwt, {Jwt} from "jsonwebtoken";
+import {ConnectionRefusedError} from "./errors";
 import {DEFAULT_JWKS_PATH, TokenHelper} from "./token_helper";
-
-import {AuthToken, ConnectionRefusedError} from "./types";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {TokenEndpointResponse, UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
+import {TokenEndpointResponse, UnauthorizedError, AuthToken} from "@mojaloop/security-bc-public-types-lib";
 
 const JWKS_FETCH_KEYS_TIMEOUT_MS = 5*1000*60; // 5 mins
 

@@ -31,13 +31,12 @@
 "use strict";
 
 import {
-    AuthorizationClient, AuthToken,
-    ConnectionRefusedError,
+    AuthorizationClient,
     LoginHelper,
     TokenHelper,
-    UnauthorizedError
 } from "@mojaloop/security-bc-client-lib";
 import {ConsoleLogger} from "@mojaloop/logging-bc-public-types-lib";
+import {AuthToken, UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
 import nock from "nock";
 
 const BC_NAME = "test-bc";

@@ -29,24 +29,23 @@
  ******/
 "use strict";
 
-export class MaxRetriesReachedError extends Error {}
-
-export class RequestTimeoutError extends Error {}
-
-export class ConnectionRefusedError extends Error {}
-
-export type AuthToken = {
-    payload: any;
-    accessToken: string; // original access token
-    accessTokenExpiresIn: number; // timestamp
-    refreshToken: string | null | undefined; // original refresh token
-    refreshTokenExpiresIn: number | null | undefined; // timestamp
-    scope: string | null | undefined;
-}
 
 export type CallSecurityContext = {
-    username: string;
+    /**
+     * This holds the username in case of a user made call, i.e.,  password grant,
+     * will be null for app to app calls, i.e., client_credentials grant
+     */
+    username: string | null;
+    /**
+     * This holds the client_id of the caller app, regardless of grant type
+     */
     clientId: string;
+    /**
+     * Array of role identifiers this security principal has associated to itself
+     */
     rolesIds: string[];
+    /**
+     * Original bearer token passed by the caller
+     */
     accessToken: string;
 }

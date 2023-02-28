@@ -49,6 +49,16 @@ export type TokenEndpointResponse = {
     refresh_token_expires_in: number | null;
 }
 
+export type AuthToken = {
+    payload: any;
+    accessToken: string; // original access token
+    accessTokenExpiresIn: number; // timestamp
+    refreshToken: string | null | undefined; // original refresh token
+    refreshTokenExpiresIn: number | null | undefined; // timestamp
+    scope: string | null | undefined;
+}
+
+
 export interface ITokenHelper {
     init(): Promise<void>;
     decodeToken(accessToken: string): any | null;

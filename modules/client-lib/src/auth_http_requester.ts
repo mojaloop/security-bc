@@ -42,11 +42,8 @@ import {randomUUID} from "crypto";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
 import {TokenEndpointResponse, UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
-import {
-	ConnectionRefusedError,
-	MaxRetriesReachedError,
-	RequestTimeoutError
-} from "./types";
+import {ConnectionRefusedError, MaxRetriesReachedError, RequestTimeoutError} from "./errors";
+
 
 const MAX_RETRIES = 3;
 const DEFAULT_TIMEOUT_MS = 5000;

@@ -6,7 +6,7 @@
 
  http://www.apache.org/licenses/LICENSE-2.0
 
- Unless required by this._routerlicable law or agreed to in writing, the Mojaloop files are distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ Unless required by applicable law or agreed to in writing, the Mojaloop files are distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
  Contributors
  --------------
@@ -27,9 +27,11 @@
 
  --------------
  ******/
-"use strict"
 
-export * from "./errors";
-export * from "./authorization";
-export * from "./authentication";
-export * from "./generic_types";
+"use strict";
+
+export class MaxRetriesReachedError extends Error {}
+
+export class RequestTimeoutError extends Error {}
+
+export class ConnectionRefusedError extends Error {}
