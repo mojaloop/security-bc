@@ -29,18 +29,18 @@
  ******/
  "use strict";
 
+import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import {AuthToken, TokenEndpointResponse, UnauthorizedError, ILoginHelper} from "@mojaloop/security-bc-public-types-lib";
 import jwt, {Jwt} from "jsonwebtoken";
 import {ConnectionRefusedError} from "./errors";
 import {DEFAULT_JWKS_PATH, TokenHelper} from "./token_helper";
-import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {TokenEndpointResponse, UnauthorizedError, AuthToken} from "@mojaloop/security-bc-public-types-lib";
 
 const JWKS_FETCH_KEYS_TIMEOUT_MS = 5*1000*60; // 5 mins
 
 // private
 declare type AuthMode = "APP_CREDS" | "USER_CREDS" | "PROVIDED_TOKEN";
 
-export class LoginHelper {
+export class LoginHelper implements ILoginHelper {
 	private readonly _logger: ILogger;
 	private readonly _authTokenUrl: string;
 	private readonly _tokenHelper: TokenHelper;
@@ -79,17 +79,17 @@ export class LoginHelper {
 		return this._initialised;
 	}
 
-    /**
-     * Set a caller provided token to be used on getToken()
-     * This disables the auto token fetching mechanism
-     * This call can throw an UnauthorizedError if the token cannot be decoded (no valid check is performed, only decode)
-     * @param accessToken
-     */
+	/**
+	 * Set a caller provided token to be used on getToken()
+	 * This disables the auto token fetching mechanism
+	 * This call can throw an UnauthorizedError if the token cannot be decoded (no valid check is performed, only decode)
+	 * @param accessToken
+	 */
 
 	setToken(accessToken: string): void {
 		this._resetPrivateData();
 		this._authMode = "PROVIDED_TOKEN";
-        this._parseAndLoadAccessToken(accessToken);
+		this._parseAndLoadAccessToken(accessToken);
 		this._initialised = true;
 	}
 
@@ -120,7 +120,7 @@ export class LoginHelper {
 			this._tokenHelperNeedsInit = false;
 
 			// schedule flag reset in JWKS_FETCH_KEYS_TIMEOUT_MS
-			setTimeout(()=>{
+			setTimeout(() => {
 				this._tokenHelperNeedsInit = true;
 			}, JWKS_FETCH_KEYS_TIMEOUT_MS);
 		}

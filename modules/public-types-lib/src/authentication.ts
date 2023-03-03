@@ -64,3 +64,7 @@ export interface ITokenHelper {
     decodeToken(accessToken: string): any | null;
     verifyToken(accessToken: string): Promise<boolean>;
 }
+
+export interface ILoginHelper {
+    getToken(): Promise<AuthToken>;
+}

@@ -47,4 +47,6 @@ export const defaultDevApplications = [
 	{client_id: "interop-api-bc-fspiop-api-svc", client_secret: "superServiceSecret", roles:["interop-api-bc-fspiop-api-svc"]},
 	{client_id: "quoting-bc-quoting-svc", client_secret: "superServiceSecret", roles: ["quoting-bc-quoting-svc"]},
 	{client_id: "settlements-bc-command-handler-svc", client_secret: "superServiceSecret", roles: ["settlements-bc-command-handler-svc"]},
+	{client_id: "settlements-bc-event-handler-svc", client_secret: "superServiceSecret", roles: ["settlements-bc-event-handler-svc"]},
+	{client_id: "settlements-bc-api-svc", client_secret: "superServiceSecret", roles: ["settlements-bc-api-svc"]},
 ]
