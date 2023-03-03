@@ -66,5 +66,9 @@ export interface ITokenHelper {
 }
 
 export interface ILoginHelper {
+    setUserCredentials(client_id: string, username: string, password: string): void;
+    setAppCredentials(client_id: string, client_secret: string): void;
+    setToken(accessToken: string): void;
+
     getToken(): Promise<AuthToken>;
 }
