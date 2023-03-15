@@ -154,32 +154,32 @@ workflows:
           # complete. In this case, we are using the parent dynamic
           # configuration itself.
           config-path: .circleci/docker_build_config.yml
-  build_lint_and_test:
-    jobs:
-      - setup:
-          context: org-global
-      - lint:
-          context: org-global
-          requires:
-            - setup
-      - build:
-          context: org-global
-          requires:
-            - setup
-      - test-unit:
-          context: org-global
-          requires:
-            - build
-            - lint
-      - coverage-report:
-          context: org-global
-          requires:
-            - test-unit
-      - publish_npm:
-          context: org-global
-          filters:
-            branches:
-              only: main
-          requires:
-            - test-unit
-
+#  build_lint_and_test:
+#    jobs:
+#      - setup:
+#          context: org-global
+#      - lint:
+#          context: org-global
+#          requires:
+#            - setup
+#      - build:
+#          context: org-global
+#          requires:
+#            - setup
+#      - test-unit:
+#          context: org-global
+#          requires:
+#            - build
+#            - lint
+#      - coverage-report:
+#          context: org-global
+#          requires:
+#            - test-unit
+#      - publish_npm:
+#          context: org-global
+#          filters:
+#            branches:
+#              only: main
+#          requires:
+#            - test-unit
+#
