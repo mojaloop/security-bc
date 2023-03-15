@@ -78,8 +78,21 @@ workflows:
     when: << pipeline.parameters.run-build-authentication-svc >>
     jobs:
       - common-pre-docker-build:
+          context: org-global
           service_name: "authentication-svc"
       - common-docker-build:
+          context: org-global
           service_name: "authentication-svc"
+          requires:
+            - common-pre-docker-build
+  authorization-svc:
+    when: << pipeline.parameters.run-build-authorization-svc >>
+    jobs:
+      - common-pre-docker-build:
+          context: org-global
+          service_name: "authorization-svc"
+      - common-docker-build:
+          context: org-global
+          service_name: "authorization-svc"
           requires:
             - common-pre-docker-build
