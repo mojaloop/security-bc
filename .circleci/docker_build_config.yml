@@ -31,7 +31,7 @@ anchor_docker_login: &anchor_docker_login
 ##
 executors:
   default-docker:
-    working_directory: /tmp
+    working_directory: /home/circleci/project
     resource_class: medium
     docker:
       - image: node:18.13
@@ -44,14 +44,13 @@ jobs:
     executor: default-docker
 #    working_directory: modules/authentication-svc
     steps:
-      - run: mkdir -p /tmp/workspace
       - checkout
       - run: ls -la
       - run: cd modules/authentication-svc
 #      - run: node -e "const p=require('./package.json'); console.log(p.name.replace('@', '')+':'+p.version)"
-      - run: node -e "const p=require('./package.json'); console.log(p.name.replace('@', '')+':'+p.version)" > workspace/authentication-svc_docker_tag
+      - run: node -e "const p=require('./package.json'); console.log(p.name.replace('@', '')+':'+p.version)" > /tmp/authentication-svc_docker_tag
       - persist_to_workspace:
-          root: workspace
+          root: /tmp
           paths:
             - authentication-svc_docker_tag
   build-authentication-svc:
@@ -63,8 +62,8 @@ jobs:
     steps:
       - checkout
       - attach_workspace:
-          at: /tmp/workspace
-      - run: cat /tmp/workspace/authentication-svc_docker_tag
+          at: /tmp
+      - run: cat /tmp/authentication-svc_docker_tag
 #      - run:
 #        <<: *anchor_docker_login
 
