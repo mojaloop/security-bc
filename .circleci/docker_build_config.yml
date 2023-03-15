@@ -20,9 +20,9 @@ parameters:
 # Yarn anchors
 #
 ##
-anchor_docker_login: &anchor_docker_login
-  name: Login to Docker Hub
-  command: docker login -u $DOCKER_USER -p $DOCKER_PASS
+#anchor_docker_login: &anchor_docker_login
+#  name: Login to Docker Hub
+#  command: docker login -u $DOCKER_USER -p $DOCKER_PASS
 
 ##
 # Executors
@@ -68,7 +68,8 @@ jobs:
           at: /tmp
       - run: cat /tmp/authentication-svc_docker_tag
       - run:
-          <<: *anchor_docker_login
+          name: Login to Docker Hub
+          command: docker login -u $DOCKER_USER -p $DOCKER_PASS
 
 
 
