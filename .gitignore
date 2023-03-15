@@ -116,11 +116,6 @@ devspace*
 # General Ignore
 *IGNORE*
 
-# yarn not using Zero-Installs:
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
+# for CircleCi docker build steps
+docker_tag
+/.circleci/local_config.yml

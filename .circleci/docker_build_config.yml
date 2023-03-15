@@ -1,0 +1,84 @@
+version: 2.1
+
+# the default pipeline parameters, which will be updated according to
+# the results of the path-filtering orb
+parameters:
+  run-build-authentication-svc:
+    type: boolean
+    default: false
+  run-build-authorization-svc:
+    type: boolean
+    default: false
+  run-build-client-lib:
+    type: boolean
+    default: false
+  run-build-public-types-lib:
+    type: boolean
+    default: false
+
+##
+# Yarn anchors
+#
+##
+anchor_docker_login: &anchor_docker_login
+  name: Login to Docker Hub
+  command: docker login -u $DOCKER_USER -p $DOCKER_PASS
+
+##
+# Executors
+#
+# CircleCI Executors
+##
+executors:
+  default-docker:
+    working_directory: /tmp
+    resource_class: medium
+    docker:
+      - image: node:18.13
+  default-machine:
+    machine:
+      image: ubuntu-2204:2022.07.1
+
+jobs:
+  pre-build-authentication-svc:
+    executor: default-docker
+    working_directory: modules/authentication-svc
+    steps:
+      - run: mkdir -p workspace
+#      - run: node -e "const p=require('./package.json'); console.log(p.name.replace('@', '')+':'+p.version)"
+      - run: node -e "const p=require('./package.json'); console.log(p.name.replace('@', '')+':'+p.version)" > workspace/authentication-svc_docker_tag
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - authentication-svc_docker_tag
+  build-authentication-svc:
+    executor: default-machine
+    working_directory: modules/authentication-svc
+    environment:
+      DOCKER_BUILDKIT: 1
+      BUILDX_PLATFORMS: linux/amd64,linux/arm64
+    steps:
+      - checkout
+      - attach_workspace:
+        at: /tmp/workspace
+      - run: cat /tmp/workspace/authentication-svc_docker_tag
+#      - run:
+#        <<: *anchor_docker_login
+
+
+
+
+
+# here we specify our workflows, most of which are conditionally
+# executed based upon pipeline parameter values. Each workflow calls a
+# specific job defined above, in the jobs section.
+workflows:
+  # when pipeline parameter, run-build-service-1-job is true, the
+  # build-service-1 job is triggered.
+  authentication-svc:
+    when: << pipeline.parameters.run-build-authentication-svc >>
+    jobs:
+      - pre-build-authentication-svc
+      - build-authentication-svc:
+        requires:
+          - pre-build-authentication-svc
