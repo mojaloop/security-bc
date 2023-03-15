@@ -40,7 +40,7 @@ executors:
       image: ubuntu-2204:2022.07.1
 
 jobs:
-  common-pre-build:
+  common-pre-docker-build:
     executor: default-docker
     parameters:
       service_name:
@@ -53,20 +53,12 @@ jobs:
           root: /tmp
           paths:
             - authentication-svc_docker_tag
-
-  pre-build-authentication-svc: # save the full docker image tag in a /tmp file - ex format "mojaloop/security-bc-authentication-svc:0.1.0"
-    executor: default-docker
-    steps:
-      - checkout
-      - run: ls -la
-      - run: node -e "const p=require('./modules/authentication-svc/package.json'); console.log(p.name.replace('@', '')+':'+p.version)" > /tmp/authentication-svc_docker_tag
-      - persist_to_workspace:
-          root: /tmp
-          paths:
-            - authentication-svc_docker_tag
-  build-authentication-svc:
+  common-docker-build:
     executor: default-machine
-#    working_directory: modules/authentication-svc
+    parameters:
+      service_name:
+        type: string
+        default: "DEFAULT_SERVICE_NAME"
     environment:
       DOCKER_BUILDKIT: 1
       BUILDX_PLATFORMS: linux/amd64,linux/arm64
@@ -75,25 +67,18 @@ jobs:
       - attach_workspace:
           at: /tmp
       - run: cat /tmp/authentication-svc_docker_tag
-#      - run:
-#        <<: *anchor_docker_login
+      - run:
+          <<: *anchor_docker_login
 
 
 
-
-
-# here we specify our workflows, most of which are conditionally
-# executed based upon pipeline parameter values. Each workflow calls a
-# specific job defined above, in the jobs section.
 workflows:
-  # when pipeline parameter, run-build-service-1-job is true, the
-  # build-service-1 job is triggered.
   authentication-svc:
     when: << pipeline.parameters.run-build-authentication-svc >>
     jobs:
-      - common-pre-build:
+      - common-pre-docker-build:
           service_name: "authentication-svc"
-      - pre-build-authentication-svc
-      - build-authentication-svc:
+      - common-docker-build:
+          service_name: "authentication-svc"
           requires:
-            - pre-build-authentication-svc
+            - common-pre-docker-build
