@@ -40,15 +40,26 @@ executors:
       image: ubuntu-2204:2022.07.1
 
 jobs:
-  pre-build-authentication-svc:
+  common-pre-build:
     executor: default-docker
-#    working_directory: modules/authentication-svc
+    parameters:
+      service_name:
+        type: string
+        default: "DEFAULT_SERVICE_NAME"
+    steps:
+      - checkout
+      - run: node -e "const p=require('./modules/<< parameters.service_name >>/package.json'); console.log(p.name.replace('@', '')+':'+p.version)" > /tmp/<< parameters.service_name >>_docker_tag
+      - persist_to_workspace:
+          root: /tmp
+          paths:
+            - authentication-svc_docker_tag
+
+  pre-build-authentication-svc: # save the full docker image tag in a /tmp file - ex format "mojaloop/security-bc-authentication-svc:0.1.0"
+    executor: default-docker
     steps:
       - checkout
       - run: ls -la
-      - run: cd modules/authentication-svc
-#      - run: node -e "const p=require('./package.json'); console.log(p.name.replace('@', '')+':'+p.version)"
-      - run: node -e "const p=require('./package.json'); console.log(p.name.replace('@', '')+':'+p.version)" > /tmp/authentication-svc_docker_tag
+      - run: node -e "const p=require('./modules/authentication-svc/package.json'); console.log(p.name.replace('@', '')+':'+p.version)" > /tmp/authentication-svc_docker_tag
       - persist_to_workspace:
           root: /tmp
           paths:
@@ -80,6 +91,8 @@ workflows:
   authentication-svc:
     when: << pipeline.parameters.run-build-authentication-svc >>
     jobs:
+      - common-pre-build:
+          service_name: "authentication-svc"
       - pre-build-authentication-svc
       - build-authentication-svc:
           requires:
