@@ -42,9 +42,11 @@ executors:
 jobs:
   pre-build-authentication-svc:
     executor: default-docker
-    working_directory: modules/authentication-svc
+#    working_directory: modules/authentication-svc
     steps:
       - run: mkdir -p workspace
+      - checkout
+      - run: cd modules/authentication-svc
 #      - run: node -e "const p=require('./package.json'); console.log(p.name.replace('@', '')+':'+p.version)"
       - run: node -e "const p=require('./package.json'); console.log(p.name.replace('@', '')+':'+p.version)" > workspace/authentication-svc_docker_tag
       - persist_to_workspace:
@@ -53,14 +55,14 @@ jobs:
             - authentication-svc_docker_tag
   build-authentication-svc:
     executor: default-machine
-    working_directory: modules/authentication-svc
+#    working_directory: modules/authentication-svc
     environment:
       DOCKER_BUILDKIT: 1
       BUILDX_PLATFORMS: linux/amd64,linux/arm64
     steps:
       - checkout
       - attach_workspace:
-        at: /tmp/workspace
+          at: /tmp/workspace
       - run: cat /tmp/workspace/authentication-svc_docker_tag
 #      - run:
 #        <<: *anchor_docker_login
@@ -80,5 +82,5 @@ workflows:
     jobs:
       - pre-build-authentication-svc
       - build-authentication-svc:
-        requires:
-          - pre-build-authentication-svc
+          requires:
+            - pre-build-authentication-svc
