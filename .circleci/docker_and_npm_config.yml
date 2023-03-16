@@ -55,14 +55,26 @@ jobs:
           keys:
             - build-cache-{{ .Environment.CIRCLE_SHA1 }}
       - run:
-          <<: *anchor_configure_git
-      - run:
           <<: *anchor_npm_auth
       - run: npm config set registry https://registry.npmjs.org/
       - run:
-          name: Publish package
+          name: Bump patch version in library package.json
           command: |
-            echo "not implemented yet - should publish package: << parameters.package_name >>"
+            npm version --no-git-tag-version --no-workspaces-update --no-commit-hooks patch -w packages/<< parameters.package_name >>
+      - run:
+          name: Publish to NPM
+          command: |
+            npm publish --tag=latest --access public -w packages/<< parameters.package_name >>
+      - run:
+          <<: *anchor_configure_git
+      - run:
+          name: Create git tag for version
+          command: |
+            LIB_VERSION=$(node -e "const p=require('./packages/<< parameters.package_name >>/package.json'); console.log(p.version)")
+            git add packages/<< parameters.package_name >>/package.json
+            git tag << parameters.package_name >>_v${LIB_VERSION}
+            git commit -nm "[ci skip] CI/CD auto commit for NPM Publish of << parameters.package_name >> - commit: $SHORT_GIT_HASH"
+            git push -f origin $CIRCLE_BRANCH --tags
 
   pre-docker-build:
     executor: default-docker
@@ -138,12 +150,12 @@ jobs:
           <<: *anchor_configure_git
       - run:
           name: Create git tag for version
-          # we run the npm version again (but with the specific version) to have the package.json file changed
+          # we run the npm version again (but with the specific version) to have the package.json file changed in this executor
           command: |
             npm version --no-git-tag-version --no-workspaces-update --no-commit-hooks $MY_DOCKER_IMAGE_VERSION -w packages/<< parameters.package_name >>
             git add packages/<< parameters.package_name >>/package.json
             git tag << parameters.package_name >>_v${MY_DOCKER_IMAGE_VERSION}
-            git commit -nm "[ci skip] CI/CD auto commit for docker push - commit: $SHORT_GIT_HASH"
+            git commit -nm "[ci skip] CI/CD auto commit for Docker push of << parameters.package_name >> - commit: $SHORT_GIT_HASH"
             git push -f origin $CIRCLE_BRANCH --tags
 
 ##
