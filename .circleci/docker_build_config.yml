@@ -34,7 +34,7 @@ executors:
     working_directory: /home/circleci/project
     resource_class: medium
     docker:
-      - image: cimg:/node:18.13
+      - image: cimg/node:18.13
 #      - image: node:18.13
   default-machine:
     machine:
