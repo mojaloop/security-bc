@@ -38,6 +38,8 @@ executors:
   default-machine:
     machine:
       image: ubuntu-2204:2022.07.1
+      docker_layer_caching: true
+
 
 jobs:
   common-pre-docker-build:
@@ -61,7 +63,7 @@ jobs:
         default: "DEFAULT_SERVICE_NAME"
     environment:
       DOCKER_BUILDKIT: 1
-      BUILDX_PLATFORMS: linux/amd64,linux/arm64
+      #BUILDX_PLATFORMS: linux/amd64,linux/arm64
     steps:
       - checkout
       - attach_workspace:
@@ -69,13 +71,14 @@ jobs:
       - run: cat /tmp/<< parameters.service_name >>_docker_tag
       - run:
           name: Login to Docker Hub
-          command: docker login -u $DOCKER_USER -p $DOCKER_PASS
+          command: echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
       - run:
           name: Docker switch docker driver
           command: docker buildx create --name mybuilder --use --bootstrap
       - run:
           name: Docker buildx build and push
-          command: docker buildx build --push --platform linux/amd64,linux/arm64 -f modules/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
+          command: docker buildx build --push --platform linux/amd64 -f modules/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
+#          command: docker buildx build --push --platform linux/amd64,linux/arm64 -f modules/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
 
 
 
