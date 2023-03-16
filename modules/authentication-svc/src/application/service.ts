@@ -72,6 +72,7 @@ const kafkaProducerOptions = {
 
 let globalLogger: ILogger;
 
+
 export class Service {
     static logger: ILogger;
     static iam:IAMAuthenticationAdapter;
