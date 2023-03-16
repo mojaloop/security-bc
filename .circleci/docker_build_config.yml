@@ -109,6 +109,7 @@ jobs:
     environment:
       DOCKER_BUILDKIT: 1
       #BUILDX_PLATFORMS: linux/amd64,linux/arm64
+      SHORT_GIT_HASH: $(echo $CIRCLE_SHA1 | cut -c -7)
     steps:
       - checkout
       #      - setup_remote_docker:
@@ -143,7 +144,7 @@ jobs:
           command: docker build --cache-from=$MY_DOCKER_IMAGE_NAME:alpha-latest -f modules/<< parameters.service_name >>/Dockerfile -t $MY_DOCKER_IMAGE_NAME:$MY_DOCKER_IMAGE_VERSION .
       - run:
           name: Docker tag image with git hash
-          command: docker tag $MY_DOCKER_IMAGE_NAME:$MY_DOCKER_IMAGE_VERSION $MY_DOCKER_IMAGE_NAME:$CIRCLE_SHA1
+          command: docker tag $MY_DOCKER_IMAGE_NAME:$MY_DOCKER_IMAGE_VERSION $MY_DOCKER_IMAGE_NAME:$SHORT_GIT_HASH
       - run:
           name: Docker tag image with alpha-latest
           command: docker tag $MY_DOCKER_IMAGE_NAME:$MY_DOCKER_IMAGE_VERSION $MY_DOCKER_IMAGE_NAME:alpha-latest
@@ -152,7 +153,7 @@ jobs:
           command: docker push $MY_DOCKER_IMAGE_NAME:$MY_DOCKER_IMAGE_VERSION
       - run:
           name: Docker push image git hash tag
-          command: docker push $MY_DOCKER_IMAGE_NAME:$CIRCLE_SHA1
+          command: docker push $MY_DOCKER_IMAGE_NAME:$SHORT_GIT_HASH
       - run:
           name: Docker push image alpha-latest tag
           command: docker push $MY_DOCKER_IMAGE_NAME:alpha-latest

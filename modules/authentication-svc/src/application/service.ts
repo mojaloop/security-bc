@@ -70,7 +70,6 @@ const kafkaProducerOptions = {
     kafkaBrokerList: KAFKA_URL
 }
 
-// let globalLogger: ILogger;
 let globalLogger: ILogger;
 
 export class Service {
