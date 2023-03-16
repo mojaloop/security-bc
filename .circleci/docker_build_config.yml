@@ -80,7 +80,7 @@ jobs:
           at: /tmp
       - run: cat /tmp/<< parameters.service_name >>_docker_image_name
       - run: cat /tmp/<< parameters.service_name >>_docker_image_version
-      - install-docker
+      - docker/install-docker
       - docker/check:
           docker-username: DOCKER_USER
           docker-password: DOCKER_PASS
