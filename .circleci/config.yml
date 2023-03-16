@@ -165,19 +165,28 @@ workflows:
           filters:
             branches:
               only: main
-          name: Detect if libs need to be published to NPM, or docker images built and pushed to DockerHub
+          name: Detect if we have libs to be published to NPM
           # 3-column, whitespace-delimited mapping. One mapping per line:
           # <regex path-to-test> <parameter-to-set> <value-of-pipeline-parameter>
+          # NOTE: add libs that need to be published here
           mapping: |
             packages/public-types-lib/.* publish_npm_lib "public-types-lib"
             packages/client-lib/.* publish_npm_lib "client-lib"
+          base-revision: main
+          config-path: .circleci/docker_build_config.yml
+      - path-filtering/filter:
+          #          requires:
+          #            - test-unit
+          filters:
+            branches:
+              only: main
+          name: Detect if we have docker images to be built and pushed to DockerHub
+          # 3-column, whitespace-delimited mapping. One mapping per line:
+          # <regex path-to-test> <parameter-to-set> <value-of-pipeline-parameter>
+          # NOTE: add services that need docker build here
+          mapping: |
             packages/authentication-svc/.* docker_build_and_push "authentication-svc"
             packages/authorization-svc/.* docker_build_and_push "authorization-svc"
           base-revision: main
-          # this is the path of the configuration we should trigger once
-          # path filtering and pipeline parameter value updates are
-          # complete. In this case, we are using the parent dynamic
-          # configuration itself.
-          config-path: .circleci/docker_build_config.yml
-
+          config-path: .circleci/npm_publish_config.yml
 
