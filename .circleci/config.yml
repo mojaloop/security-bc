@@ -173,7 +173,7 @@ workflows:
             packages/public-types-lib/.* publish_npm_lib "public-types-lib"
             packages/client-lib/.* publish_npm_lib "client-lib"
           base-revision: main
-          config-path: .circleci/docker_build_config.yml
+          config-path: .circleci/npm_publish_config.yml
       - path-filtering/filter:
           #          requires:
           #            - test-unit
@@ -188,5 +188,5 @@ workflows:
             packages/authentication-svc/.* docker_build_and_push "authentication-svc"
             packages/authorization-svc/.* docker_build_and_push "authorization-svc"
           base-revision: main
-          config-path: .circleci/npm_publish_config.yml
+          config-path: .circleci/docker_build_config.yml
 
