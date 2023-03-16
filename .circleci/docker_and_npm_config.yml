@@ -3,10 +3,10 @@ version: 2.1
 # the default pipeline parameters, which will be updated according to
 # the results of the path-filtering orb
 parameters:
-  publish_npm_lib:
+  docker_svc_package:
     type: string
     default: "INVALID_PARAM"
-  docker_build_and_push:
+  npm_lib_package:
     type: string
     default: "INVALID_PARAM"
 
@@ -14,6 +14,15 @@ parameters:
 # Yaml anchors
 #
 ##
+anchor_configure_git: &anchor_configure_git
+  name: Configure git
+  command: |
+    git config user.email ${GIT_CI_EMAIL}
+    git config user.name ${GIT_CI_USER}
+
+anchor_npm_auth: &anchor_npm_auth
+  name: Update NPM registry auth token
+  command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
 
 ##
 # Executors
@@ -32,6 +41,29 @@ executors:
       docker_layer_caching: true
 
 jobs:
+  publish-npm-lib:
+    executor: default-docker
+    parameters:
+      package_name:
+        type: string
+        default: "DEFAULT_PACKAGE_NAME"
+    steps:
+      - checkout
+      - attach_workspace:
+          at: *workingDirVar
+      - restore_cache:
+          keys:
+            - build-cache-{{ .Environment.CIRCLE_SHA1 }}
+      - run:
+          <<: *anchor_configure_git
+      - run:
+          <<: *anchor_npm_auth
+      - run: npm config set registry https://registry.npmjs.org/
+      - run:
+          name: Publish package
+          command: |
+            echo "not implemented yet - should publish package: << parameters.package_name >>"
+
   common-pre-docker-build:
     executor: default-docker
     parameters:
@@ -101,13 +133,19 @@ jobs:
 
 workflows:
   docker-build-and-push:
-    when: << pipeline.parameters.docker_build_and_push >>
+    when: << pipeline.parameters.docker_svc_package >>
     jobs:
       - common-pre-docker-build:
           context: org-global
-          package_name: << pipeline.parameters.docker_build_and_push >>
+          package_name: << pipeline.parameters.docker_svc_package >>
       - common-docker-build:
           context: org-global
-          package_name: << pipeline.parameters.docker_build_and_push >>
+          package_name: << pipeline.parameters.docker_svc_package >>
           requires:
             - common-pre-docker-build
+  publish-npm-lib:
+    when: << pipeline.parameters.npm_lib_package >>
+    jobs:
+      - publish-npm-lib:
+          context: org-global
+          package_name: << pipeline.parameters.npm_lib_package >>

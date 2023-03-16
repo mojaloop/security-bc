@@ -59,6 +59,7 @@ jobs:
 
 workflows:
   publish-npm-lib:
+    name: NPM publish for << pipeline.parameters.publish_npm_lib >>
     when: << pipeline.parameters.publish_npm_lib >>
     jobs:
       - publish-npm-lib:
