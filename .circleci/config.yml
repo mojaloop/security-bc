@@ -135,7 +135,7 @@ jobs:
 
 workflows:
   version: 2
-  always-run:
+  initial-setup:
     jobs:
       # detect which modules/packages have changed using the path-filtering orb
       - path-filtering/filter:

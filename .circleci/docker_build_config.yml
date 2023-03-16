@@ -73,11 +73,18 @@ jobs:
           name: Login to Docker Hub
           command: echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
       - run:
-          name: Docker switch docker driver
-          command: docker buildx create --name mybuilder --use --bootstrap
+          name: Docker build image
+          command: docker build -f modules/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
       - run:
-          name: Docker buildx build and push
-          command: docker buildx build --push --platform linux/amd64 -f modules/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
+          name: Docker push image
+          command: docker build -f modules/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
+
+#      - run:
+#          name: Docker switch docker driver
+#          command: docker buildx create --name mybuilder --use --bootstrap
+#      - run:
+#          name: Docker buildx build and push
+#          command: docker buildx build --push --platform linux/amd64 -f modules/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
 #          command: docker buildx build --push --platform linux/amd64,linux/arm64 -f modules/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
 
 
