@@ -12,8 +12,8 @@ RUN npm install -g node-gyp
 
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
 COPY package*.json ./
-COPY modules/public-types-lib/package*.json ./modules/public-types-lib/
-COPY modules/authentication-svc/package*.json ./modules/authentication-svc/
+COPY packages/public-types-lib/package*.json ./packages/public-types-lib/
+COPY packages/authorization-svc/package*.json ./packages/authorization-svc/
 
 # If you are building your code for production
 #RUN npm ci --only=production
@@ -29,16 +29,16 @@ RUN BUILD_LIBRDKAFKA=0 npm install
 # root tsconfig.json
 COPY tsconfig.json ./
 
-# copy required supporting modules/packages (especially private ones not published to npm)
-COPY modules/public-types-lib ./modules/public-types-lib
+# copy required supporting packages/packages (especially private ones not published to npm)
+COPY packages/public-types-lib ./packages/public-types-lib
 
 # copy service code
-COPY modules/authentication-svc ./modules/authentication-svc
+COPY packages/authorization-svc ./packages/authorization-svc
 
 # build
 RUN npm run build
 
-RUN ls -la ./modules/authentication-svc/dist
+RUN ls -la ./packages/authorization-svc/dist
 
 
 FROM node:18.13-alpine
@@ -49,6 +49,6 @@ RUN apk add librdkafka
 COPY --from=builder /app .
 
 # kafka handler, no http server yet
-EXPOSE 3201
+EXPOSE 3202
 
-CMD [ "npm", "run", "start:authentication-svc" ]
+CMD [ "npm", "run", "start:authorization-svc" ]

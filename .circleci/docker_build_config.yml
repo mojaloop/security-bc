@@ -1,21 +1,21 @@
 version: 2.1
 
-orbs:
-  docker: circleci/docker@2.2.0
-
 # the default pipeline parameters, which will be updated according to
 # the results of the path-filtering orb
 parameters:
-  run-build-authentication-svc:
+  integration-tests-_changed:
     type: boolean
     default: false
-  run-build-authorization-svc:
+  authentication-svc_changed:
     type: boolean
     default: false
-  run-build-client-lib:
+  authorization-svc_changed:
     type: boolean
     default: false
-  run-build-public-types-lib:
+  client-lib_changed:
+    type: boolean
+    default: false
+  public-types-lib_changed:
     type: boolean
     default: false
 
@@ -46,6 +46,7 @@ executors:
 
 
 jobs:
+
   common-pre-docker-build:
     executor: default-docker
     parameters:
@@ -54,50 +55,13 @@ jobs:
         default: "DEFAULT_SERVICE_NAME"
     steps:
       - checkout
-      - run: node -e "const p=require('./modules/<< parameters.service_name >>/package.json'); console.log(p.name.replace('@', ''))" > /tmp/<< parameters.service_name >>_docker_image_name
-      - run: node -e "const p=require('./modules/<< parameters.service_name >>/package.json'); console.log(p.version)" > /tmp/<< parameters.service_name >>_docker_image_version
+      - run: node -e "const p=require('./packages/<< parameters.service_name >>/package.json'); console.log(p.name.replace('@', ''))" > /tmp/<< parameters.service_name >>_docker_image_name
+      - run: node -e "const p=require('./packages/<< parameters.service_name >>/package.json'); console.log(p.version)" > /tmp/<< parameters.service_name >>_docker_image_version
       - persist_to_workspace:
           root: /tmp
           paths:
             - << parameters.service_name >>_docker_image_name
             - << parameters.service_name >>_docker_image_version
-#  common-docker-build:
-#    executor: default-machine
-##    executor: default-docker
-#    parameters:
-#      service_name:
-#        type: string
-#        default: "DEFAULT_SERVICE_NAME"
-#    environment:
-#      DOCKER_BUILDKIT: 1
-#      #BUILDX_PLATFORMS: linux/amd64,linux/arm64
-#    steps:
-#      - checkout
-##      - setup_remote_docker:
-##          version: 20.10.18
-##          docker_layer_caching: true
-#      - attach_workspace:
-#          at: /tmp
-#      - run: cat /tmp/<< parameters.service_name >>_docker_image_name
-#      - run: cat /tmp/<< parameters.service_name >>_docker_image_version
-#      - docker/check:
-#          docker-username: DOCKER_USER
-#          docker-password: DOCKER_PASS
-#      - docker/build:
-#          dockerfile: modules/<< parameters.service_name >>/Dockerfile
-#          docker-context: .
-#          cache_from: $(cat /tmp/<< parameters.service_name >>_docker_image_name):alpha-latest
-#          image: $(cat /tmp/<< parameters.service_name >>_docker_image_name)
-#          tag: $(cat /tmp/<< parameters.service_name >>_docker_image_version)
-#      - run:
-#          name: Tag Images with git hash
-#          command: docker tag $(cat /tmp/<< parameters.service_name >>_docker_image_name):$(cat /tmp/<< parameters.service_name >>_docker_image_version) $(cat /tmp/<< parameters.service_name >>_docker_image_name):$CIRCLE_SHA1
-#      - run:
-#          name: Tag Images with git alpha-latest
-#          command: docker tag $(cat /tmp/<< parameters.service_name >>_docker_image_name):$(cat /tmp/<< parameters.service_name >>_docker_image_version) $(cat /tmp/<< parameters.service_name >>_docker_image_name):alpha-latest
-#      - docker/push:
-#          image: $(cat /tmp/<< parameters.service_name >>_docker_image_name)
-#          tag: $CIRCLE_SHA1,$(cat /tmp/<< parameters.service_name >>_docker_image_version),alpha-latest
 
   common-docker-build:
     executor: default-machine
@@ -111,25 +75,22 @@ jobs:
       #BUILDX_PLATFORMS: linux/amd64,linux/arm64
     steps:
       - checkout
-      #      - setup_remote_docker:
-      #          version: 20.10.18
-      #          docker_layer_caching: true
       - attach_workspace:
           at: /tmp
+#      - run:
+#          name: Docker image name (from package.json)
+#          command: cat /tmp/<< parameters.service_name >>_docker_image_name
+#      - run:
+#          name: Docker image version (from package.json)
+#          command: cat /tmp/<< parameters.service_name >>_docker_image_version
       - run:
-          name: Docker image name (from package.json)
-          command: cat /tmp/<< parameters.service_name >>_docker_image_name
-      - run:
-          name: Docker image version (from package.json)
-          command: cat /tmp/<< parameters.service_name >>_docker_image_version
-      - run:
-          name: Setup Env vars with docker image name and tag
+          name: Setup Env vars with docker image name, tag and git short hash
           command: |
             echo 'export MY_DOCKER_IMAGE_NAME="$(cat /tmp/<< parameters.service_name >>_docker_image_name)"' >> "$BASH_ENV"
             echo 'export MY_DOCKER_IMAGE_VERSION="$(cat /tmp/<< parameters.service_name >>_docker_image_version)"' >> "$BASH_ENV"
             echo 'export SHORT_GIT_HASH="$(echo $CIRCLE_SHA1 | cut -c -7)"' >> "$BASH_ENV"
       - run:
-          name: Test Env vars with docker image name and tag
+          name: Test Env vars with docker image name, tag and git short hash
           command: |
             echo $MY_DOCKER_IMAGE_NAME
             echo $MY_DOCKER_IMAGE_VERSION
@@ -142,7 +103,7 @@ jobs:
           command: echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
       - run:
           name: Docker build image
-          command: docker build --cache-from=$MY_DOCKER_IMAGE_NAME:alpha-latest -f modules/<< parameters.service_name >>/Dockerfile -t $MY_DOCKER_IMAGE_NAME:$MY_DOCKER_IMAGE_VERSION .
+          command: docker build --cache-from=$MY_DOCKER_IMAGE_NAME:alpha-latest -f packages/<< parameters.service_name >>/Dockerfile -t $MY_DOCKER_IMAGE_NAME:$MY_DOCKER_IMAGE_VERSION .
       - run:
           name: Docker tag image with git hash
           command: docker tag $MY_DOCKER_IMAGE_NAME:$MY_DOCKER_IMAGE_VERSION $MY_DOCKER_IMAGE_NAME:$SHORT_GIT_HASH
@@ -164,8 +125,8 @@ jobs:
 #          command: docker buildx create --name mybuilder --use --bootstrap
 #      - run:
 #          name: Docker buildx build and push
-#          command: docker buildx build --push --platform linux/amd64 -f modules/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
-##          command: docker buildx build --push --platform linux/amd64,linux/arm64 -f modules/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
+#          command: docker buildx build --push --platform linux/amd64 -f packages/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
+##          command: docker buildx build --push --platform linux/amd64,linux/arm64 -f packages/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
 
 
 

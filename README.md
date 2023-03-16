@@ -7,9 +7,9 @@ See the Reference Architecture documentation [security section](https://mojaloop
 
 ## Modules
 
-### Authentication service [link](modules/authentication-svc/README.md)
+### Authentication service [link](packages/authentication-svc/README.md)
 
-### Authentication client lib [link](modules/authentication-svc/README.md)
+### Authentication client lib [link](packages/authentication-svc/README.md)
 
 
 ## Usage
@@ -108,7 +108,7 @@ npm run start:authentication-svc
 npm run start:authorization-svc 
 ```
 
-To run those services locally, you need to pass 2 env vars like this (executed in modules/authentication-svc):
+To run those services locally, you need to pass 2 env vars like this (executed in packages/authentication-svc):
 
 ```bash
 export PRIVATE_CERT_PEM_FILE_PATH=test_keys/private.pem

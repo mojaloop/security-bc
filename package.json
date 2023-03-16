@@ -18,9 +18,9 @@
     "pre_commit_check": "npm run build && npm run lint && npm run test:unit",
     "build": "npm -ws run build",
     "watch": "npm -ws run watch",
-    "clean": "npm run clean:dist",
-    "clean:npm": "npm -ws run clean:npm",
-    "clean:dist": "npm -ws run clean",
+    "clean": "npm run clean:dist; npm run clean:npm",
+    "clean:npm": "rm -Rf node_modules; npm -ws run clean:npm",
+    "clean:dist": "rm -Rf dist; npm -ws run clean:dist",
     "lint": "npm -ws run lint",
     "lint:fix": "npm -ws run lint:fix",
     "test": "npm run test:unit",
@@ -52,7 +52,7 @@
     "tslib": "^2.5.0"
   },
   "workspaces": [
-    "modules/public-types-lib",
-    "modules/*"
+    "packages/public-types-lib",
+    "packages/*"
   ]
 }

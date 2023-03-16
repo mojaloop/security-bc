@@ -137,17 +137,19 @@ workflows:
   version: 2
   initial-setup:
     jobs:
-      # detect which modules/packages have changed using the path-filtering orb
+      # detect which packages/packages have changed using the path-filtering orb
       - path-filtering/filter:
           name: check-updated-files
           # 3-column, whitespace-delimited mapping. One mapping per
           # line:
           # <regex path-to-test> <parameter-to-set> <value-of-pipeline-parameter>
           mapping: |
-            modules/authentication-svc/.* run-build-authentication-svc true
-            modules/authorization-svc/.* run-build-authorization-svc true
-            modules/client-lib/.* run-build-client-lib true
-            modules/public-types-lib/.* run-build-public-types-lib true
+            test/integration/.* integration-tests-_changed true
+            packages/authentication-svc/.* authentication-svc_changed true
+            packages/authorization-svc/.* authorization-svc_changed true
+            packages/client-lib/.* client-lib_changed true
+            packages/public-types-lib/.* public-types-lib_changed true
+
           base-revision: main
           # this is the path of the configuration we should trigger once
           # path filtering and pipeline parameter value updates are

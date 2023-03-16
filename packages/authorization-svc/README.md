@@ -1,4 +1,4 @@
-# Security BC - Authentication Service
+# Security BC - Authorization Service
 
 [![Git Commit](https://img.shields.io/github/last-commit/mojaloop/security-bc.svg?style=flat)](https://github.com/mojaloop/security-bc/commits/master)
 [![Git Releases](https://img.shields.io/github/release/mojaloop/security-bc.svg?style=flat)](https://github.com/mojaloop/security-bc/releases)
@@ -6,13 +6,13 @@
 [![NPM Vulnerabilities](https://img.shields.io/snyk/vulnerabilities/npm/@mojaloop/security-bc.svg?style=flat)](https://www.npmjs.com/package/@mojaloop-poc/security-bc)
 [![CircleCI](https://circleci.com/gh/mojaloop/security-bc.svg?style=svg)](https://circleci.com/gh/mojaloop/security-bc)
 
-Mojaloop vNext Authentication Service
+Mojaloop vNext Authorization Service
 
 #Notes
 
 ## How to create RSA private and public keys without password
 
-*These keys should be injected to the authentication-svc, or at this early stage put in the test_keys directory*
+*These keys should be injected to the authorization-svc, or at this early stage put in the test_keys directory*
 
 Create an RSA certificate 
 
@@ -47,6 +47,7 @@ npm run watch
 npm run test:unit
 ```
 
+
 ## Run
 
 ```bash
@@ -54,18 +55,17 @@ npm run start
 ```
 
 ## Docker build
-(Must be executed at the root of the monorepo)
 ```bash
-docker build -f modules/authentication-svc/Dockerfile -t mojaloop/security-bc-authentication-svc:0.1.0 .
+npm run docker:build
 ```
 
 ## Docker run (dev env)
 ```bash
-# example using a local authN_TempStorageFile a custom KAFKA_URL
-docker run -ti --rm -p 3201:3201 \
-  --name mojaloop_security-bc-authentication-svc \
-  -v $(pwd)/modules/authentication-svc/dist/authN_TempStorageFile:/app/data/authN_TempStorageFile \
-  -e KAFKA_URL=192.168.1.103:9092 mojaloop/security-bc-authentication-svc
+# example using a local authZ_TempStorageFile a custom KAFKA_URL
+docker run -ti --rm -p 3202:3202 \
+  --name mojaloop_security-bc-authorization-svc \
+  -v $(pwd)/packages/authorization-svc/dist/authZ_TempStorageFile:/app/data/authZ_TempStorageFile \
+  -e KAFKA_URL=192.168.1.103:9092 mojaloop/security-bc-authorization-svc
   
 #to run as daemon replace "-ti --rm" with "-d"
 ```
