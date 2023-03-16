@@ -12,7 +12,7 @@
     "Pedro Sousa Barreto <pedrosousabarreto@gmail.com>"
   ],
   "scripts": {
-    "start": "npm -ws run start",
+    "prepare": "husky install",
     "start:authentication-svc": "npm -w @mojaloop/security-bc-authentication-svc run start",
     "start:authorization-svc": "npm -w @mojaloop/security-bc-authorization-svc run start",
     "pre_commit_check": "npm run build && npm run lint && npm run test:unit",
@@ -33,7 +33,6 @@
     "audit:check": "npm -ws run audit:check",
     "dep:check": "ncu -e 2; npm -ws run dep:check",
     "dep:update": "ncu -e 2 -u; npm -ws run dep:update",
-    "prepare": "husky install",
     "publish:client-lib": "npm -w @mojaloop/security-bc-client-lib run pub",
     "publish:public-types-lib": "npm -w @mojaloop/security-bc-public-types-lib run pub"
   },

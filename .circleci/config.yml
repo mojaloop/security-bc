@@ -9,7 +9,10 @@ setup: true
 orbs:
   path-filtering: circleci/path-filtering@0.1.3
 
-
+##
+# Yaml anchors
+#
+##
 defaults_configure_git: &defaults_configure_git
   name: Configure git
   command: |
@@ -135,29 +138,8 @@ jobs:
 
 workflows:
   version: 2
-  initial-setup:
+  build_lint_and_test:
     jobs:
-      # detect which packages/packages have changed using the path-filtering orb
-      - path-filtering/filter:
-          name: check-updated-files
-          # 3-column, whitespace-delimited mapping. One mapping per
-          # line:
-          # <regex path-to-test> <parameter-to-set> <value-of-pipeline-parameter>
-          mapping: |
-            test/integration/.* integration-tests-_changed true
-            packages/authentication-svc/.* authentication-svc_changed true
-            packages/authorization-svc/.* authorization-svc_changed true
-            packages/client-lib/.* client-lib_changed true
-            packages/public-types-lib/.* public-types-lib_changed true
-
-          base-revision: main
-          # this is the path of the configuration we should trigger once
-          # path filtering and pipeline parameter value updates are
-          # complete. In this case, we are using the parent dynamic
-          # configuration itself.
-          config-path: .circleci/docker_build_config.yml
-#  build_lint_and_test:
-#    jobs:
 #      - setup:
 #          context: org-global
 #      - lint:
@@ -177,11 +159,23 @@ workflows:
 #          context: org-global
 #          requires:
 #            - test-unit
-#      - publish_npm:
-#          context: org-global
-#          filters:
-#            branches:
-#              only: main
-#          requires:
-#            - test-unit
-#
+      - path-filtering/filter:
+          filters:
+            branches:
+              only: main
+          name: Detect if libs need to be published to NPM, or docker images built and pushed to DockerHub
+          # 3-column, whitespace-delimited mapping. One mapping per line:
+          # <regex path-to-test> <parameter-to-set> <value-of-pipeline-parameter>
+          mapping: |
+            packages/public-types-lib/.* publish_npm_lib public-types-lib
+            packages/client-lib/.* publish_npm_lib client-lib
+            packages/authentication-svc/.* docker_build_and_push authentication-svc
+            packages/authorization-svc/.* docker_build_and_push authorization-svc
+          base-revision: main
+          # this is the path of the configuration we should trigger once
+          # path filtering and pipeline parameter value updates are
+          # complete. In this case, we are using the parent dynamic
+          # configuration itself.
+          config-path: .circleci/docker_build_config.yml
+
+

@@ -20,12 +20,19 @@ parameters:
     default: false
 
 ##
-# Yarn anchors
+# Yaml anchors
 #
 ##
-#anchor_docker_login: &anchor_docker_login
-#  name: Login to Docker Hub
-#  command: docker login -u $DOCKER_USER -p $DOCKER_PASS
+
+anchor_configure_git: &anchor_configure_git
+  name: Configure git
+  command: |
+    git config user.email ${GIT_CI_EMAIL}
+    git config user.name ${GIT_CI_USER}
+
+anchor_npm_auth: &anchor_npm_auth
+  name: Update NPM registry auth token
+  command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
 
 ##
 # Executors
@@ -34,40 +41,60 @@ parameters:
 ##
 executors:
   default-docker:
-    working_directory: /home/circleci/project
+    working_directory: &workingDirVar /home/circleci/project
     resource_class: medium
     docker:
       - image: cimg/node:18.13
-#      - image: node:18.13
   default-machine:
     machine:
       image: ubuntu-2204:2022.07.1
       docker_layer_caching: true
 
-
 jobs:
+  publish-npm-lib:
+    executor: default-docker
+    parameters:
+      package_name:
+        type: string
+        default: "DEFAULT_PACKAGE_NAME"
+    steps:
+      - checkout
+      - attach_workspace:
+          at: *workingDirVar
+      - restore_cache:
+          keys:
+            - build-cache-{{ .Environment.CIRCLE_SHA1 }}
+      - run:
+          <<: *anchor_configure_git
+      - run:
+          <<: *anchor_npm_auth
+      - run: npm config set registry https://registry.npmjs.org/
+      - run:
+          name: Publish package
+          command: |
+            echo "not implemented yet - should publish package: << parameters.package_name >>"
 
   common-pre-docker-build:
     executor: default-docker
     parameters:
-      service_name:
+      package_name:
         type: string
-        default: "DEFAULT_SERVICE_NAME"
+        default: "DEFAULT_PACKAGE_NAME"
     steps:
       - checkout
-      - run: node -e "const p=require('./packages/<< parameters.service_name >>/package.json'); console.log(p.name.replace('@', ''))" > /tmp/<< parameters.service_name >>_docker_image_name
-      - run: node -e "const p=require('./packages/<< parameters.service_name >>/package.json'); console.log(p.version)" > /tmp/<< parameters.service_name >>_docker_image_version
+      - run: node -e "const p=require('./packages/<< parameters.package_name >>/package.json'); console.log(p.name.replace('@', ''))" > /tmp/<< parameters.package_name >>_docker_image_name
+      - run: node -e "const p=require('./packages/<< parameters.package_name >>/package.json'); console.log(p.version)" > /tmp/<< parameters.package_name >>_docker_image_version
       - persist_to_workspace:
           root: /tmp
           paths:
-            - << parameters.service_name >>_docker_image_name
-            - << parameters.service_name >>_docker_image_version
+            - << parameters.package_name >>_docker_image_name
+            - << parameters.package_name >>_docker_image_version
 
   common-docker-build:
     executor: default-machine
     #    executor: default-docker
     parameters:
-      service_name:
+      package_name:
         type: string
         default: "DEFAULT_SERVICE_NAME"
     environment:
@@ -77,17 +104,11 @@ jobs:
       - checkout
       - attach_workspace:
           at: /tmp
-#      - run:
-#          name: Docker image name (from package.json)
-#          command: cat /tmp/<< parameters.service_name >>_docker_image_name
-#      - run:
-#          name: Docker image version (from package.json)
-#          command: cat /tmp/<< parameters.service_name >>_docker_image_version
       - run:
           name: Setup Env vars with docker image name, tag and git short hash
           command: |
-            echo 'export MY_DOCKER_IMAGE_NAME="$(cat /tmp/<< parameters.service_name >>_docker_image_name)"' >> "$BASH_ENV"
-            echo 'export MY_DOCKER_IMAGE_VERSION="$(cat /tmp/<< parameters.service_name >>_docker_image_version)"' >> "$BASH_ENV"
+            echo 'export MY_DOCKER_IMAGE_NAME="$(cat /tmp/<< parameters.package_name >>_docker_image_name)"' >> "$BASH_ENV"
+            echo 'export MY_DOCKER_IMAGE_VERSION="$(cat /tmp/<< parameters.package_name >>_docker_image_version)"' >> "$BASH_ENV"
             echo 'export SHORT_GIT_HASH="$(echo $CIRCLE_SHA1 | cut -c -7)"' >> "$BASH_ENV"
       - run:
           name: Test Env vars with docker image name, tag and git short hash
@@ -103,7 +124,7 @@ jobs:
           command: echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
       - run:
           name: Docker build image
-          command: docker build --cache-from=$MY_DOCKER_IMAGE_NAME:alpha-latest -f packages/<< parameters.service_name >>/Dockerfile -t $MY_DOCKER_IMAGE_NAME:$MY_DOCKER_IMAGE_VERSION .
+          command: docker build --cache-from=$MY_DOCKER_IMAGE_NAME:alpha-latest -f packages/<< parameters.package_name >>/Dockerfile -t $MY_DOCKER_IMAGE_NAME:$MY_DOCKER_IMAGE_VERSION .
       - run:
           name: Docker tag image with git hash
           command: docker tag $MY_DOCKER_IMAGE_NAME:$MY_DOCKER_IMAGE_VERSION $MY_DOCKER_IMAGE_NAME:$SHORT_GIT_HASH
@@ -120,58 +141,21 @@ jobs:
           name: Docker push image alpha-latest tag
           command: docker push $MY_DOCKER_IMAGE_NAME:alpha-latest
 
-#      - run:
-#          name: Docker switch docker driver
-#          command: docker buildx create --name mybuilder --use --bootstrap
-#      - run:
-#          name: Docker buildx build and push
-#          command: docker buildx build --push --platform linux/amd64 -f packages/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
-##          command: docker buildx build --push --platform linux/amd64,linux/arm64 -f packages/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
-
-
-
 workflows:
-#  build_lint_and_test:
-#    when: << pipeline.parameters.run-build-authentication-svc >>
-#    jobs:
-#      - setup:
-#          context: org-global
-#      - lint:
-#          context: org-global
-#          requires:
-#            - setup
-#      - build:
-#          context: org-global
-#          requires:
-#            - setup
-#      - test-unit:
-#          context: org-global
-#          requires:
-#            - build
-#            - lint
-#      - coverage-report:
-#          context: org-global
-#          requires:
-#            - test-unit
-  authentication-svc:
-    when: << pipeline.parameters.run-build-authentication-svc >>
+  docker-build-and-push:
+    when: << pipeline.parameters.docker_build_and_push >>
     jobs:
       - common-pre-docker-build:
           context: org-global
-          service_name: "authentication-svc"
+          package_name: << pipeline.parameters.docker_build_and_push >>
       - common-docker-build:
           context: org-global
-          service_name: "authentication-svc"
+          service_name: << pipeline.parameters.docker_build_and_push >>
           requires:
             - common-pre-docker-build
-  authorization-svc:
-    when: << pipeline.parameters.run-build-authorization-svc >>
+  publish-npm-lib:
+    when: << pipeline.parameters.publish_npm_lib >>
     jobs:
-      - common-pre-docker-build:
+      - publish-npm-lib:
           context: org-global
-          service_name: "authorization-svc"
-      - common-docker-build:
-          context: org-global
-          service_name: "authorization-svc"
-          requires:
-            - common-pre-docker-build
+          package_name: << pipeline.parameters.publish-npm-lib >>
