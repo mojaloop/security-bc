@@ -3,21 +3,12 @@ version: 2.1
 # the default pipeline parameters, which will be updated according to
 # the results of the path-filtering orb
 parameters:
-  integration-tests-_changed:
-    type: boolean
-    default: false
-  authentication-svc_changed:
-    type: boolean
-    default: false
-  authorization-svc_changed:
-    type: boolean
-    default: false
-  client-lib_changed:
-    type: boolean
-    default: false
-  public-types-lib_changed:
-    type: boolean
-    default: false
+  publish_npm_lib:
+    type: string
+    default: "INVALID_PARAM"
+  docker_build_and_push:
+    type: string
+    default: "INVALID_PARAM"
 
 ##
 # Yaml anchors
@@ -150,7 +141,7 @@ workflows:
           package_name: << pipeline.parameters.docker_build_and_push >>
       - common-docker-build:
           context: org-global
-          service_name: << pipeline.parameters.docker_build_and_push >>
+          package_name: << pipeline.parameters.docker_build_and_push >>
           requires:
             - common-pre-docker-build
   publish-npm-lib:
@@ -158,4 +149,4 @@ workflows:
     jobs:
       - publish-npm-lib:
           context: org-global
-          package_name: << pipeline.parameters.publish-npm-lib >>
+          package_name: << pipeline.parameters.publish_npm_lib >>
