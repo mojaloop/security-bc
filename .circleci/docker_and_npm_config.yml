@@ -12,7 +12,6 @@ parameters:
 
 ##
 # Yaml anchors
-#
 ##
 anchor_configure_git: &anchor_configure_git
   name: Configure git
@@ -26,8 +25,6 @@ anchor_npm_auth: &anchor_npm_auth
 
 ##
 # Executors
-#
-# CircleCI Executors
 ##
 executors:
   default-docker:
@@ -40,8 +37,11 @@ executors:
       image: ubuntu-2204:2022.07.1
       docker_layer_caching: true
 
+##
+# Jobs
+##
 jobs:
-  publish-npm-lib:
+  publish-npm:
     executor: default-docker
     parameters:
       package_name:
@@ -64,7 +64,7 @@ jobs:
           command: |
             echo "not implemented yet - should publish package: << parameters.package_name >>"
 
-  common-pre-docker-build:
+  pre-docker-build:
     executor: default-docker
     parameters:
       package_name:
@@ -72,6 +72,9 @@ jobs:
         default: "DEFAULT_PACKAGE_NAME"
     steps:
       - checkout
+      - run:
+          name: Bump patch version in service package.json
+          command: npm version --no-git-tag-version --no-workspaces-update --no-commit-hooks patch -w packages/<< parameters.package_name >>
       - run: node -e "const p=require('./packages/<< parameters.package_name >>/package.json'); console.log(p.name.replace('@', ''))" > /tmp/<< parameters.package_name >>_docker_image_name
       - run: node -e "const p=require('./packages/<< parameters.package_name >>/package.json'); console.log(p.version)" > /tmp/<< parameters.package_name >>_docker_image_version
       - persist_to_workspace:
@@ -80,7 +83,7 @@ jobs:
             - << parameters.package_name >>_docker_image_name
             - << parameters.package_name >>_docker_image_version
 
-  common-docker-build:
+  docker-build:
     executor: default-machine
     #    executor: default-docker
     parameters:
@@ -130,22 +133,34 @@ jobs:
       - run:
           name: Docker push image alpha-latest tag
           command: docker push $MY_DOCKER_IMAGE_NAME:alpha-latest
+      - run:
+          <<: *anchor_configure_git
+      - run:
+          name: Create git tag for version
+          command: |
+            git add packages/<< parameters.package_name >>/package.json
+            git tag $MY_DOCKER_IMAGE_NAME_v$MY_DOCKER_IMAGE_VERSION
+            git commit -nm "[ci skip] CI/CD auto commit for docker push - commit: $SHORT_GIT_HASH"
+            git push -f origin $CIRCLE_BRANCH --tags
 
+##
+# Workflows
+##
 workflows:
   docker-build-and-push:
     when: << pipeline.parameters.docker_svc_package >>
     jobs:
-      - common-pre-docker-build:
+      - pre-docker-build:
           context: org-global
           package_name: << pipeline.parameters.docker_svc_package >>
-      - common-docker-build:
+      - docker-build:
           context: org-global
           package_name: << pipeline.parameters.docker_svc_package >>
           requires:
-            - common-pre-docker-build
+            - pre-docker-build
   publish-npm-lib:
     when: << pipeline.parameters.npm_lib_package >>
     jobs:
-      - publish-npm-lib:
+      - publish-npm:
           context: org-global
           package_name: << pipeline.parameters.npm_lib_package >>
