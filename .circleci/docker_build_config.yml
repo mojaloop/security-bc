@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  docker: circleci/docker:2.2.0
+  docker: circleci/docker@2.2.0
 
 # the default pipeline parameters, which will be updated according to
 # the results of the path-filtering orb
