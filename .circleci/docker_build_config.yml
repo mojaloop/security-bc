@@ -61,9 +61,47 @@ jobs:
           paths:
             - << parameters.service_name >>_docker_image_name
             - << parameters.service_name >>_docker_image_version
+#  common-docker-build:
+#    executor: default-machine
+##    executor: default-docker
+#    parameters:
+#      service_name:
+#        type: string
+#        default: "DEFAULT_SERVICE_NAME"
+#    environment:
+#      DOCKER_BUILDKIT: 1
+#      #BUILDX_PLATFORMS: linux/amd64,linux/arm64
+#    steps:
+#      - checkout
+##      - setup_remote_docker:
+##          version: 20.10.18
+##          docker_layer_caching: true
+#      - attach_workspace:
+#          at: /tmp
+#      - run: cat /tmp/<< parameters.service_name >>_docker_image_name
+#      - run: cat /tmp/<< parameters.service_name >>_docker_image_version
+#      - docker/check:
+#          docker-username: DOCKER_USER
+#          docker-password: DOCKER_PASS
+#      - docker/build:
+#          dockerfile: modules/<< parameters.service_name >>/Dockerfile
+#          docker-context: .
+#          cache_from: $(cat /tmp/<< parameters.service_name >>_docker_image_name):alpha-latest
+#          image: $(cat /tmp/<< parameters.service_name >>_docker_image_name)
+#          tag: $(cat /tmp/<< parameters.service_name >>_docker_image_version)
+#      - run:
+#          name: Tag Images with git hash
+#          command: docker tag $(cat /tmp/<< parameters.service_name >>_docker_image_name):$(cat /tmp/<< parameters.service_name >>_docker_image_version) $(cat /tmp/<< parameters.service_name >>_docker_image_name):$CIRCLE_SHA1
+#      - run:
+#          name: Tag Images with git alpha-latest
+#          command: docker tag $(cat /tmp/<< parameters.service_name >>_docker_image_name):$(cat /tmp/<< parameters.service_name >>_docker_image_version) $(cat /tmp/<< parameters.service_name >>_docker_image_name):alpha-latest
+#      - docker/push:
+#          image: $(cat /tmp/<< parameters.service_name >>_docker_image_name)
+#          tag: $CIRCLE_SHA1,$(cat /tmp/<< parameters.service_name >>_docker_image_version),alpha-latest
+
   common-docker-build:
     executor: default-machine
-#    executor: default-docker
+    #    executor: default-docker
     parameters:
       service_name:
         type: string
@@ -73,50 +111,51 @@ jobs:
       #BUILDX_PLATFORMS: linux/amd64,linux/arm64
     steps:
       - checkout
-#      - setup_remote_docker:
-#          version: 20.10.18
-#          docker_layer_caching: true
+      #      - setup_remote_docker:
+      #          version: 20.10.18
+      #          docker_layer_caching: true
       - attach_workspace:
           at: /tmp
-      - run: cat /tmp/<< parameters.service_name >>_docker_image_name
-      - run: cat /tmp/<< parameters.service_name >>_docker_image_version
-#      - docker/install-docker
-      - docker/check:
-          docker-username: DOCKER_USER
-          docker-password: DOCKER_PASS
-#          remote-docker-version: 20.10.18
-      - docker/build:
-          dockerfile: modules/<< parameters.service_name >>/Dockerfile
-          docker-context: .
-          cache_from: $(cat /tmp/<< parameters.service_name >>_docker_image_name):alpha-latest
-          image: $(cat /tmp/<< parameters.service_name >>_docker_image_name)
-          tag: $(cat /tmp/<< parameters.service_name >>_docker_image_version)
       - run:
-          name: Tag Images with git hash
-          command: docker tag $(cat /tmp/<< parameters.service_name >>_docker_image_name):$(cat /tmp/<< parameters.service_name >>_docker_image_version) $(cat /tmp/<< parameters.service_name >>_docker_image_name):$CIRCLE_SHA1
+          name: Docker image name (from package.json)
+          command: cat /tmp/<< parameters.service_name >>_docker_image_name
       - run:
-          name: Tag Images with git alpha-latest
-          command: docker tag $(cat /tmp/<< parameters.service_name >>_docker_image_name):$(cat /tmp/<< parameters.service_name >>_docker_image_version) $(cat /tmp/<< parameters.service_name >>_docker_image_name):alpha-latest
-      - docker/push:
-          image: $(cat /tmp/<< parameters.service_name >>_docker_image_name)
-#          tag: alpha_latest
-          tag: $CIRCLE_SHA1,$(cat /tmp/<< parameters.service_name >>_docker_image_version),alpha-latest
-
-#      - run:
-#          name: Login to Docker Hub
-#          command: echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
-#      - run:
-#          name: Docker build image
-#          command: docker build -f modules/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
-#      - run:
-#          name: Docker tag image with latest
-#          command: docker tag $(cat /tmp/<< parameters.service_name >>_docker_tag) $(cat /tmp/<< parameters.service_name >>_docker_image_name):latest
-#      - run:
-#          name: Docker push image
-#          command: docker push $(cat /tmp/<< parameters.service_name >>_docker_tag)
-#      - run:
-#          name: Docker push image latest tag
-#          command: docker push $(cat /tmp/<< parameters.service_name >>_docker_image_name):latest
+          name: Docker image version (from package.json)
+          command: cat /tmp/<< parameters.service_name >>_docker_image_version
+      - run:
+          name: Setup Env vars with docker image name and tag
+          command: |
+            echo 'export MY_DOCKER_IMAGE_NAME="$(cat /tmp/<< parameters.service_name >>_docker_image_name)"' >> "$BASH_ENV"
+            echo 'export MY_DOCKER_IMAGE_VERSION="$(cat /tmp/<< parameters.service_name >>_docker_image_version)"' >> "$BASH_ENV"
+      - run:
+          name: Test Env vars with docker image name and tag
+          command: |
+            echo $MY_DOCKER_IMAGE_NAME
+            echo $MY_DOCKER_IMAGE_VERSION
+      - run:
+          name: Docker version
+          command: docker --version
+      - run:
+          name: Login to Docker Hub
+          command: echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
+      - run:
+          name: Docker build image
+          command: docker build --cache-from=$MY_DOCKER_IMAGE_NAME:alpha-latest -f modules/<< parameters.service_name >>/Dockerfile -t $MY_DOCKER_IMAGE_NAME:$MY_DOCKER_IMAGE_VERSION .
+      - run:
+          name: Docker tag image with git hash
+          command: docker tag $MY_DOCKER_IMAGE_NAME:$MY_DOCKER_IMAGE_VERSION $MY_DOCKER_IMAGE_NAME:$CIRCLE_SHA1
+      - run:
+          name: Docker tag image with alpha-latest
+          command: docker tag $MY_DOCKER_IMAGE_NAME:$MY_DOCKER_IMAGE_VERSION $MY_DOCKER_IMAGE_NAME:alpha-latest
+      - run:
+          name: Docker push image
+          command: docker push $MY_DOCKER_IMAGE_NAME:$MY_DOCKER_IMAGE_VERSION
+      - run:
+          name: Docker push image git hash tag
+          command: docker push $MY_DOCKER_IMAGE_NAME:$CIRCLE_SHA1
+      - run:
+          name: Docker push image alpha-latest tag
+          command: docker push $MY_DOCKER_IMAGE_NAME:alpha-latest
 
 #      - run:
 #          name: Docker switch docker driver
@@ -124,7 +163,7 @@ jobs:
 #      - run:
 #          name: Docker buildx build and push
 #          command: docker buildx build --push --platform linux/amd64 -f modules/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
-#          command: docker buildx build --push --platform linux/amd64,linux/arm64 -f modules/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
+##          command: docker buildx build --push --platform linux/amd64,linux/arm64 -f modules/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
 
 
 
