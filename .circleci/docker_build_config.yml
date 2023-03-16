@@ -55,7 +55,7 @@ jobs:
     steps:
       - checkout
       - run: node -e "const p=require('./modules/<< parameters.service_name >>/package.json'); console.log(p.name.replace('@', ''))" > /tmp/<< parameters.service_name >>_docker_image_name
-      - run: node -e "const p=require('./modules/<< parameters.service_name >>/package.json'); console.log(p.name.replace('@', '')+':'+p.version)" > /tmp/<< parameters.service_name >>_docker_image_version
+      - run: node -e "const p=require('./modules/<< parameters.service_name >>/package.json'); console.log(p.version)" > /tmp/<< parameters.service_name >>_docker_image_version
       - persist_to_workspace:
           root: /tmp
           paths:
