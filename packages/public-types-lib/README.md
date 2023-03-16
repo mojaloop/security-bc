@@ -2,11 +2,11 @@
 
 [![Git Commit](https://img.shields.io/github/last-commit/mojaloop/security-bc.svg?style=flat)](https://github.com/mojaloop/security-bc/commits/master)
 [![Git Releases](https://img.shields.io/github/release/mojaloop/security-bc.svg?style=flat)](https://github.com/mojaloop/security-bc/releases)
-[![Npm Version](https://img.shields.io/npm/v/@mojaloop-poc/security-bc.svg?style=flat)](https://www.npmjs.com/package/@mojaloop-poc/security-bc)
-[![NPM Vulnerabilities](https://img.shields.io/snyk/vulnerabilities/npm/@mojaloop/security-bc.svg?style=flat)](https://www.npmjs.com/package/@mojaloop-poc/security-bc)
-[![CircleCI](https://circleci.com/gh/mojaloop/security-bc.svg?style=svg)](https://circleci.com/gh/mojaloop/security-bc)
+[![Npm Version](https://img.shields.io/npm/v/@mojaloop/security-bc-public-types-lib.svg?style=flat)](https://www.npmjs.com/package/@mojaloop/security-bc-public-types-lib)
+[![NPM Vulnerabilities](https://img.shields.io/snyk/vulnerabilities/npm/@mojaloop/security-bc-public-types-lib.svg?style=flat)](https://www.npmjs.com/package/@mojaloop/security-bc-public-types-lib)
+[![CircleCI](https://circleci.com/gh/mojaloop/security-bc.svg?style=shield)](https://circleci.com/github/mojaloop/security-bc)
 
-Mojaloop vNext common security types library - types only, no funcionality
+Mojaloop vNext common security types library - types only, no implementations
 
 ---
 

@@ -5,10 +5,10 @@ version: 2.1
 parameters:
   docker_svc_package:
     type: string
-    default: "INVALID_PARAM"
+    default: ""
   npm_lib_package:
     type: string
-    default: "INVALID_PARAM"
+    default: ""
 
 ##
 # Yaml anchors
@@ -123,6 +123,9 @@ jobs:
             echo $MY_DOCKER_IMAGE_VERSION
             echo $SHORT_GIT_HASH
       - run:
+          name: Update package.json to the same version bumped in the prep version
+          command: npm version --no-git-tag-version --no-workspaces-update --no-commit-hooks $MY_DOCKER_IMAGE_VERSION -w packages/<< parameters.package_name >>
+      - run:
           name: Docker version
           command: docker --version
       - run:
@@ -152,7 +155,6 @@ jobs:
           name: Create git tag for version
           # we run the npm version again (but with the specific version) to have the package.json file changed in this executor
           command: |
-            npm version --no-git-tag-version --no-workspaces-update --no-commit-hooks $MY_DOCKER_IMAGE_VERSION -w packages/<< parameters.package_name >>
             git add packages/<< parameters.package_name >>/package.json
             git tag << parameters.package_name >>_v${MY_DOCKER_IMAGE_VERSION}
             git commit -nm "[ci skip] CI/CD auto commit for Docker push of << parameters.package_name >> - commit: $SHORT_GIT_HASH"
