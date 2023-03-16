@@ -16,7 +16,7 @@
   "files": [
     "/dist"
   ],
-  "test_field_to_delete": "val_6",
+  "test_field_to_delete": "val_1",
   "scripts": {
     "start": "npm run service",
     "start:dev": "npm run build && PLATFORM_CONFIG_BASE_SVC_URL=http://localhost:3100 PRIVATE_CERT_PEM_FILE_PATH=dist/private.pem IAM_STORAGE_FILE_PATH=dist/authN_TempIAMStorageFile.json npm start",
