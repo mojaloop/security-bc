@@ -88,12 +88,19 @@ jobs:
       - docker/build:
           dockerfile: modules/<< parameters.service_name >>/Dockerfile
           docker-context: .
+          cache_from: $(cat /tmp/<< parameters.service_name >>_docker_image_name):alpha-latest
           image: $(cat /tmp/<< parameters.service_name >>_docker_image_name)
           tag: $(cat /tmp/<< parameters.service_name >>_docker_image_version)
+      - run:
+          name: Tag Images with git hash
+          command: docker tag $(cat /tmp/<< parameters.service_name >>_docker_image_name):$(cat /tmp/<< parameters.service_name >>_docker_image_version) $(cat /tmp/<< parameters.service_name >>_docker_image_name):$CIRCLE_SHA1
+      - run:
+          name: Tag Images with git alpha-latest
+          command: docker tag $(cat /tmp/<< parameters.service_name >>_docker_image_name):$(cat /tmp/<< parameters.service_name >>_docker_image_version) $(cat /tmp/<< parameters.service_name >>_docker_image_name):alpha-latest
       - docker/push:
           image: $(cat /tmp/<< parameters.service_name >>_docker_image_name)
 #          tag: alpha_latest
-          tag: $CIRCLE_SHA1,$(cat /tmp/<< parameters.service_name >>_docker_image_version),alpha_latest
+          tag: $CIRCLE_SHA1,$(cat /tmp/<< parameters.service_name >>_docker_image_version),alpha-latest
 
 #      - run:
 #          name: Login to Docker Hub
