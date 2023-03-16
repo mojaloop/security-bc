@@ -34,7 +34,8 @@ executors:
     working_directory: /home/circleci/project
     resource_class: medium
     docker:
-      - image: node:18.13
+      - image: cimg:/node:18.13
+#      - image: node:18.13
   default-machine:
     machine:
       image: ubuntu-2204:2022.07.1
@@ -58,7 +59,8 @@ jobs:
             - << parameters.service_name >>_docker_image_name
             - << parameters.service_name >>_docker_tag
   common-docker-build:
-    executor: default-machine
+#    executor: default-machine
+    executor: default-docker
     parameters:
       service_name:
         type: string
@@ -68,6 +70,9 @@ jobs:
       #BUILDX_PLATFORMS: linux/amd64,linux/arm64
     steps:
       - checkout
+      - setup_remote_docker:
+          version: 23.0.1
+          docker_layer_caching: true
       - attach_workspace:
           at: /tmp
       - run: cat /tmp/<< parameters.service_name >>_docker_image_name
@@ -79,7 +84,7 @@ jobs:
           name: Docker build image
           command: docker build -f modules/<< parameters.service_name >>/Dockerfile -t $(cat /tmp/<< parameters.service_name >>_docker_tag) .
       - run:
-          name: Docker tag image
+          name: Docker tag image with latest
           command: docker tag $(cat /tmp/<< parameters.service_name >>_docker_tag) $(cat /tmp/<< parameters.service_name >>_docker_image_name):latest
       - run:
           name: Docker push image
