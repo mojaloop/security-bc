@@ -69,7 +69,7 @@ const AUTH_N_ISSUER_NAME = process.env["AUTH_N_ISSUER_NAME"] || "http://localhos
 const kafkaProducerOptions = {
     kafkaBrokerList: KAFKA_URL
 }
- 
+
 let globalLogger: ILogger;
 
 export class Service {
