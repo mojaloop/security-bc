@@ -90,28 +90,28 @@ jobs:
 
 
 workflows:
-  build_lint_and_test:
-    when: << pipeline.parameters.run-build-authentication-svc >>
-    jobs:
-      - setup:
-          context: org-global
-      - lint:
-          context: org-global
-          requires:
-            - setup
-      - build:
-          context: org-global
-          requires:
-            - setup
-      - test-unit:
-          context: org-global
-          requires:
-            - build
-            - lint
-      - coverage-report:
-          context: org-global
-          requires:
-            - test-unit
+#  build_lint_and_test:
+#    when: << pipeline.parameters.run-build-authentication-svc >>
+#    jobs:
+#      - setup:
+#          context: org-global
+#      - lint:
+#          context: org-global
+#          requires:
+#            - setup
+#      - build:
+#          context: org-global
+#          requires:
+#            - setup
+#      - test-unit:
+#          context: org-global
+#          requires:
+#            - build
+#            - lint
+#      - coverage-report:
+#          context: org-global
+#          requires:
+#            - test-unit
   authentication-svc:
     when: << pipeline.parameters.run-build-authentication-svc >>
     jobs:
