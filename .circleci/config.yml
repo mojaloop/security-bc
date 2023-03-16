@@ -160,6 +160,8 @@ workflows:
 #          requires:
 #            - test-unit
       - path-filtering/filter:
+#          requires:
+#            - test-unit
           filters:
             branches:
               only: main
@@ -167,10 +169,10 @@ workflows:
           # 3-column, whitespace-delimited mapping. One mapping per line:
           # <regex path-to-test> <parameter-to-set> <value-of-pipeline-parameter>
           mapping: |
-            packages/public-types-lib/.* publish_npm_lib public-types-lib
-            packages/client-lib/.* publish_npm_lib client-lib
-            packages/authentication-svc/.* docker_build_and_push authentication-svc
-            packages/authorization-svc/.* docker_build_and_push authorization-svc
+            packages/public-types-lib/.* publish_npm_lib "public-types-lib"
+            packages/client-lib/.* publish_npm_lib "client-lib"
+            packages/authentication-svc/.* docker_build_and_push "authentication-svc"
+            packages/authorization-svc/.* docker_build_and_push "authorization-svc"
           base-revision: main
           # this is the path of the configuration we should trigger once
           # path filtering and pipeline parameter value updates are
