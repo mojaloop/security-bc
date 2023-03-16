@@ -88,6 +88,7 @@ jobs:
           dockerfile: modules/<< parameters.service_name >>/Dockerfile
           docker-context: .
           image: $(cat /tmp/<< parameters.service_name >>_docker_tag)
+          tag: $(cat /tmp/<< parameters.service_name >>_docker_tag)
       - docker/push:
           image: $(cat /tmp/<< parameters.service_name >>_docker_tag)
           tag: $CIRCLE_SHA1,$(cat /tmp/<< parameters.service_name >>_docker_tag),$(cat /tmp/<< parameters.service_name >>_docker_image_name):alpha_latest
