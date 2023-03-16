@@ -80,7 +80,6 @@ export class Service {
     static authAgg: AuthenticationAggregate;
     static expressServer: Server;
 
-
     static async start(
         logger?: ILogger, iamAdapter?:IAMAuthenticationAdapter,
         cryptoAdapter?:ICryptoAuthenticationAdapter, localRoleAssociationRepo?: ILocalRoleAssociationRepo
