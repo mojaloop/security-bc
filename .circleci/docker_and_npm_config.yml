@@ -142,7 +142,7 @@ jobs:
           command: |
             npm version --no-git-tag-version --no-workspaces-update --no-commit-hooks $MY_DOCKER_IMAGE_VERSION -w packages/<< parameters.package_name >>
             git add packages/<< parameters.package_name >>/package.json
-            git tag $MY_DOCKER_IMAGE_NAME_v$MY_DOCKER_IMAGE_VERSION
+            git tag "$MY_DOCKER_IMAGE_NAME_v$MY_DOCKER_IMAGE_VERSION"
             git commit -nm "[ci skip] CI/CD auto commit for docker push - commit: $SHORT_GIT_HASH"
             git push -f origin $CIRCLE_BRANCH --tags
 
