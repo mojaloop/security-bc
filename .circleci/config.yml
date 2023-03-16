@@ -178,5 +178,5 @@ workflows:
             packages/authentication-svc/.* docker_svc_package "authentication-svc"
             packages/authorization-svc/.* docker_svc_package "authorization-svc"
           base-revision: main
-          config-path: .circleci/docker_and_npm_config.yml.yml
+          config-path: .circleci/docker_and_npm_config.yml
 
