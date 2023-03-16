@@ -73,20 +73,25 @@ jobs:
       #BUILDX_PLATFORMS: linux/amd64,linux/arm64
     steps:
       - checkout
-      - setup_remote_docker:
-          version: 20.10.18
-          docker_layer_caching: true
+#      - setup_remote_docker:
+#          version: 20.10.18
+#          docker_layer_caching: true
       - attach_workspace:
           at: /tmp
       - run: cat /tmp/<< parameters.service_name >>_docker_image_name
       - run: cat /tmp/<< parameters.service_name >>_docker_tag
-      - docker/publish:
-          docker-username: $DOCKER_USER
-          docker-password: $DOCKER_PASS
-          remote-docker-version: 20.10.18
+      - docker/check:
+          docker-username: DOCKER_USER
+          docker-password: DOCKER_PASS
+#          remote-docker-version: 20.10.18
+      - docker/build:
           dockerfile: modules/<< parameters.service_name >>/Dockerfile
           docker-context: .
           image: $(cat /tmp/<< parameters.service_name >>_docker_tag)
+      - docker/push:
+          image: $(cat /tmp/<< parameters.service_name >>_docker_tag)
+          tag: $CIRCLE_SHA1,$(cat /tmp/<< parameters.service_name >>_docker_tag),$(cat /tmp/<< parameters.service_name >>_docker_image_name):alpha_latest
+
 #      - run:
 #          name: Login to Docker Hub
 #          command: echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
