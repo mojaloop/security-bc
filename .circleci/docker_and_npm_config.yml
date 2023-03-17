@@ -55,7 +55,7 @@ jobs:
           keys:
             - node_modules-cache-{{ checksum "package-lock.json" }}
             - build-cache-{{ .Environment.CIRCLE_SHA1 }}
-      - run: tree
+      - run: ls -laR
       - run:
           <<: *anchor_npm_auth
       - run: npm config set registry https://registry.npmjs.org/
