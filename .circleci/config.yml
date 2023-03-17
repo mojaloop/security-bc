@@ -139,8 +139,8 @@ workflows:
   version: 2
   build_lint_and_test:
     jobs:
-#      - setup:
-#          context: org-global
+      - setup:
+          context: org-global
 #      - lint:
 #          context: org-global
 #          requires:
