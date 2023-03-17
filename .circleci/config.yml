@@ -134,12 +134,16 @@ jobs:
       - run:
           name: Detect and publish modules
           command: chmod +x .circleci/publish_npm.sh && .circleci/publish_npm.sh
-
+  test-filtering:
+    steps:
+      - path-filtering/set-parameters
+      - cat /tmp/pipeline-parameters.json
 
 workflows:
   version: 2
   build_lint_and_test:
     jobs:
+      - test-filtering
 #      - setup:
 #          context: org-global
 #      - lint:
@@ -159,10 +163,7 @@ workflows:
 #          context: org-global
 #          requires:
 #            - test-unit
-      - test-filtering:
-          steps:
-            - path-filtering/set-parameters
-            - cat /tmp/pipeline-parameters.json
+
 #      - path-filtering/filter:
 #          #          requires:
 #          #            - test-unit
