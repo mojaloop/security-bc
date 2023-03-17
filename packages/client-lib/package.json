@@ -1,6 +1,6 @@
 {
   "name": "@mojaloop/security-bc-client-lib",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "test_change_field": "val_7",
   "description": "mojaloop security authentication and authorization client library",
   "license": "Apache-2.0",
