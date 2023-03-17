@@ -140,29 +140,29 @@ workflows:
     jobs:
       - setup:
           context: org-global
-#      - lint:
-#          context: org-global
-#          requires:
-#            - setup
+      - lint:
+          context: org-global
+          requires:
+            - setup
       - build:
           context: org-global
           requires:
             - setup
-#      - test-unit:
-#          context: org-global
-#          requires:
-#            - build
-#            - lint
-#      - coverage-report:
-#          context: org-global
-#          requires:
-#            - test-unit
-
-      - path-filtering/filter:
+      - test-unit:
+          context: org-global
           requires:
             - build
+            - lint
+      - coverage-report:
+          context: org-global
+          requires:
+            - test-unit
+
+      - path-filtering/filter:
 #          requires:
-#            - test-unit
+#            - build
+          requires:
+            - test-unit
           filters:
             branches:
               only: main

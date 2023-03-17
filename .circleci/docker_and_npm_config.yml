@@ -53,7 +53,7 @@ jobs:
       - restore_cache:
           keys:
             - build-cache-{{ .Environment.CIRCLE_SHA1 }}
-      - run: ls -laR packages/
+      - run: ls -laR packages/*/dist
       - run:
           <<: *anchor_npm_auth
       - run: npm config set registry https://registry.npmjs.org/
