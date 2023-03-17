@@ -145,10 +145,10 @@ workflows:
 #          context: org-global
 #          requires:
 #            - setup
-#      - build:
-#          context: org-global
-#          requires:
-#            - setup
+      - build:
+          context: org-global
+          requires:
+            - setup
 #      - test-unit:
 #          context: org-global
 #          requires:
