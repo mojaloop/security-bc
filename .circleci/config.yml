@@ -160,8 +160,8 @@ workflows:
             - test-unit
 
       - path-filtering/filter:
-          #          requires:
-          #            - test-unit
+          requires:
+            - test-unit
           filters:
             branches:
               only: main
