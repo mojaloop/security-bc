@@ -134,10 +134,12 @@ jobs:
       - run:
           name: Detect and publish modules
           command: chmod +x .circleci/publish_npm.sh && .circleci/publish_npm.sh
+
   test-filtering:
+    executor: default-docker
     steps:
       - path-filtering/set-parameters
-      - cat /tmp/pipeline-parameters.json
+      - run: cat /tmp/pipeline-parameters.json
 
 workflows:
   version: 2
