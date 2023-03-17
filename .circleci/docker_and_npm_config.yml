@@ -53,7 +53,7 @@ jobs:
           at: *workingDirVar
       - restore_cache:
           keys:
-            - node_modules-cache-{{ checksum "package-lock.json" }}
+#            - node_modules-cache-{{ checksum "package.json" }}
             - build-cache-{{ .Environment.CIRCLE_SHA1 }}
       - run: ls -laR
       - run:

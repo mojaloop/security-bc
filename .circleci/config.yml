@@ -31,7 +31,6 @@ defaults_npm_auth: &defaults_npm_auth
 executors:
   default-docker:
     working_directory: &workingDirVar /home/circleci/project
-    resource_class: medium
     docker:
       - image: node:18.13
   default-machine:
@@ -45,12 +44,12 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - node_modules-cache-{{ checksum "package-lock.json" }}
+            - node_modules-cache-{{ checksum "package.json" }}
       - run: npm install
       - save_cache:
           paths:
             - node_modules
-          key: node_modules-cache-{{ checksum "package-lock.json" }}
+          key: node_modules-cache-{{ checksum "package.json" }}
       - persist_to_workspace:
           root: *workingDirVar
           paths:
@@ -62,7 +61,7 @@ jobs:
           at: *workingDirVar
       - restore_cache:
           keys:
-            - node_modules-cache-{{ checksum "package-lock.json" }}
+            - node_modules-cache-{{ checksum "package.json" }}
       - run: npm run lint
 
   build:
@@ -72,7 +71,7 @@ jobs:
           at: *workingDirVar
       - restore_cache:
           keys:
-            - node_modules-cache-{{ checksum "package-lock.json" }}
+            - node_modules-cache-{{ checksum "package.json" }}
       - run: npm run build
       - save_cache:
           paths:
@@ -116,24 +115,24 @@ jobs:
       - store_artifacts:
           path: coverage
 
-  publish_npm:
-    executor: default-docker
-    steps:
-      - checkout
-      - attach_workspace:
-          at: *workingDirVar
-      - restore_cache:
-          keys:
-            - build-cache-{{ .Environment.CIRCLE_SHA1 }}
-      - run:
-          <<: *defaults_configure_git
-      - run:
-          <<: *defaults_npm_auth
-      #      - run: cat ~/.npmrc
-      - run: npm config set registry https://registry.npmjs.org/
-      - run:
-          name: Detect and publish modules
-          command: chmod +x .circleci/publish_npm.sh && .circleci/publish_npm.sh
+#  publish_npm:
+#    executor: default-docker
+#    steps:
+#      - checkout
+#      - attach_workspace:
+#          at: *workingDirVar
+#      - restore_cache:
+#          keys:
+#            - build-cache-{{ .Environment.CIRCLE_SHA1 }}
+#      - run:
+#          <<: *defaults_configure_git
+#      - run:
+#          <<: *defaults_npm_auth
+#      #      - run: cat ~/.npmrc
+#      - run: npm config set registry https://registry.npmjs.org/
+#      - run:
+#          name: Detect and publish modules
+#          command: chmod +x .circleci/publish_npm.sh && .circleci/publish_npm.sh
 
 workflows:
   version: 2
