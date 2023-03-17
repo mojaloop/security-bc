@@ -139,7 +139,9 @@ jobs:
     executor: default-docker
     steps:
       - checkout
-      - path-filtering/set-parameters
+      - path-filtering/set-parameters:
+          mapping: |
+            packages/*
       - run: cat /tmp/pipeline-parameters.json
 
 workflows:
