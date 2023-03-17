@@ -138,6 +138,7 @@ jobs:
   test-filtering:
     executor: default-docker
     steps:
+      - checkout
       - path-filtering/set-parameters
       - run: cat /tmp/pipeline-parameters.json
 
