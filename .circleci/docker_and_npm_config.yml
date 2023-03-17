@@ -29,7 +29,6 @@ anchor_npm_auth: &anchor_npm_auth
 executors:
   default-docker:
     working_directory: &workingDirVar /home/circleci/project
-    resource_class: medium
     docker:
       - image: cimg/node:18.13
   default-machine:
@@ -53,9 +52,8 @@ jobs:
           at: *workingDirVar
       - restore_cache:
           keys:
-#            - node_modules-cache-{{ checksum "package.json" }}
             - build-cache-{{ .Environment.CIRCLE_SHA1 }}
-      - run: ls -laR
+      - run: ls -laR packages/
       - run:
           <<: *anchor_npm_auth
       - run: npm config set registry https://registry.npmjs.org/
