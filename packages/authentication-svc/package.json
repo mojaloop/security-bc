@@ -6,6 +6,9 @@
   "license": "Apache-2.0",
   "homepage": "https://github.com/mojaloop/security-bc/tree/main/packages/authentication-svc",
   "private": true,
+  "mojaloop": {
+    "publish_to_dockerhub": true
+  },
   "bugs": {
     "url": "https://github.com/mojaloop/security-bc/issues#readme"
   },
