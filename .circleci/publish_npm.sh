@@ -4,8 +4,6 @@
 # The root directory of packages to publish
 ROOT="./packages"
 REPOSITORY_TYPE="github"
-#CIRCLE_API="https://circleci.com/api"
-#LASTCIBUILDFILE=".lastcibuild"
 
 ########################################################################################
 ## 1. Setup
@@ -87,8 +85,9 @@ for PACKAGE in ${CHANGED_PACKAGES}; do
         PUBLISHED_NPM_PACKAGES_COUNT=$((PUBLISHED_NPM_PACKAGES_COUNT + 1))
         TAG_NAME=${PACKAGE}_v${PACKAGE_NEW_VERSION}
         echo -e "Successfully published package."
-        echo -e "Git staging '${PACKAGE_PATH}/package.json' and creating tag: '${TAG_NAME}'"
+        echo -e "Git staging '${PACKAGE_PATH}/package.json, committing and tagging with: '${TAG_NAME}'"
         git add ${PACKAGE_PATH}/package.json
+        git commit -nm "[ci skip] CI/CD auto commit for '${PACKAGE_NAME}' NPM publish - parent commit: '${CIRCLE_SHA1}'"
         git tag ${TAG_NAME}
     else
         echo -e "Error publishing package: ${PACKAGE} - exiting"
@@ -96,55 +95,29 @@ for PACKAGE in ${CHANGED_PACKAGES}; do
     fi
 done
 
-
 #### REMOTE
-exit 99
-
-
-########################################################################################
-## Phase 4 - Building docker images and publishing to DockerHub
-########################################################################################
-printHeader "Phase 4 - Building docker images and publishing to DockerHub"
-
-PUBLISHED_DOCKERHUB_PACKAGES_COUNT=0
-
-echo -e "Going to build and publish ${PACKAGES_TO_PUBLISH_TO_DOCKER_COUNT} package(s)..."
-
-for PACKAGE in ${PACKAGES_TO_PUBLISH_TO_DOCKER}; do
-    echo -e "\n------------------------"
-    echo -e "Building and publishing package: ${PACKAGE} to DockerHub..."
-
-    PACKAGE_PATH=${ROOT}/$PACKAGE
-    IMAGE_NAME=$(node -e "const p=require('./packages/${PACKAGE_PATH}/package.json'); console.log(p.name.replace('@', ''))")
-
-done
+if [[ -n "$DRYRUN" ]]; then
+    echo -e "\nDryrun env var found - stopping script execution before 'Pushing commits to git'"
+    exit 0
+fi
 
 ############################################
-## Phase 5 - Pushing commits to git
+## Phase 4 - Pushing commits to git
 ############################################
-printHeader "Phase 5 - Pushing commits to git"
+printHeader "Phase 4 - Pushing commits to git"
 
-if [[ PUBLISHED_NPM_PACKAGES_COUNT -gt 0 ]] || [[ PUBLISHED_DOCKERHUB_PACKAGES_COUNT -gt 0 ]]; then
-    # store the commit ID of the current commit for future CI/C reference
-    echo ${CIRCLE_SHA1} >${LASTCIBUILDFILE}
-    #git --no-pager log -1 --pretty=%H > ${LASTCIBUILDFILE}
-    git add ${LASTCIBUILDFILE}
-
-    # commit the updated package.json files and LASTCIBUILDFILE
-    echo -e "${PUBLISHED_NPM_PACKAGES_COUNT} package(s) were published, committing changed 'package.json' files..."
-    git commit -nm "[ci skip] CI/CD auto commit for: '$(git log -1 --pretty=%B)'"
-
-    echo -e "Pushing changes..."
-    # git status
-    git push -f origin $CIRCLE_BRANCH --tags
-
-    if [[ $? -eq 0 ]]; then
-        echo -e "\nDONE - ${PUBLISHED_NPM_PACKAGES_COUNT} package(s) were published and version changes pushed, all done."
-    else
-        echo -e "Error pushing CI/CD auto commits for version changes - exiting"
-        exit 5
-    fi
-else
-    echo -e "${PUBLISHED_NPM_PACKAGES_COUNT} Packages were found to be published, but none was successfully published, error."
+if [[ PUBLISHED_NPM_PACKAGES_COUNT -eq 0 ]]; then
+    echo -e "No Packages were published, nothing to push to git"
     exit 9
+fi
+
+echo -e "Pushing changes..."
+# git status
+git push -f origin $CIRCLE_BRANCH --tags
+
+if [[ $? -eq 0 ]]; then
+    echo -e "\nDONE - ${PUBLISHED_NPM_PACKAGES_COUNT} package(s) were published and version changes pushed, all done."
+else
+    echo -e "Error pushing CI/CD auto commits for version changes - exiting"
+    exit 5
 fi

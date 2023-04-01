@@ -6,9 +6,9 @@ set -a # Enable allexport
 ########################################################################################
 
 function printHeader() {
-    echo -e "\n****************************************"
+    echo -e "\n********************************************************************************"
     echo -e "${1}"
-    echo -e "****************************************"
+    echo -e "********************************************************************************"
 }
 
 #
@@ -40,7 +40,10 @@ function loadCommits(){
     echo -e "Provided project repository name: \t${CIRCLE_PROJECT_REPONAME}"
 
     echo -e "\nFetching last successful build from CircleCI API...."
-    LAST_CI_BUILD_COMMIT=$(curl -s --header "Authorization: Basic $CIRCLE_TOKEN" https://circleci.com/api/v1.1/project/github/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME\?filter\=completed\&limit\=1 | jq -r '.[0]["vcs_revision"]')
+    # Note: we're trying to find the last item with either "success" or "not_run" status,
+    # because we commit code at the end of the pipeline, we don't want the last commit that triggered the build, rather the last one that was processed by the CI/CD successfully
+    # detail: when we push the git changes with the tags and version bumps at the end of this script, we use skip ci, that entry in cicd will have a not_run status
+    LAST_CI_BUILD_COMMIT=$(curl -s --header "Authorization: Basic $CIRCLE_TOKEN" https://circleci.com/api/v1.1/project/github/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME\?\&limit\=10 | jq -r 'first(.[] | select(.status == "success" or .status == "not_run")).vcs_revision')
     echo -e "\nLast successful CI Build commit hash: \t${LAST_CI_BUILD_COMMIT}"
 
     if [[ -z "${LAST_CI_BUILD_COMMIT}" ]]; then
@@ -81,53 +84,6 @@ function detectChangedPackages(){
             echo -e "\tPackage changed since last CI build and has a package.json file - ADDING TO THE LIST of changed packages"
         else
             echo -e "\tPackage not changed since last CI build - IGNORING"
-        fi
-    done
-
-}
-
-
-function OLD_detectChanges(){
-    PACKAGES=$(ls -l "${ROOT}" | grep ^d | awk '{print $9}')
-    echo -e "Found these packages in this repository:"
-    for PACKAGE in $PACKAGES; do
-        echo -e " - ${PACKAGE}"
-    done
-
-    PACKAGES_TO_PUBLISH_TO_NPM=""
-    PACKAGES_TO_PUBLISH_TO_NPM_COUNT=0
-    PACKAGES_TO_PUBLISH_TO_DOCKER=""
-    PACKAGES_TO_PUBLISH_TO_DOCKER_COUNT=0
-
-    #for PACKAGE in "${PACKAGES[@]}"; do
-    for PACKAGE in $PACKAGES; do
-        PACKAGE_PATH=${ROOT}/$PACKAGE
-        PACKAGE_LAST_CHANGE_COMMIT_SHA=$(git --no-pager log -1 --format=format:%H --full-diff $PACKAGE_PATH)
-        PACKAGE_IS_PRIVATE=$(cat $PACKAGE_PATH/package.json | jq -r ".private // false")
-        PACKAGE_IS_DOCKERIMAGE=$(cat $PACKAGE_PATH/package.json | jq -r ".mojaloop.publish_to_dockerhub // false")
-
-        echo -e "\nChecking package: '${PACKAGE}' on path: ${PACKAGE_PATH}"
-
-        if [[ ! -s "$PACKAGE_PATH/package.json" ]]; then
-            echo -e "\tPackage does not have a package.json file - ignoring"
-            continue
-        fi
-
-        echo -e "\tPackage last change commit: ${PACKAGE_LAST_CHANGE_COMMIT_SHA} - is private: ${PACKAGE_IS_PRIVATE} - mojaloop.publish_to_dockerhub key: ${PACKAGE_IS_DOCKERIMAGE}"
-
-        if [[ -z "$PACKAGE_LAST_CHANGE_COMMIT_SHA" ]] || [[ $COMMITS_SINCE_LAST_CI_BUILD == *"$PACKAGE_LAST_CHANGE_COMMIT_SHA"* ]]; then
-            if [[ "$PACKAGE_IS_DOCKERIMAGE" = "true" ]]; then
-                PACKAGES_TO_PUBLISH_TO_DOCKER+="$PACKAGE "
-                PACKAGES_TO_PUBLISH_TO_DOCKER_COUNT=$((PACKAGES_TO_PUBLISH_TO_DOCKER_COUNT + 1))
-                echo -e "\tPackage changed since last CI build and has Docker Build flag in package.json - adding to the list or docker packages"
-            fi
-            if [[ "$PACKAGE_IS_PRIVATE" = "false" ]]; then
-                PACKAGES_TO_PUBLISH_TO_NPM+="$PACKAGE "
-                PACKAGES_TO_PUBLISH_TO_NPM_COUNT=$((PACKAGES_TO_PUBLISH_TO_NPM_COUNT + 1))
-                echo -e "\tPackage changed since last CI build and is not market as private in package.json - adding to the list of npm packages"
-            fi
-        else
-            echo -e "\tPackage not changed since last CI build - ignoring"
         fi
     done
 
