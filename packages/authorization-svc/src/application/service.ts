@@ -61,7 +61,7 @@ const AUTHZ_STORAGE_FILE_PATH = process.env["AUTHZ_STORAGE_FILE_PATH"] || "/app/
 const kafkaProducerOptions = {
     kafkaBrokerList: KAFKA_URL
 }
-
+// global
 let globalLogger: ILogger;
 
 export class Service {
