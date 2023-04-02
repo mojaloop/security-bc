@@ -58,7 +58,14 @@ function loadCommits(){
     # Note: we're trying to find the last item with either "success" or "not_run" status,
     # because we commit code at the end of the pipeline, we don't want the last commit that triggered the build, rather the last one that was processed by the CI/CD successfully
     # detail: when we push the git changes with the tags and version bumps at the end of this script, we use skip ci, that entry in cicd will have a not_run status
-    LAST_CI_BUILD_COMMIT=$(curl -s --header "Authorization: Basic $CIRCLE_TOKEN" https://circleci.com/api/v1.1/project/github/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME\?\&limit\=10 | jq -r 'first(.[] | select(.status == "success" or .status == "not_run")).vcs_revision')
+    LAST_CI_BUILD_COMMIT=$(curl -s --header "Authorization: Basic $CIRCLE_TOKEN" https://circleci.com/api/v1.1/project/github/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME\?\&limit\=10 | jq -r 'first(.[] | select(.vcs_revision!="'${CIRCLE_SHA1}'" and .status=="success" or .status=="not_run")).vcs_revision')
+    SUCCESS=$?
+
+    if [[ ! SUCCESS -eq 0 ]]; then
+        echo -e "\e[93mGet last commit failed, exiting.\e[0m"
+        exit 2
+    fi
+
     echo -e "\nLast successful CI Build commit hash: \t${LAST_CI_BUILD_COMMIT}"
 
     if [[ -z "${LAST_CI_BUILD_COMMIT}" ]]; then
