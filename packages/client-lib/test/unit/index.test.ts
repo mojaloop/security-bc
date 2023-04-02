@@ -65,6 +65,7 @@ const logger: ILogger = new ConsoleLogger();
 let jwksUrlNockScope: nock.Scope;
 let loginNockScope: nock.Scope;
 
+
 describe('authentication-client-lib tests', () => {
     beforeAll(async () => {
         const jwksUrl = new URL(JWKS_URL);

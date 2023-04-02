@@ -111,6 +111,8 @@ if [[ PUBLISHED_NPM_PACKAGES_COUNT -eq 0 ]]; then
     exit 0
 fi
 
+echo -e "Pulling latest changes from this pipeline..."
+git pull
 echo -e "Pushing changes..."
 # git status
 git push -f origin $CIRCLE_BRANCH --tags

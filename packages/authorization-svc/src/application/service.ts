@@ -28,7 +28,7 @@
  --------------
  ******/
 
-"use strict"
+"use strict";
 
 import {defaultDevRoles} from "../dev_defaults";
 import {existsSync} from "fs";

@@ -79,6 +79,11 @@ jobs:
       - run:
           name: Execute unit tests
           command: npm run test:unit
+      # store workspace for the coverage-report step
+      - persist_to_workspace:
+          root: *workingDirVar
+          paths:
+            - .
 
   coverage-report:
     executor: default-docker
@@ -97,7 +102,6 @@ jobs:
   publish_npm:
     executor: default-docker
     steps:
-      - checkout
       - attach_workspace:
           at: *workingDirVar
       - run:
@@ -111,7 +115,6 @@ jobs:
   publish_docker:
     executor: default-machine
     steps:
-      - checkout
       - attach_workspace:
           at: *workingDirVar
       - run:

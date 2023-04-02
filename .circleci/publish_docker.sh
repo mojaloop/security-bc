@@ -79,6 +79,7 @@ for PACKAGE in ${CHANGED_PACKAGES}; do
     npm -w ${PACKAGE_NAME} version patch --no-git-tag-version --no-workspaces-update >/dev/null 2>&1
 
     PACKAGE_NEW_VERSION=$(cat ${PACKAGE_PATH}/package.json | jq -r ".version")
+    DOCKER_TAG_PREV_VERSION=${DOCKER_IMAGE_NAME}:${PACKAGE_CUR_VERSION}
     DOCKER_TAG_VERSION=${DOCKER_IMAGE_NAME}:${PACKAGE_NEW_VERSION}
     DOCKER_TAG_SHORT_GIT_HASH=${DOCKER_IMAGE_NAME}:${SHORT_GIT_HASH}
     DOCKER_TAG_LATEST_RELEASE=${DOCKER_IMAGE_NAME}:${DOCKER_LATEST_RELEASE_NAME}
@@ -99,7 +100,8 @@ for PACKAGE in ${CHANGED_PACKAGES}; do
     echo -e "---------------- DOCKER BUILD AND PUBLISH START ----------------------\n"
 
 #    docker buildx build --platform ${DOCKER_BUILD_PLATFORMS} --cache-from=${DOCKER_TAG_LATEST_RELEASE} \
-    docker buildx build --platform ${DOCKER_BUILD_PLATFORMS} --push --cache-from=${DOCKER_TAG_LATEST_RELEASE} \
+    docker buildx build --progress plain --platform ${DOCKER_BUILD_PLATFORMS} --push \
+        --cache-from=${DOCKER_TAG_PREV_VERSION} \
         -f ${PACKAGE_PATH}/Dockerfile \
         -t ${DOCKER_TAG_VERSION} -t ${DOCKER_TAG_SHORT_GIT_HASH} -t ${DOCKER_TAG_LATEST_RELEASE} \
         .
@@ -136,6 +138,8 @@ if [[ PUBLISHED_DOCKERHUB_PACKAGES_COUNT -eq 0 ]]; then
     exit 0
 fi
 
+echo -e "Pulling latest changes from this pipeline..."
+git pull
 echo -e "Pushing changes..."
 # git status
 git push -f origin $CIRCLE_BRANCH --tags
