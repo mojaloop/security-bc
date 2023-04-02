@@ -108,16 +108,16 @@ printHeader "Phase 4 - Pushing commits to git"
 
 if [[ PUBLISHED_NPM_PACKAGES_COUNT -eq 0 ]]; then
     echo -e "No Packages were published, nothing to push to git"
-    exit 9
+    exit 0
 fi
 
 echo -e "Pushing changes..."
 # git status
 git push -f origin $CIRCLE_BRANCH --tags
 
-if [[ $? -eq 0 ]]; then
-    echo -e "\nDONE - ${PUBLISHED_NPM_PACKAGES_COUNT} package(s) were published and version changes pushed, all done."
-else
+if [[ ! $? -eq 0 ]]; then
     echo -e "Error pushing CI/CD auto commits for version changes - exiting"
     exit 5
 fi
+
+echo -e "\nDONE - ${PUBLISHED_NPM_PACKAGES_COUNT} package(s) were published and version changes pushed, all done."
