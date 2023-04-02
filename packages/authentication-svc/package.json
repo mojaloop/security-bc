@@ -1,6 +1,6 @@
 {
   "name": "@mojaloop/security-bc-authentication-svc",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "test_change_field": "val_3",
   "description": "mojaloop security authentication service",
   "license": "Apache-2.0",

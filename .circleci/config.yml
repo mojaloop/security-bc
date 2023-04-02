@@ -185,25 +185,3 @@ workflows:
               only: main
           requires:
             - test-unit
-#      - path-filtering/filter:
-##          requires:
-##            - build
-#          requires:
-#            - test-unit
-#          filters:
-#            branches:
-#              only: main
-#          name: Detect if we have to publish to npm or docker hub
-#          # 3-column, whitespace-delimited mapping. One mapping per line:
-#          # <regex path-to-test> <parameter-to-set> <value-of-pipeline-parameter>
-#          #
-#          # NOTE: add libs that need to be published here with npm_lib_package and the name of the package as value
-#          # NOTE: add services that need docker build here with docker_svc_package and the name of the package as value
-#          #
-#          mapping: |
-#            packages/public-types-lib/.* npm_lib_package "public-types-lib"
-#            packages/client-lib/.* npm_lib_package "client-lib"
-#            packages/authentication-svc/.* docker_svc_package "authentication-svc"
-#            packages/authorization-svc/.* docker_svc_package "authorization-svc"
-#          base-revision: main
-#          config-path: .circleci/docker_and_npm_config.yml

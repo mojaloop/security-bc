@@ -88,15 +88,14 @@ for PACKAGE in ${CHANGED_PACKAGES}; do
         echo -e "Successfully published package."
         echo -e "Git staging '${PACKAGE_PATH}/package.json, committing and tagging with: '${TAG_NAME}'"
         git add ${PACKAGE_PATH}/package.json
-        git commit -nm "[ci skip] CI/CD auto commit for '${PACKAGE_NAME}' NPM publish - parent commit: '${CIRCLE_SHA1}'"
+        git commit -nm "[ci skip] CI/CD auto commit for '${PACKAGE}' NPM publish - parent commit: '${CIRCLE_SHA1}'"
         git tag ${TAG_NAME}
     else
         echo -e "Error publishing package: ${PACKAGE} - exiting"
-        exit 1
+        #exit 1
     fi
 done
 
-#### REMOTE
 if [[ -n "$DRYRUN" ]]; then
     echo -e "\nDryrun env var found - stopping script execution before 'Pushing commits to git'"
     exit 0

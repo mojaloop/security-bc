@@ -90,7 +90,7 @@ for PACKAGE in ${CHANGED_PACKAGES}; do
 
 
     if [[ -n "$DRYRUN" ]]; then
-        echo -e "\nDryrun env var found - not actually publishing to NPM"
+        echo -e "\nDryrun env var found - not actually building and publishing docker image"
         continue
     fi
 
@@ -112,20 +112,26 @@ for PACKAGE in ${CHANGED_PACKAGES}; do
         echo -e "Successfully published docker image."
         echo -e "Git staging '${PACKAGE_PATH}/package.json, committing and tagging with: '${TAG_NAME}'"
         git add ${PACKAGE_PATH}/package.json
-        git commit -nm "[ci skip] CI/CD auto commit for '${PACKAGE_NAME}' Docker Build and Publish - parent commit: '${CIRCLE_SHA1}'"
+        git commit -nm "[ci skip] CI/CD auto commit for '${PACKAGE}' Docker Build and Publish - parent commit: '${CIRCLE_SHA1}'"
         git tag ${TAG_NAME}
     else
         echo -e "Error publishing package: ${PACKAGE} - exiting"
-        exit 1
+        #exit 1
     fi
 done
+
+if [[ -n "$DRYRUN" ]]; then
+    echo -e "\nDryrun env var found - stopping script execution before 'Pushing commits to git'"
+    exit 0
+fi
+
 
 ############################################
 ## Phase 4 - Pushing commits to git
 ############################################
 printHeader "Phase 4 - Pushing commits to git"
 
-if [[ PUBLISHED_NPM_PACKAGES_COUNT -eq 0 ]]; then
+if [[ PUBLISHED_DOCKERHUB_PACKAGES_COUNT -eq 0 ]]; then
     echo -e "No Packages were published, nothing to push to git"
     exit 9
 fi
@@ -135,7 +141,7 @@ echo -e "Pushing changes..."
 git push -f origin $CIRCLE_BRANCH --tags
 
 if [[ $? -eq 0 ]]; then
-    echo -e "\nDONE - ${PUBLISHED_NPM_PACKAGES_COUNT} package(s) were published and version changes pushed, all done."
+    echo -e "\nDONE - ${PUBLISHED_DOCKERHUB_PACKAGES_COUNT} package(s) were published and version changes pushed, all done."
 else
     echo -e "Error pushing CI/CD auto commits for version changes - exiting"
     exit 5
