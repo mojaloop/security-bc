@@ -57,7 +57,6 @@ const KAFKA_LOGS_TOPIC = process.env["KAFKA_LOGS_TOPIC"] || "logs";
 
 const AUTHZ_STORAGE_FILE_PATH = process.env["AUTHZ_STORAGE_FILE_PATH"] || "/app/data/authZ_TempStorageFile.json";
 
-
 // kafka logger
 const kafkaProducerOptions = {
     kafkaBrokerList: KAFKA_URL

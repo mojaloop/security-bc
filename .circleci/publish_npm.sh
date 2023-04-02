@@ -92,7 +92,7 @@ for PACKAGE in ${CHANGED_PACKAGES}; do
         git tag ${TAG_NAME}
     else
         echo -e "Error publishing package: ${PACKAGE} - exiting"
-        #exit 1
+        exit 1
     fi
 done
 
