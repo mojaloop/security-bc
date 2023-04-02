@@ -16,6 +16,7 @@ source .circleci/publish_common_functions.sh
 
 # load commits and git change history
 printHeader "Phase 1 - Setup"
+testEnv
 loadCommits
 
 if [[ -z "$COMMITS_SINCE_LAST_CI_BUILD" ]]; then

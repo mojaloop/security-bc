@@ -11,10 +11,7 @@ function printHeader() {
     echo -e "********************************************************************************"
 }
 
-#
-# publishes COMMITS_SINCE_LAST_CI_BUILD and LAST_CI_BUILD_COMMIT
-#
-function loadCommits(){
+function testEnv(){
     if [[ -z "${CIRCLE_SHA1}" ]]; then
         echo -e "\e[93mEnvironment variable CIRCLE_SHA1 is not set. Exiting.\e[0m"
         exit 1
@@ -38,6 +35,24 @@ function loadCommits(){
     echo -e "Provided CI Build commit hash: \t\t${CIRCLE_SHA1}"
     echo -e "Provided CI Build username: \t\t${CIRCLE_PROJECT_USERNAME}"
     echo -e "Provided project repository name: \t${CIRCLE_PROJECT_REPONAME}"
+
+    if ! command -v curl &> /dev/null; then
+        echo -e "\e[93m'curl' is not installed, cannot continue.\e[0m"
+        exit 2
+    fi
+
+    if ! command -v jq &> /dev/null; then
+        echo -e "\e[93m'jq' is not installed, cannot continue.\e[0m"
+        exit 2
+    fi
+}
+
+
+#
+# publishes COMMITS_SINCE_LAST_CI_BUILD and LAST_CI_BUILD_COMMIT
+#
+function loadCommits(){
+
 
     echo -e "\nFetching last successful build from CircleCI API...."
     # Note: we're trying to find the last item with either "success" or "not_run" status,
