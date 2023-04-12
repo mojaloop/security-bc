@@ -8,13 +8,14 @@
 
 Mojaloop vNext Authorization Service
 
+
 #Notes
 
 ## How to create RSA private and public keys without password
 
 *These keys should be injected to the authorization-svc, or at this early stage put in the test_keys directory*
 
-Create an RSA certificate 
+Create an RSA certificate
 
 `openssl genrsa -out private.pem 2048`
 
@@ -66,6 +67,6 @@ docker run -ti --rm -p 3202:3202 \
   --name mojaloop_security-bc-authorization-svc \
   -v $(pwd)/packages/authorization-svc/dist/authZ_TempStorageFile:/app/data/authZ_TempStorageFile \
   -e KAFKA_URL=192.168.1.103:9092 mojaloop/security-bc-authorization-svc
-  
+
 #to run as daemon replace "-ti --rm" with "-d"
 ```
