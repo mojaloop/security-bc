@@ -217,4 +217,6 @@ if [[ ! $? -eq 0 ]]; then
     exit 5
 fi
 
-echo -e "\nDONE - ${PUBLISHED_NPM_PACKAGES_COUNT} package(s) were published and version changes pushed, all done."
+TOTAL_PUBLISHED_COUNT=$((PUBLISHED_NPM_PACKAGES_COUNT + PUBLISHED_DOCKERHUB_PACKAGES_COUNT))
+
+echo -e "\nDONE - ${TOTAL_PUBLISHED_COUNT} package(s) were published and version changes pushed, all done."
