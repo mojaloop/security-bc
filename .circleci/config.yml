@@ -30,7 +30,7 @@ executors:
       - image: mojaloop/node-18-builder:0.0.3
   default-machine:
     machine:
-      image: ubuntu-2204:2022.07.1
+      image: ubuntu-2204:2023.04.2
 
 jobs:
   setup:

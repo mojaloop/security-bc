@@ -45,6 +45,8 @@ function testEnv(){
         echo -e "\e[93m'jq' is not installed, cannot continue.\e[0m"
         exit 2
     fi
+
+    echo -e "Node.js version is: \t\t\t$(node --version)"
 }
 
 
@@ -52,13 +54,15 @@ function testEnv(){
 # publishes COMMITS_SINCE_LAST_CI_BUILD and LAST_CI_BUILD_COMMIT
 #
 function loadCommits(){
-
-
     echo -e "\nFetching last successful build from CircleCI API...."
     # Note: we're trying to find the last item with either "success" or "not_run" status,
     # because we commit code at the end of the pipeline, we don't want the last commit that triggered the build, rather the last one that was processed by the CI/CD successfully
     # detail: when we push the git changes with the tags and version bumps at the end of this script, we use skip ci, that entry in cicd will have a not_run status
-    LAST_CI_BUILD_COMMIT=$(curl -s --header "Authorization: Basic $CIRCLE_TOKEN" https://circleci.com/api/v1.1/project/github/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME\?\&limit\=10 | jq -r 'first(.[] | select(.vcs_revision!="'${CIRCLE_SHA1}'" and .status=="success" or .status=="not_run")).vcs_revision')
+    #LAST_CI_BUILD_COMMIT=$(curl -s --header "Authorization: Basic $CIRCLE_TOKEN" https://circleci.com/api/v1.1/project/gh/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME\?\&limit\=10 | jq -r 'first(.[] | select(.vcs_revision!="'${CIRCLE_SHA1}'" and .status=="success" or .status=="not_run")).vcs_revision')
+    #SUCCESS=$?
+
+    # new method using js and CircleCI v2 API - iterates all pipelines and child workflows in order
+    LAST_CI_BUILD_COMMIT=$(node .circleci/getLastCommit.js --repo="$CIRCLE_PROJECT_REPONAME" --user="$CIRCLE_TOKEN")
     SUCCESS=$?
 
     if [[ ! SUCCESS -eq 0 ]]; then
