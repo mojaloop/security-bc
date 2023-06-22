@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 /*****
  License
  --------------
@@ -71,4 +72,11 @@ export interface ILoginHelper {
     setToken(accessToken: string): void;
 
     getToken(): Promise<AuthToken>;
+}
+
+export interface IAuthenticatedHttpRequester {
+    initialised: boolean;
+    setUserCredentials(client_id: string, username: string, password: string): void;
+    setAppCredentials(client_id: string, client_secret: string): void;
+    fetch(requestInfo: RequestInfo, timeoutMs?: number): Promise<Response>;
 }
