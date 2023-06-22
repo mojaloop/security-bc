@@ -41,14 +41,19 @@ NOTES on Fetch API usage and node version
 import {randomUUID} from "crypto";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
-import {TokenEndpointResponse, UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
+import {
+    TokenEndpointResponse,
+    UnauthorizedError
+} from "@mojaloop/security-bc-public-types-lib";
 import {ConnectionRefusedError, MaxRetriesReachedError, RequestTimeoutError} from "./errors";
 
 
 const MAX_RETRIES = 3;
 const DEFAULT_TIMEOUT_MS = 5000;
 
-
+/**
+ * @deprecated Use IAuthenticatedHttpRequester from @mojaloop/@mojaloop/security-bc-public-types-lib: ~0.2.1 instead
+ */
 export interface IAuthenticatedHttpRequester {
 	initialised: boolean;
 	setUserCredentials(client_id: string, username: string, password: string): void;
@@ -75,7 +80,6 @@ class AuthenticatedHttpRequesterQueueItem {
 		this.timeoutMs = timeoutMs;
 	}
 }
-
 
 export class AuthenticatedHttpRequester implements IAuthenticatedHttpRequester{
 	private readonly _logger: ILogger;
