@@ -44,7 +44,7 @@ import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
     TokenEndpointResponse,
     UnauthorizedError,
-    IAuthenticatedHttpRequester
+    IAuthenticatedHttpRequester, ForbiddenError
 } from "@mojaloop/security-bc-public-types-lib";
 import {ConnectionRefusedError, MaxRetriesReachedError, RequestTimeoutError} from "./errors";
 
@@ -58,7 +58,7 @@ declare type QueueItemCallback = (err: Error | null, response: Response | null) 
 
 class AuthenticatedHttpRequesterQueueItem {
 	readonly id: string;
-	readonly requestInfo: RequestInfo;
+	requestInfo: RequestInfo;
 	readonly callback: QueueItemCallback;
 	readonly timeoutMs: number = 0;
 	tries: number;
@@ -175,13 +175,16 @@ export class AuthenticatedHttpRequester implements IAuthenticatedHttpRequester{
 
 
 		fetch(item.requestInfo, options).then( (response) => {
-			if (response.status === 403) {
-				item.tries++;
-				this._queue.unshift(item);
-				return;
-			}
+            clearTimeout(timeoutId);
 
-			clearTimeout(timeoutId);
+            // if (response.status === 401) { // UnauthorizedError (bad/no token)
+            //     item.callback(null, response);
+            //     return;
+			// }else if (response.status === 403) { // ForbiddenError (missing role/privs)
+            //     item.callback(null, response);
+            //     return;
+            // }
+
 			item.callback(null, response);
 		}).catch(reason => {
 			// When abort() is called, the fetch() promise rejects with a DOMException named AbortError
