@@ -217,6 +217,30 @@ export const defaultDevRoles:PlatformRole[] = [
 			"BUILTIN_LEDGER_CREATE_JOURNAL_ENTRY",
 		]
 	}, {
+        id: "transfers-bc-event-handler-svc",
+        description: "transfers-bc-event-handler-svc roles",
+        labelName: "transfers-bc-event-handler-svc roles",
+        isExternal: false,
+        externalId: undefined,
+        isApplicationRole: true,
+        privileges: [
+            "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
+            "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
+            "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT"
+        ]
+    },{
+        id: "transfers-bc-api-svc",
+        description: "transfers-bc-api-svc roles",
+        labelName: "transfers-bc-api-svc roles",
+        isExternal: false,
+        externalId: undefined,
+        isApplicationRole: true,
+        privileges: [
+            "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
+            "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
+            "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT"
+        ]
+    },{
 		id: "account-lookup-bc-account-lookup-svc",
 		description: "account-lookup-bc-account-lookup-svc roles",
 		labelName: "account-lookup-bc-account-lookup-svc roles",
