@@ -49,4 +49,5 @@ export const defaultDevApplications = [
 	{client_id: "settlements-bc-command-handler-svc", client_secret: "superServiceSecret", roles: ["settlements-bc-command-handler-svc"]},
 	{client_id: "settlements-bc-event-handler-svc", client_secret: "superServiceSecret", roles: ["settlements-bc-event-handler-svc"]},
 	{client_id: "settlements-bc-api-svc", client_secret: "superServiceSecret", roles: ["settlements-bc-api-svc"]},
+	{client_id: "platform-configuration-bc-api-svc", client_secret: "superServiceSecret", roles: ["platform-configuration-bc-api-svc"]},
 ]
