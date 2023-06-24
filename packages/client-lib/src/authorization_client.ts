@@ -68,7 +68,7 @@ export class AuthorizationClient implements IAuthorizationClient{
         })
     }
 
-    async bootstrap(ignoreDuplicateError = false): Promise<boolean>{
+    async bootstrap(ignoreDuplicateError = true): Promise<boolean>{
         const appPrivileges:AppPrivileges = {
             boundedContextName: this._boundedContextName,
             applicationName: this._applicationName,
