@@ -42,12 +42,18 @@ import {LogLevel} from "@mojaloop/logging-bc-public-types-lib/dist/index";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib/dist/index";
 import {AuthenticationRoutes} from "./authentication_routes";
 import {SimpleCryptoAdapter2} from "../infrastructure/simple_crypto_adapter2";
-
-// get configClient from dedicated file
-import configClient, {configKeys} from "./config";
+import configClient from "./config";
 import {defaultDevApplications, defaultDevUsers} from "../dev_defaults";
 
+// get configClient from dedicated file
+// import configClient, {configKeys} from "./config";
+// import {defaultDevApplications, defaultDevUsers} from "../dev_defaults";
+// import configClient from "./config";
+
 // service constants
+const BC_NAME = "security-bc";
+const APP_NAME = "authentication-svc";
+const APP_VERSION = process.env.npm_package_version || "0.0.0";
 const PRODUCTION_MODE = process.env["PRODUCTION_MODE"] || false;
 const LOG_LEVEL:LogLevel = process.env["LOG_LEVEL"] as LogLevel || LogLevel.DEBUG;
 
@@ -86,16 +92,16 @@ export class Service {
     ):Promise<void>{
         console.log(`Service starting with PID: ${process.pid}`);
 
-        /// start config client - this is not mockable (can use STANDALONE MODE if desired)
-        await configClient.init();
-        await configClient.bootstrap(true);
-        await configClient.fetch();
+        // /// start config client - this is not mockable (can use STANDALONE MODE if desired)
+        // await configClient.init();
+        // await configClient.bootstrap(true);
+        // await configClient.fetch();
 
         if (!logger) {
             logger = new KafkaLogger(
-                configClient.boundedContextName,
-                configClient.applicationName,
-                configClient.applicationVersion,
+                BC_NAME,
+                APP_NAME,
+                APP_VERSION,
                 kafkaProducerOptions,
                 KAFKA_LOGS_TOPIC,
                 LOG_LEVEL
@@ -110,10 +116,12 @@ export class Service {
             defaultAudience: AUTH_N_DEFAULT_AUDIENCE
         };
 
+/*
         const rolesFromIamProviderParam = configClient.appConfigs.getParam(configKeys.ROLES_FROM_IAM_PROVIDER);
         if (rolesFromIamProviderParam) {
             aggregateOptions.rolesFromIamProvider = rolesFromIamProviderParam.currentValue;
         }
+*/
 
         if(!iamAdapter){
             // not sure why we would be running this FileIAMAdapter in production, but...
@@ -166,7 +174,7 @@ export class Service {
             }
 
             localRoleAssociationRepo = new LocalRolesAssociationRepo(ROLES_STORAGE_FILE_PATH, this.logger);
-            await localRoleAssociationRepo!.init();
+            await localRoleAssociationRepo.init();
         }
         this.localRoleAssociationRepo = localRoleAssociationRepo || null;
 
