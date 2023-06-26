@@ -92,6 +92,9 @@ export const defaultDevRoles:PlatformRole[] = [
             "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT",
             "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
             "PLATFORM_CONFIGURATION_CHANGE_VALUES_BOUNDED_CONTEXT",
+            "TRANSFERS_VIEW_ALL_TRANSFERS",
+            "CREATE_NDC_CHANGE_REQUEST",
+            "APPROVE_NDC_CHANGE_REQUEST"
 		]
 	},
 	{
@@ -144,6 +147,9 @@ export const defaultDevRoles:PlatformRole[] = [
             "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT",
             "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
             "PLATFORM_CONFIGURATION_CHANGE_VALUES_BOUNDED_CONTEXT",
+            "TRANSFERS_VIEW_ALL_TRANSFERS",
+            "CREATE_NDC_CHANGE_REQUEST",
+            "APPROVE_NDC_CHANGE_REQUEST"
 		]
 	},{
 		id: "participants-bc-participants-svc",
