@@ -28,7 +28,7 @@
  --------------
  ******/
 
-"use strict"
+"use strict";
 
 export class InvalidAppPrivilegesError extends Error{}
 export class CannotCreateDuplicateAppPrivilegesError extends Error{}
@@ -42,6 +42,6 @@ export class CannotStorePlatformRoleError extends Error{}
 
 export class PrivilegeNotFoundError extends Error{}
 export class PlatformRoleNotFoundError extends Error{}
-export class DuplicatePrivilegeInPlatformRoleError extends Error{}
+//export class DuplicatePrivilegeInPlatformRoleError extends Error{}
 
 export class ApplicationsPrivilegesNotFoundError extends Error{}

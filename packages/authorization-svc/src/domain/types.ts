@@ -28,7 +28,7 @@
  --------------
  ******/
 
-"use strict"
+"use strict";
 
 export type AllPrivilegesResp = {
     id: string;

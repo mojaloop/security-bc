@@ -28,14 +28,14 @@
  --------------
  ******/
 
-"use strict"
-import * as Semver from "semver";
+"use strict";
+
 import express from "express";
 import {
     ApplicationsPrivilegesNotFoundError,
     CannotCreateDuplicateAppPrivilegesError,
     CannotCreateDuplicateRoleError,
-    CannotOverrideAppPrivilegesError, CannotStorePlatformRoleError,
+    CannotOverrideAppPrivilegesError,
     CouldNotStoreAppPrivilegesError,
     InvalidAppPrivilegesError,
     InvalidPlatformRoleError,
@@ -81,7 +81,7 @@ export class ExpressRoutes {
         return this._rolesRouter;
     }
 
-    private async postBootstrap(req: express.Request, res: express.Response, next: express.NextFunction){
+    private async postBootstrap(req: express.Request, res: express.Response){
         const data: AppPrivileges = req.body as AppPrivileges;
         this._logger.debug(data);
 
@@ -118,7 +118,7 @@ export class ExpressRoutes {
     }
 
 
-    private async getAppRoles(req: express.Request, res: express.Response, next: express.NextFunction){
+    private async getAppRoles(req: express.Request, res: express.Response){
         const bcName = req.query["bcName"] ?? null;
         const appName = req.query["appName"] ?? null;
 
@@ -138,7 +138,7 @@ export class ExpressRoutes {
                     msg: "Application Privileges not found"
                 });
             }else{
-                this._logger.error("error in getAppRoles route")
+                this._logger.error("error in getAppRoles route");
                 return res.status(500).json({
                     status: "error",
                     msg: "unknown error"
@@ -149,11 +149,11 @@ export class ExpressRoutes {
     }
 
 
-    private async getAllAppPrivileges(req: express.Request, res: express.Response, next: express.NextFunction){
+    private async getAllAppPrivileges(req: express.Request, res: express.Response){
         await this._authorizationAggregate.getAllPrivileges().then((resp:AllPrivilegesResp[])=>{
             return res.send(resp);
         }).catch(()=>{
-            this._logger.error("error in getAllApprPrivileged route")
+            this._logger.error("error in getAllAppPrivileges route");
             return res.status(500).json({
                 status: "error",
                 msg: "unknown error"
@@ -163,11 +163,11 @@ export class ExpressRoutes {
 
 
     // roles
-    private async getAllPlatformRole(req: express.Request, res: express.Response, next: express.NextFunction){
+    private async getAllPlatformRole(req: express.Request, res: express.Response){
         await this._authorizationAggregate.getAllRoles().then((resp:PlatformRole[])=>{
             return res.send(resp);
         }).catch(()=>{
-            this._logger.error("error in getAllPlatformRole route")
+            this._logger.error("error in getAllPlatformRole route");
             return res.status(500).json({
                 status: "error",
                 msg: "unknown error"
@@ -175,7 +175,7 @@ export class ExpressRoutes {
         });
     }
 
-    private async postPlatformRole(req: express.Request, res: express.Response, next: express.NextFunction){
+    private async postPlatformRole(req: express.Request, res: express.Response){
         const data: PlatformRole = req.body as PlatformRole;
         this._logger.debug(data);
 
@@ -206,9 +206,9 @@ export class ExpressRoutes {
         });
     }
 
-    private async postAssociatePrivsToPlatformRole(req: express.Request, res: express.Response, next: express.NextFunction){
+    private async postAssociatePrivsToPlatformRole(req: express.Request, res: express.Response){
         const roleId = req.params["roleId"] ?? null;
-        // body is supposed to be array of strings
+        // body is supposed to be an array of strings
         const data: string[] = req.body as string[];
         this._logger.debug(data);
 

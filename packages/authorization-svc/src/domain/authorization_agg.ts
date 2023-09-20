@@ -28,19 +28,19 @@
  --------------
  ******/
 
-"use strict"
+"use strict";
 
 import semver from "semver";
 import * as Crypto from "crypto";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Privilege, AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
-import {IAMAuthorizationAdapter, IAuthorizationRepository} from "./interfaces";
+import {IAuthorizationRepository} from "./interfaces";
 import {
     ApplicationsPrivilegesNotFoundError,
     CannotCreateDuplicateAppPrivilegesError,
     CannotCreateDuplicateRoleError,
     CannotOverrideAppPrivilegesError, CannotStorePlatformRoleError,
-    CouldNotStoreAppPrivilegesError, DuplicatePrivilegeInPlatformRoleError,
+    CouldNotStoreAppPrivilegesError,
     InvalidAppPrivilegesError,
     InvalidPlatformRoleError,
     NewRoleWithPrivsUsersOrAppsError, PlatformRoleNotFoundError, PrivilegeNotFoundError
@@ -49,7 +49,7 @@ import {AllPrivilegesResp, PrivilegesByRole} from "../domain/types";
 
 
 export class AuthorizationAggregate{
-    private _logger:ILogger
+    private _logger:ILogger;
     //private _iamAuthNAdapter:IAMAuthorizationAdapter;
     private _authzRepo:IAuthorizationRepository;
 
@@ -103,10 +103,13 @@ export class AuthorizationAggregate{
             }
         }
 
-        this._logger.info(`Created AppPrivileges set for BC: ${appPrivs.boundedContextName}, APP: ${appPrivs.applicationName}, version: ${appPrivs.applicationVersion}`);
-        const stored = await this._authzRepo.storeAppPrivileges(appPrivs);
-        if(!stored){
-            throw new CouldNotStoreAppPrivilegesError();
+
+        try {
+            await this._authzRepo.storeAppPrivileges(appPrivs);
+            this._logger.info(`Created AppPrivileges set for BC: ${appPrivs.boundedContextName}, APP: ${appPrivs.applicationName}, version: ${appPrivs.applicationVersion}`);
+        }catch(err:any){
+            this._logger.error(err);
+            throw new CouldNotStoreAppPrivilegesError(err?.message);
         }
     }
 
@@ -128,8 +131,8 @@ export class AuthorizationAggregate{
                     applicationName: appPrivs.applicationName,
                     applicationVersion: appPrivs.applicationVersion
                 });
-            })
-        })
+            });
+        });
 
         return ret;
     }
@@ -191,7 +194,7 @@ export class AuthorizationAggregate{
 
             appPrivs.privileges.forEach(priv=>{
                 ret.push(priv.id);
-            })
+            });
         });
 
         return ret;
@@ -232,9 +235,12 @@ export class AuthorizationAggregate{
             throw new CannotCreateDuplicateRoleError();
         }
 
-        const success = await this._authzRepo.storePlatformRole(role);
-        if(!success){
-            throw new CannotStorePlatformRoleError();
+
+        try {
+            await this._authzRepo.storePlatformRole(role);
+        }catch(err:any){
+            this._logger.error(err);
+            throw new CannotStorePlatformRoleError(err?.message);
         }
 
         return role.id;
@@ -259,10 +265,13 @@ export class AuthorizationAggregate{
             }
         }
 
-        const success = await this._authzRepo.storePlatformRole(role);
-        if(!success){
-            throw new CannotStorePlatformRoleError();
+        try {
+            await this._authzRepo.storePlatformRole(role);
+        }catch(err:any){
+            this._logger.error(err);
+            throw new CannotStorePlatformRoleError(err?.message);
         }
+
     }
 
 }

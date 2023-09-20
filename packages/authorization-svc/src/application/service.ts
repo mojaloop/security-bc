@@ -31,7 +31,6 @@
 "use strict";
 
 import {defaultDevRoles} from "../dev_defaults";
-import {existsSync} from "fs";
 import {Server} from "http";
 import express from "express";
 
@@ -40,27 +39,32 @@ import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 
 import {AuthorizationAggregate} from "../domain/authorization_agg";
 import { IAuthorizationRepository} from "../domain/interfaces";
-import {FileAuthorizationRepo} from "../infrastructure/file_authorization_repo";
 import {ExpressRoutes} from "./routes";
+import {MongoDbAuthorizationRepo} from "../infrastructure/mongodb_authorization_repo";
+import process from "process";
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const packageJSON = require("../../package.json");
 
 const BC_NAME = "security-bc";
 const APP_NAME = "authorization-svc";
-const APP_VERSION = process.env.npm_package_version || "0.0.0";
+const APP_VERSION = packageJSON.version;
 const PRODUCTION_MODE = process.env["PRODUCTION_MODE"] || false;
 const LOG_LEVEL:LogLevel = process.env["LOG_LEVEL"] as LogLevel || LogLevel.DEBUG;
 
 const SVC_DEFAULT_HTTP_PORT = 3202;
 
 const KAFKA_URL = process.env["KAFKA_URL"] || "localhost:9092";
+const MONGO_URL = process.env["MONGO_URL"] || "mongodb://root:mongoDbPas42@localhost:27017/";
+
 //const KAFKA_AUDITS_TOPIC = process.env["KAFKA_AUDITS_TOPIC"] || "audits";
 const KAFKA_LOGS_TOPIC = process.env["KAFKA_LOGS_TOPIC"] || "logs";
-
-const AUTHZ_STORAGE_FILE_PATH = process.env["AUTHZ_STORAGE_FILE_PATH"] || "/app/data/authZ_TempStorageFile.json";
 
 // kafka logger
 const kafkaProducerOptions = {
     kafkaBrokerList: KAFKA_URL
-}
+};
+
 // global
 let globalLogger: ILogger;
 
@@ -80,21 +84,18 @@ export class Service {
                     KAFKA_LOGS_TOPIC,
                     LOG_LEVEL
             );
-            await (logger as KafkaLogger).start();
+            await (logger as KafkaLogger).init();
         }
         globalLogger = this.logger = logger.createChild("Service");
 
         if(!authNRepo){
-            if(!existsSync(AUTHZ_STORAGE_FILE_PATH) && PRODUCTION_MODE){
-                throw new Error("PRODUCTION_MODE and non existing AUTHZ_STORAGE_FILE_PATH in: "+AUTHZ_STORAGE_FILE_PATH);
-            }
-            authNRepo = new FileAuthorizationRepo(AUTHZ_STORAGE_FILE_PATH, logger);
+            authNRepo = new MongoDbAuthorizationRepo(MONGO_URL, logger);
             await authNRepo.init();
 
             // hard insert dev defaults into the repository
             if (!PRODUCTION_MODE) {
                 if((await authNRepo.fetchAllPlatformRoles()).length <=0 ){
-                    this.logger.warn("In PRODUCTION_MODE and no platformRoles found - creating dev default platformRole(s)...");
+                    this.logger.warn("Not in PRODUCTION_MODE and no platformRoles found - creating dev default platformRole(s)...");
                     for(const role of defaultDevRoles){
                         await authNRepo.storePlatformRole(role);
                     }
@@ -132,7 +133,7 @@ export class Service {
 
         let portNum = SVC_DEFAULT_HTTP_PORT;
         if(process.env["SVC_HTTP_PORT"] && !isNaN(parseInt(process.env["SVC_HTTP_PORT"]))) {
-            portNum = parseInt(process.env["SVC_HTTP_PORT"])
+            portNum = parseInt(process.env["SVC_HTTP_PORT"]);
         }
 
         this.expressServer = app.listen(portNum, () => {

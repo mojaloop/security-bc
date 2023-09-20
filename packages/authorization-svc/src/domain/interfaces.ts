@@ -28,26 +28,28 @@
  --------------
  ******/
 
-"use strict"
+"use strict";
 
 
 import {Privilege, AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
 
+/*
 export interface IAMAuthorizationAdapter {
     init(): Promise<void>;
     getAllRoles():Promise<PlatformRole[]>
 }
+*/
 
 export interface IAuthorizationRepository {
     init(): Promise<void>;
 
     // PlatformRole
-    storePlatformRole(role:PlatformRole):Promise<boolean>;
+    storePlatformRole(role:PlatformRole):Promise<void>;
     fetchPlatformRole(roleId:string):Promise<PlatformRole | null>;
     fetchAllPlatformRoles():Promise<PlatformRole[]>;
 
     // AppPrivileges
-    storeAppPrivileges(priv:AppPrivileges):Promise<boolean>;
+    storeAppPrivileges(priv:AppPrivileges):Promise<void>;
     fetchPrivilege(privilegeId: string):Promise<Privilege | null>;
     fetchAppPrivileges(boundedContextName: string, applicationName: string):Promise<AppPrivileges | null>;
     fetchAllAppPrivileges():Promise<AppPrivileges[]>;
