@@ -42,24 +42,30 @@ import {LogLevel} from "@mojaloop/logging-bc-public-types-lib/dist/index";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib/dist/index";
 import {AuthenticationRoutes} from "./authentication_routes";
 import {SimpleCryptoAdapter2} from "../infrastructure/simple_crypto_adapter2";
-import configClient from "./config";
+
 import {defaultDevApplications, defaultDevUsers} from "../dev_defaults";
+import process from "process";
 
 // get configClient from dedicated file
 // import configClient, {configKeys} from "./config";
 // import {defaultDevApplications, defaultDevUsers} from "../dev_defaults";
 // import configClient from "./config";
 
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const packageJSON = require("../../package.json");
+
 // service constants
 const BC_NAME = "security-bc";
 const APP_NAME = "authentication-svc";
-const APP_VERSION = process.env.npm_package_version || "0.0.0";
+const APP_VERSION = packageJSON.version;
 const PRODUCTION_MODE = process.env["PRODUCTION_MODE"] || false;
 const LOG_LEVEL:LogLevel = process.env["LOG_LEVEL"] as LogLevel || LogLevel.DEBUG;
 
 const SVC_DEFAULT_HTTP_PORT = 3201;
 
 const KAFKA_URL = process.env["KAFKA_URL"] || "localhost:9092";
+const MONGO_URL = process.env["MONGO_URL"] || "mongodb://root:mongoDbPas42@localhost:27017/";
 //const KAFKA_AUDITS_TOPIC = process.env["KAFKA_AUDITS_TOPIC"] || "audits";
 const KAFKA_LOGS_TOPIC = process.env["KAFKA_LOGS_TOPIC"] || "logs";
 
@@ -74,7 +80,8 @@ const AUTH_N_ISSUER_NAME = process.env["AUTH_N_ISSUER_NAME"] || "http://localhos
 // kafka logger
 const kafkaProducerOptions = {
     kafkaBrokerList: KAFKA_URL
-}
+};
+
 // global
 let globalLogger: ILogger;
 
@@ -213,12 +220,13 @@ export class Service {
 
         let portNum = SVC_DEFAULT_HTTP_PORT;
         if(process.env["SVC_HTTP_PORT"] && !isNaN(parseInt(process.env["SVC_HTTP_PORT"]))) {
-            portNum = parseInt(process.env["SVC_HTTP_PORT"])
+            portNum = parseInt(process.env["SVC_HTTP_PORT"]);
         }
 
         this.expressServer = app.listen(portNum, () => {
             console.log(`🚀 Server ready at: http://localhost:${portNum}`);
-            this.logger.info(`Authentication service v: ${configClient.applicationVersion} started - with IssuerName: ${AUTH_N_ISSUER_NAME} tokenLifeSecs: ${AUTH_N_TOKEN_LIFE_SECS}`);
+            this.logger.info(`Authentication service v: ${APP_VERSION} started - with IssuerName: ${AUTH_N_ISSUER_NAME} tokenLifeSecs: ${AUTH_N_TOKEN_LIFE_SECS}`);
+            //this.logger.info(`Authentication service v: ${configClient.applicationVersion} started - with IssuerName: ${AUTH_N_ISSUER_NAME} tokenLifeSecs: ${AUTH_N_TOKEN_LIFE_SECS}`);
         }).on("error", err => {
             this.logger.fatal(err);
             process.exit(9);

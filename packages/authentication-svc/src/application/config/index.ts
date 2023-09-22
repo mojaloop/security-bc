@@ -28,7 +28,7 @@
  --------------
  ******/
 "use strict";
-
+/*
 import { ConfigParameterTypes } from "@mojaloop/platform-configuration-bc-public-types-lib";
 import {
     ConfigurationClient,
@@ -56,9 +56,9 @@ export const configKeys = {
     "ROLES_FROM_IAM_PROVIDER": "ROLES_FROM_IAM_PROVIDER"
 }
 
-/*
+/!*
 * Add application parameters here
-* */
+* *!/
 configClient.appConfigs.addNewParam(
         configKeys.ROLES_FROM_IAM_PROVIDER,
         ConfigParameterTypes.BOOL,
@@ -68,4 +68,5 @@ configClient.appConfigs.addNewParam(
 
 
 export default configClient;
+*/
 
