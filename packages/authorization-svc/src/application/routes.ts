@@ -117,7 +117,6 @@ export class ExpressRoutes {
         });
     }
 
-
     private async getAppRoles(req: express.Request, res: express.Response){
         const bcName = req.query["bcName"] ?? null;
         const appName = req.query["appName"] ?? null;
@@ -147,7 +146,6 @@ export class ExpressRoutes {
         });
         return;
     }
-
 
     private async getAllAppPrivileges(req: express.Request, res: express.Response){
         await this._authorizationAggregate.getAllPrivileges().then((resp:AllPrivilegesResp[])=>{

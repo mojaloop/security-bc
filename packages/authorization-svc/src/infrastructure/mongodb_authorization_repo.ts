@@ -85,12 +85,14 @@ export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
             this._privilegesCollection = db.collection(this._collectionNamePrivileges);
         } else {
             this._privilegesCollection = await db.createCollection(this._collectionNamePrivileges);
-            await this._privilegesCollection.createIndex({id: 1}, {unique: true});
+            //await this._privilegesCollection.createIndex({id: 1}, {unique: true});
         }
 
         this._initialized = true;
         this._logger.info("initialized");
     }
+
+    /* Privileges */
 
     private _appPrivilegeIdString(boundedContextName: string, applicationName: string): string{
         return boundedContextName.toUpperCase()+"::"+applicationName.toUpperCase();
@@ -104,23 +106,43 @@ export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
         return found as AppPrivileges[];
     }
 
+
+    async fetchAppPrivileges(boundedContextName: string, applicationName: string): Promise<AppPrivileges | null> {
+        const found = await this._privilegesCollection.findOne(
+            {boundedContextName: boundedContextName, applicationName: applicationName},
+            {projection: {_id: 0}}
+        );
+
+        return found as AppPrivileges | null;
+    }
+
+    async storeAppPrivileges(priv: AppPrivileges): Promise<void> {
+        try {
+            const updateResult = await this._privilegesCollection.replaceOne(
+                {boundedContextName: priv.boundedContextName, applicationName: priv.applicationName},
+                priv,
+                {upsert: true}
+            );
+
+            if ((updateResult.upsertedCount + updateResult.modifiedCount) !== 1) {
+                const err = new Error("Could not storeAppPrivileges - mismatch between requests length and MongoDb response length");
+                this._logger.error(err);
+                throw err;
+            }
+        } catch (error: unknown) {
+            this._logger.error(error);
+            throw error;
+        }
+    }
+
+    /* Roles */
+
     async fetchAllPlatformRoles(): Promise<PlatformRole[]> {
         const found = await this._rolesCollection
             .find({})
             .project({_id: 0})
             .toArray();
         return found as PlatformRole[];
-    }
-
-    async fetchAppPrivileges(boundedContextName: string, applicationName: string): Promise<AppPrivileges | null> {
-        const id = this._appPrivilegeIdString(boundedContextName, applicationName);
-
-        const found = await this._privilegesCollection.findOne(
-            {id: id},
-            {projection: {_id: 0}}
-        );
-
-        return found as AppPrivileges | null;
     }
 
     async fetchPlatformRole(roleId: string): Promise<PlatformRole | null> {
@@ -140,25 +162,6 @@ export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
     }
 
 
-    async storeAppPrivileges(priv: AppPrivileges): Promise<void> {
-        const id = this._appPrivilegeIdString(priv.boundedContextName, priv.applicationName);
-        try {
-            const updateResult = await this._privilegesCollection.replaceOne(
-                {id: id},
-                priv,
-                {upsert: true}
-            );
-
-            if ((updateResult.upsertedCount + updateResult.modifiedCount) !== 1) {
-                const err = new Error("Could not storeAppPrivileges - mismatch between requests length and MongoDb response length");
-                this._logger.error(err);
-                throw err;
-            }
-        } catch (error: unknown) {
-            this._logger.error(error);
-            throw error;
-        }
-    }
 
     async storePlatformRole(role: PlatformRole): Promise<void> {
         try {

@@ -70,7 +70,7 @@ let globalLogger: ILogger;
 
 export class Service {
     static logger: ILogger;
-    static authNRepo: IAuthorizationRepository;
+    static authorizationRepo: IAuthorizationRepository;
     static authorizationAggregate:AuthorizationAggregate;
     static expressServer: Server;
 
@@ -104,9 +104,9 @@ export class Service {
                 }
             }
         }
-        this.authNRepo = authNRepo;
+        this.authorizationRepo = authNRepo;
 
-        this.authorizationAggregate = new AuthorizationAggregate(this.authNRepo, this.logger);
+        this.authorizationAggregate = new AuthorizationAggregate(this.authorizationRepo, this.logger);
 
         if (!PRODUCTION_MODE && ! await this.authorizationAggregate.getAllRoles()) {
             // create default roles
@@ -171,6 +171,6 @@ process.on("exit", async () => {
     globalLogger.info("Microservice - exiting...");
 });
 process.on("uncaughtException", (err: Error) => {
-    globalLogger.fatal(err);
+    console.error(err);
     process.exit(99);
 });
