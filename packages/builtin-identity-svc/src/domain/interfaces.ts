@@ -27,33 +27,22 @@
 
  --------------
  ******/
+
 "use strict";
 
+import {IBuiltinIamApplication, IBuiltinIamUser} from "@mojaloop/security-bc-public-types-lib/dist/builtin_identity";
 
-export type CallSecurityContext = {
-    /**
-     * This holds the username in case of a user made call, i.e.,  password grant,
-     * will be null for app to app calls, i.e., client_credentials grant
-     */
-    username: string | null;
-    /**
-     * This holds the client_id of the caller app, regardless of grant type
-     */
-    clientId: string;
-    /**
-     * Array of role identifiers for platform wide access this security principal has associated to itself
-     */
-    platformRoleIds: string[];
-    /**
-     * Original bearer token passed by the caller
-     */
-    accessToken: string;
+export interface IBuiltinIdentityRepository {
+    init(): Promise<void>;
+    destroy(): Promise<void>;
 
-    /**
-     * Array of per participants roles identifiers this this security principal has associated to itself
-     */
-    participantRoleIds?: {
-        participantId: string,
-        roleId: string
-    }[]
+    fetchAllUsers():Promise<IBuiltinIamUser[]>;
+    searchUsers(userType?:string, email?:string, name?:string, enabled?:boolean):Promise<IBuiltinIamUser[]>;
+    fetchUser(username:string):Promise<IBuiltinIamUser | null>;
+    storeUser(user:IBuiltinIamUser):Promise<void>;
+
+    fetchAllApps():Promise<IBuiltinIamApplication[]>;
+    searchApps(clientId?:string, canLogin?:boolean, enabled?:boolean):Promise<IBuiltinIamApplication[]>;
+    fetchApp(client_id:string):Promise<IBuiltinIamApplication | null>;
+    storeApp(app:IBuiltinIamApplication):Promise<void>;
 }

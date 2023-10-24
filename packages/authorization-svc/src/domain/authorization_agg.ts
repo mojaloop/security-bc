@@ -137,6 +137,11 @@ export class AuthorizationAggregate{
         return ret;
     }
 
+    /**
+     * Returns only the roles which include privileges for a certain app (and their relationship)
+     * @param bcName BoundedContext name
+     * @param appName Application name
+     */
     async getAppPrivilegesByRole(bcName:string, appName:string):Promise<PrivilegesByRole>{
         const appPrivIds = await this.getAppPrivilegeIds(bcName, appName);
 
@@ -149,7 +154,7 @@ export class AuthorizationAggregate{
         const ret:PrivilegesByRole = {};
 
         allRoles.forEach(role => {
-            if(role.privileges.length<=0) return;
+            if(!role.privileges || role.privileges.length<=0) return;
 
             role.privileges.forEach(rolePriv => {
                 if(!appPrivIds.includes(rolePriv)) return;

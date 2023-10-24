@@ -65,7 +65,7 @@ export class AuthorizationClient implements IAuthorizationClient{
             baseURL: authSvcBaseUrl,
             timeout: 1000,
             //headers: {'X-Custom-Header': 'foobar'} TODO config svc authentication
-        })
+        });
     }
 
     async bootstrap(ignoreDuplicateError = true): Promise<boolean>{
@@ -74,7 +74,7 @@ export class AuthorizationClient implements IAuthorizationClient{
             applicationName: this._applicationName,
             applicationVersion: this._applicationVersion,
             privileges: this._privileges
-        }
+        };
 
         return await new Promise<boolean>((resolve, reject) => {
             this._client.post("/bootstrap", appPrivileges).then((resp:AxiosResponse)=>{

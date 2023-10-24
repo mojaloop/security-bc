@@ -28,7 +28,7 @@
  --------------
  ******/
 
-'use strict'
+'use strict';
 
 import fs, {writeFileSync} from "fs";
 import * as jwt from "jsonwebtoken";

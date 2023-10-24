@@ -41,72 +41,11 @@ npm run build
 npm run test:unit
 ```
 
-## Run the services 
-
-### Startup supporting services
-
-Use https://github.com/mojaloop/platform-shared-tools/tree/main/packages/deployment/docker-compose-infra
 
 
-To startup Kafka, MongoDB, Elasticsearch and Kibana, follow the steps below(executed in docker-compose-infra/):   
-
-1. Create a sub-directory called `exec` inside the `docker-compose-infra` (this) directory, and navigate to that directory.
 
 
-```shell
-mkdir exec 
-cd exec
-```
-
-2. Create the following directories as sub-directories of the `docker-compose/exec` directory:
-* `certs`
-* `esdata01`
-* `kibanadata`
-* `logs`
-
-```shell
-mkdir {certs,esdata01,kibanadata,logs}
-```
-
-3. Copy the `.env.sample` to the exec dir:
-```shell
-cp ../.env.sample ./.env
-```
-
-4. Review the contents of the `.env` file
-
-5. Ensure `vm.max_map_count` is set to at least `262144`: Example to apply property on live system:
-```shell
-sysctl -w vm.max_map_count=262144 # might require sudo
-```
-
-### Start Infrastructure Containers
-
-Start the docker containers using docker-compose up (in the exec dir)
-```shell
-docker-compose -f ../docker-compose-infra.yml --env-file ./.env up -d
-```
-
-
-To view the logs of the infrastructure containers, run:
-```shell
-docker-compose -f ../docker-compose-infra.yml --env-file ./.env logs -f
-```
-
-To stop the infrastructure containers, run:
-```shell
-docker-compose -f ../docker-compose-infra.yml --env-file ./.env stop
-```
-
-After running the docker-compose-infra we can start authentication and authorization services:
-
-```bash
-# start the authentication service
-npm run start:authentication-svc 
-
-# start the authorization service
-npm run start:authorization-svc 
-```
+## Troubleshoot
 
 To run those services locally, you need to pass 2 env vars like this (executed in packages/authentication-svc):
 
@@ -115,13 +54,7 @@ export PRIVATE_CERT_PEM_FILE_PATH=test_keys/private.pem
 export IAM_STORAGE_FILE_PATH=dist/authN_TempStorageFile
 ```
 
-## Integration Tests
 
-```bash
-npm run test:integration
-```
-
-## Troubleshoot 
 
 ### Unable to load dlfcn_load
 ```bash

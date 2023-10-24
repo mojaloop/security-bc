@@ -59,8 +59,14 @@ export class TokenHelper implements ITokenHelper {
         });
     }
 
+    /**
+     * @deprecated Please use preFetch() instead, this is not a required initialization function
+     */
     async init(): Promise<void> {
-
+        //await this.preFetch();
+        return Promise.resolve();
+    }
+    async preFetch(): Promise<void> {
         // do an initial request to test it works and cache it
         const keys = await this._jwksClient.getSigningKeys();
         for (const k of keys) {

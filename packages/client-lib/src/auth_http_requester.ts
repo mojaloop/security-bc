@@ -89,7 +89,7 @@ export class AuthenticatedHttpRequester implements IAuthenticatedHttpRequester{
 	private _refresh_token_expires_in: number | null = null;
 	private _refresh_token_expires_at: number | null = null;
 
-	private _queue: AuthenticatedHttpRequesterQueueItem[] = []
+	private _queue: AuthenticatedHttpRequesterQueueItem[] = [];
 	private _queue_processing = false;
 	private _initialised = false;
 
@@ -134,7 +134,7 @@ export class AuthenticatedHttpRequester implements IAuthenticatedHttpRequester{
 					return reject(err);
 				}
 				resolve(response!); // make sure below we only call either with error or with proper response
-			}
+			};
 			this._queue.push(new AuthenticatedHttpRequesterQueueItem(requestInfo, callback, timeoutMs));
 		});
 	}
@@ -223,7 +223,7 @@ export class AuthenticatedHttpRequester implements IAuthenticatedHttpRequester{
 			password: this._password
 			// audience
 			// scope
-		}
+		};
 
 		// const body = new FormData();
 		// body.append("json", JSON.stringify(payload));

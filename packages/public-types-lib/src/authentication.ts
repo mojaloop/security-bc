@@ -28,17 +28,27 @@
 
  --------------
  ******/
-"use strict"
+"use strict";
 
 /*
 Authentication specific
 */
+export type UserType = "HUB" | "DFSP";
 
-export type IAMLoginResponse = {
-    success: boolean;
+export type ParticipantRole = {
+    participantId: string;
+    roleId: string;
+}
+
+export type LoginResponse = {
     scope: string | null;
-    roles: string[];
-    expires_in_secs: number;
+    platformRoles: string[];
+    expires_in: number;
+}
+
+export type UserLoginResponse = LoginResponse & {
+    userType: UserType
+    participantRoles: ParticipantRole[];
 }
 
 export type TokenEndpointResponse = {

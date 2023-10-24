@@ -40,6 +40,7 @@ export const defaultDevRoles:PlatformRole[] = [
 		isExternal: false,
 		externalId: undefined,
 		isApplicationRole: false,
+        isPerParticipantRole: false,
 		privileges: [
 			"TEST_EXAMPLE_PRIV"
 		]
@@ -50,6 +51,7 @@ export const defaultDevRoles:PlatformRole[] = [
 		isExternal: false,
 		externalId: undefined,
 		isApplicationRole: false,
+        isPerParticipantRole: false,
 		privileges: [
 			"VIEW_PARTICIPANT",
 			"CREATE_PARTICIPANT",
@@ -109,6 +111,7 @@ export const defaultDevRoles:PlatformRole[] = [
 		isExternal: false,
 		externalId: undefined,
 		isApplicationRole: false,
+        isPerParticipantRole: false,
 		privileges: [
 			"VIEW_PARTICIPANT",
 			"CREATE_PARTICIPANT",
@@ -168,6 +171,7 @@ export const defaultDevRoles:PlatformRole[] = [
 		isExternal: false,
 		externalId: undefined,
 		isApplicationRole: true,
+        isPerParticipantRole: false,
 		privileges: [
             "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
             "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
@@ -187,6 +191,7 @@ export const defaultDevRoles:PlatformRole[] = [
 		isExternal: false,
 		externalId: undefined,
 		isApplicationRole: true,
+        isPerParticipantRole: false,
 		privileges: [
             "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
             "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
@@ -206,6 +211,7 @@ export const defaultDevRoles:PlatformRole[] = [
         isExternal: false,
         externalId: undefined,
         isApplicationRole: true,
+        isPerParticipantRole: false,
         privileges: [
             "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
             "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
@@ -218,6 +224,7 @@ export const defaultDevRoles:PlatformRole[] = [
 		isExternal: false,
 		externalId: undefined,
 		isApplicationRole: true,
+        isPerParticipantRole: false,
 		privileges: [
             "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
             "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
@@ -239,6 +246,7 @@ export const defaultDevRoles:PlatformRole[] = [
         isExternal: false,
         externalId: undefined,
         isApplicationRole: true,
+        isPerParticipantRole: false,
         privileges: [
             "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
             "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
@@ -251,6 +259,7 @@ export const defaultDevRoles:PlatformRole[] = [
         isExternal: false,
         externalId: undefined,
         isApplicationRole: true,
+        isPerParticipantRole: false,
         privileges: [
             "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
             "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
@@ -263,6 +272,7 @@ export const defaultDevRoles:PlatformRole[] = [
 		isExternal: false,
 		externalId: undefined,
 		isApplicationRole: true,
+        isPerParticipantRole: false,
 		privileges: [
             "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
             "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
@@ -276,6 +286,7 @@ export const defaultDevRoles:PlatformRole[] = [
 		isExternal: false,
 		externalId: undefined,
 		isApplicationRole: true,
+        isPerParticipantRole: false,
 		privileges: [
             "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
             "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
@@ -289,6 +300,7 @@ export const defaultDevRoles:PlatformRole[] = [
 		isExternal: false,
 		externalId: undefined,
 		isApplicationRole: true,
+        isPerParticipantRole: false,
 		privileges: [
             "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
             "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
@@ -302,6 +314,7 @@ export const defaultDevRoles:PlatformRole[] = [
 		isExternal: false,
 		externalId: undefined,
 		isApplicationRole: true,
+        isPerParticipantRole: false,
 		privileges: [
             "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
             "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
@@ -336,6 +349,7 @@ export const defaultDevRoles:PlatformRole[] = [
 		isExternal: false,
 		externalId: undefined,
 		isApplicationRole: true,
+        isPerParticipantRole: false,
 		privileges: [
             "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
             "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
@@ -359,6 +373,17 @@ export const defaultDevRoles:PlatformRole[] = [
 			"SETTLEMENTS_RETRIEVE_BATCH_ACCOUNTS",
 			"SETTLEMENTS_RETRIEVE_TRANSFERS"
 		]
-	}
+	},{
+        id: "reporting-bc-participants-reporting-svc",
+        description: "reporting-bc-participants-reporting-svc roles",
+        labelName: "reporting-bc-participants-reporting-svc roles",
+        isExternal: false,
+        externalId: undefined,
+        isApplicationRole: true,
+        isPerParticipantRole: false,
+        privileges: [
+            "VIEW_PARTICIPANT",
+        ]
+    }
 
 ];

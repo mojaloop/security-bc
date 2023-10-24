@@ -27,33 +27,50 @@
 
  --------------
  ******/
+
 "use strict";
 
 
-export type CallSecurityContext = {
-    /**
-     * This holds the username in case of a user made call, i.e.,  password grant,
-     * will be null for app to app calls, i.e., client_credentials grant
-     */
-    username: string | null;
-    /**
-     * This holds the client_id of the caller app, regardless of grant type
-     */
-    clientId: string;
-    /**
-     * Array of role identifiers for platform wide access this security principal has associated to itself
-     */
-    platformRoleIds: string[];
-    /**
-     * Original bearer token passed by the caller
-     */
-    accessToken: string;
+import {ParticipantRole, UserType} from "./authentication";
 
-    /**
-     * Array of per participants roles identifiers this this security principal has associated to itself
-     */
-    participantRoleIds?: {
-        participantId: string,
-        roleId: string
-    }[]
+export interface IBuiltinIamUser{
+    enabled: boolean;
+    email: string;
+    fullName: string;
+
+    userType: UserType;
+
+    passwordHash?:string;
+
+    // array of role ids for platform wide access
+    platformRoles: string[];
+
+    // per participant roles
+    participantRoles: ParticipantRole[];
+}
+
+
+// to be used on creation only
+export interface IBuiltinIamUserCreate extends IBuiltinIamUser{
+    password:string;
+}
+
+
+export interface IBuiltinIamApplication{
+    enabled: boolean;
+    clientId: string;
+
+    canLogin: boolean;
+
+    clientSecretHash?:string;
+
+    // array of role ids
+    platformRoles: string[];
+}
+
+// to be used on creation only
+export interface IBuiltinIamApplicationCreate extends IBuiltinIamApplication{
+    // Applications that can't login on their own have a null secret and no roles
+    // Ex: UIs or APIs that always call other services using the caller/user token
+    clientSecret:string | null;
 }

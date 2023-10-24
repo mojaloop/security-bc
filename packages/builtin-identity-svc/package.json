@@ -1,0 +1,64 @@
+{
+    "name": "@mojaloop/security-bc-builtin-identity-svc",
+    "version": "0.3.0",
+    "description": "mojaloop security builtin identity management service",
+    "license": "Apache-2.0",
+    "homepage": "https://github.com/mojaloop/security-bc/tree/main/packages/builtin-identity-svc",
+    "private": true,
+    "mojaloop": {
+        "publish_to_dockerhub": true
+    },
+    "bugs": {
+        "url": "https://github.com/mojaloop/security-bc/issues#readme"
+    },
+    "contributors": [
+        "Pedro Sousa Barreto <pedrosousabarreto@gmail.com>"
+    ],
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "/dist"
+    ],
+    "scripts": {
+        "start": "npm run service",
+        "start:dev": "npm run build && PLATFORM_CONFIG_BASE_SVC_URL=http://localhost:3100 PRIVATE_CERT_PEM_FILE_PATH=dist/private.pem npm start",
+        "service": "node dist/application/index.js",
+        "build": "tsc",
+        "watch": "tsc -w",
+        "clean:dist": "rm -rf dist",
+        "clean:npm": "rm -rf node_modules",
+        "clean": "rm -rf dist node_modules",
+        "pretest": "npm run build",
+        "standard": "npm run lint",
+        "lint": "npm run build && npx eslint ./src",
+        "lint:fix": "npm run build && npx eslint ./src --fix",
+        "test:unit": "jest",
+        "audit:resolve": "SHELL=sh resolve-audit",
+        "audit:check": "SHELL=sh check-audit",
+        "dep:check": "ncu -e 2",
+        "dep:update": "ncu -u"
+    },
+    "dependencies": {
+        "@mojaloop/logging-bc-client-lib": "~0.1.19",
+        "@mojaloop/platform-configuration-bc-client-lib": "~0.1.22",
+        "@mojaloop/platform-configuration-bc-public-types-lib": "~0.2.3",
+        "@mojaloop/security-bc-client-lib": "*",
+        "@mojaloop/security-bc-public-types-lib": "*",
+        "express": "^4.18.2",
+        "tslib": "^2.5.0",
+        "mongodb": "~5.5.0",
+        "bcrypt": "~5.1.1"
+    },
+    "devDependencies": {
+        "@types/asn1": "^0.2.0",
+        "@types/express": "^4.17.17",
+        "@types/jsonwebtoken": "^9.0.1",
+        "@types/node-jose": "^1.1.10",
+        "@types/bcrypt": "~5.0.0",
+        "typescript": "^4.6.4",
+        "eslint": "^8.36.0",
+        "jest": "^29.5.0",
+        "npm-check-updates": "~16.7.12",
+        "ts-jest": "^29.0.5"
+    }
+}

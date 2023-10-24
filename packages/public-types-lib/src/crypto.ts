@@ -27,33 +27,19 @@
 
  --------------
  ******/
+
 "use strict";
 
+export interface ICryptoKeyManagement{
+    /***
+     * Creates a private RSA key file in PEM format using pkcs8 encoding
+     *
+     * Note: typical files have a "pem" extension.
+     * @param filePath - destination of file to be created
+     * @param modulusLength - Key size in bits, default modulus length is 2048 bits
+     */
+    createPrivateRsaKeyPEMFileSync(filePath: string, modulusLength:number): void;
 
-export type CallSecurityContext = {
-    /**
-     * This holds the username in case of a user made call, i.e.,  password grant,
-     * will be null for app to app calls, i.e., client_credentials grant
-     */
-    username: string | null;
-    /**
-     * This holds the client_id of the caller app, regardless of grant type
-     */
-    clientId: string;
-    /**
-     * Array of role identifiers for platform wide access this security principal has associated to itself
-     */
-    platformRoleIds: string[];
-    /**
-     * Original bearer token passed by the caller
-     */
-    accessToken: string;
 
-    /**
-     * Array of per participants roles identifiers this this security principal has associated to itself
-     */
-    participantRoleIds?: {
-        participantId: string,
-        roleId: string
-    }[]
+
 }

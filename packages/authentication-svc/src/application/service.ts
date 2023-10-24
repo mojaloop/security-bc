@@ -36,15 +36,15 @@ import express from "express";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {LocalRolesAssociationRepo} from "../infrastructure/local_roles_repo";
 import {IAMAuthenticationAdapter, ICryptoAuthenticationAdapter, ILocalRoleAssociationRepo} from "../domain/interfaces";
-import {FileIAMAdapter} from "../infrastructure/file_iam_adapter";
 import {AuthenticationAggregate, AuthenticationAggregateOptions} from "../domain/authentication_agg";
 import {LogLevel} from "@mojaloop/logging-bc-public-types-lib/dist/index";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib/dist/index";
 import {AuthenticationRoutes} from "./authentication_routes";
 import {SimpleCryptoAdapter2} from "../infrastructure/simple_crypto_adapter2";
 
-import {defaultDevApplications, defaultDevUsers} from "../dev_defaults";
 import process from "process";
+import {BuiltinIamAdapter} from "../infrastructure/builtin_iam_adapter";
+import util from "util";
 
 // get configClient from dedicated file
 // import configClient, {configKeys} from "./config";
@@ -65,17 +65,19 @@ const LOG_LEVEL:LogLevel = process.env["LOG_LEVEL"] as LogLevel || LogLevel.DEBU
 const SVC_DEFAULT_HTTP_PORT = 3201;
 
 const KAFKA_URL = process.env["KAFKA_URL"] || "localhost:9092";
-const MONGO_URL = process.env["MONGO_URL"] || "mongodb://root:mongoDbPas42@localhost:27017/";
+// const MONGO_URL = process.env["MONGO_URL"] || "mongodb://root:mongoDbPas42@localhost:27017/";
 //const KAFKA_AUDITS_TOPIC = process.env["KAFKA_AUDITS_TOPIC"] || "audits";
 const KAFKA_LOGS_TOPIC = process.env["KAFKA_LOGS_TOPIC"] || "logs";
 
-const IAM_STORAGE_FILE_PATH = process.env["IAM_STORAGE_FILE_PATH"] || "/app/data/authN_TempIAMStorageFile.json";
+// const IAM_STORAGE_FILE_PATH = process.env["IAM_STORAGE_FILE_PATH"] || "/app/data/authN_TempIAMStorageFile.json";
 const ROLES_STORAGE_FILE_PATH = process.env["ROLES_STORAGE_FILE_PATH"] || "/app/data/authN_TempRolesStorageFile.json";
 const PRIVATE_CERT_PEM_FILE_PATH = process.env["PRIVATE_CERT_PEM_FILE_PATH"] || "/app/data/private.pem";
 
 const AUTH_N_TOKEN_LIFE_SECS = process.env["AUTH_N_TOKEN_LIFE_SECS"] ? parseInt(process.env["AUTH_N_TOKEN_LIFE_SECS"]) : 3600;
-const AUTH_N_DEFAULT_AUDIENCE = process.env["AUTH_N_DEFAULT_AUDIENCE"] || "mojaloop.vnext.default_audience";
-const AUTH_N_ISSUER_NAME = process.env["AUTH_N_ISSUER_NAME"] || "http://localhost:3201";
+const AUTH_N_DEFAULT_AUDIENCE = process.env["AUTH_N_DEFAULT_AUDIENCE"] || "mojaloop.vnext.dev.default_audience";
+const AUTH_N_ISSUER_NAME = process.env["AUTH_N_ISSUER_NAME"] || "mojaloop.vnext.dev.default_issuer";
+
+const BUILTIN_IAM_BASE_URL = process.env["BUILTIN_IAM_BASE_URL"] || "http://localhost:3203";
 
 // kafka logger
 const kafkaProducerOptions = {
@@ -90,12 +92,14 @@ export class Service {
     static iam:IAMAuthenticationAdapter;
     static crypto:ICryptoAuthenticationAdapter;
     static localRoleAssociationRepo: ILocalRoleAssociationRepo | null;
-    static authAgg: AuthenticationAggregate;
+    static authenticationAgg: AuthenticationAggregate;
     static expressServer: Server;
 
     static async start(
-        logger?: ILogger, iamAdapter?:IAMAuthenticationAdapter,
-        cryptoAdapter?:ICryptoAuthenticationAdapter, localRoleAssociationRepo?: ILocalRoleAssociationRepo
+        logger?: ILogger,
+        iamAdapter?:IAMAuthenticationAdapter,
+        cryptoAdapter?:ICryptoAuthenticationAdapter,
+        localRoleAssociationRepo?: ILocalRoleAssociationRepo
     ):Promise<void>{
         console.log(`Service starting with PID: ${process.pid}`);
 
@@ -131,7 +135,7 @@ export class Service {
 */
 
         if(!iamAdapter){
-            // not sure why we would be running this FileIAMAdapter in production, but...
+            /*// not sure why we would be running this FileIAMAdapter in production, but...
             if(!existsSync(IAM_STORAGE_FILE_PATH) && PRODUCTION_MODE){
                 throw new Error("PRODUCTION_MODE and non existing IAM_STORAGE_FILE_PATH in: "+IAM_STORAGE_FILE_PATH);
             }
@@ -158,7 +162,10 @@ export class Service {
                 }
             }
 
-            iamAdapter = fileIAMAdapter;
+            iamAdapter = fileIAMAdapter;*/
+
+            iamAdapter = new BuiltinIamAdapter(BUILTIN_IAM_BASE_URL, this.logger);
+            await iamAdapter.init();
         }
         this.iam = iamAdapter;
 
@@ -187,7 +194,7 @@ export class Service {
 
         // construct the aggregate
         try {
-            this.authAgg = new AuthenticationAggregate(this.iam, this.crypto, this.logger, this.localRoleAssociationRepo, aggregateOptions);
+            this.authenticationAgg = new AuthenticationAggregate(this.iam, this.crypto, this.logger, this.localRoleAssociationRepo, aggregateOptions);
         }catch(err){
             await Service.stop();
         }
@@ -208,7 +215,7 @@ export class Service {
             next();
         });
 
-        const globalConfigsRoutes = new AuthenticationRoutes(this.authAgg, this.crypto, AUTH_N_ISSUER_NAME, this.logger);
+        const globalConfigsRoutes = new AuthenticationRoutes(this.authenticationAgg, this.crypto, AUTH_N_ISSUER_NAME, this.logger);
         app.use(globalConfigsRoutes.Router);
 
         // catch all rule
@@ -234,7 +241,11 @@ export class Service {
     }
 
     static async stop():Promise<void>{
-       if(this.expressServer) this.expressServer.close();
+        if (this.expressServer){
+            const closeExpress = util.promisify(this.expressServer.close);
+            await closeExpress();
+        }
+        if (this.logger && this.logger instanceof KafkaLogger) await this.logger.destroy();
     }
 
 }
@@ -261,5 +272,6 @@ process.on("exit", async () => {
     globalLogger.info("Microservice - exiting...");
 });
 process.on("uncaughtException", (err: Error) => {
-    globalLogger.error(err);
+    console.error(err);
+    process.exit(99);
 });

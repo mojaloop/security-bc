@@ -27,9 +27,10 @@
 
  --------------
  ******/
-"use strict"
+"use strict";
 
 export * from "./errors";
 export * from "./authorization";
 export * from "./authentication";
 export * from "./generic_types";
+export * from "./crypto";

@@ -34,3 +34,4 @@ export * from "./token_helper";
 export * from "./authorization_client";
 export * from "./errors";
 export * from "./auth_http_requester";
+export * from "./crypto";

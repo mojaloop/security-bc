@@ -56,19 +56,30 @@ export type AppPrivileges = {
 }
 
 export type PlatformRole = {
-	id: string;                             // unique and matching a constant identifier / enum - case insensitive - not a uuid
-	isApplicationRole: boolean               // role for applications, in opposition to users
-	isExternal: boolean;                    // external role, synced from an external IAM
-	externalId: string | null | undefined;  // id of the role in the external system/iam
-	labelName: string;                      // label name to show on a UI
-	description: string;                    // description to show on a UI
-	privileges: string[];                   // array of Privilege.id's
+    // unique and matching a constant identifier / enum - case insensitive - not a uuid
+    id: string;
+    // role for applications, in opposition to users
+    isApplicationRole: boolean;
+    // external role, synced from an external IAM
+    isExternal: boolean;
+    // id of the role in the external system/iam
+    externalId: string | null | undefined;
+    // label name to show on a UI
+    labelName: string;
+    // description to show on a UI
+    description: string;
+    // array of Privilege.id's
+    privileges: string[];
+    // role can only be attributed in conjunction with a participant id (not a system-wide role)
+    isPerParticipantRole: boolean;
 
 	//  membership association is from authN,
 	// // if using external IAM, users and apps will com e with role association
 	// memberUserIds: string[];                  // array of PlatformUser.id's
 	// memberAppIds: string[]                    // array of PlatformApp.id's
 }
+
+
 
 // export type PlatformUser = {
 //     id: string;                     // unique and constant identifier - case-insensitive - uuid

@@ -19,8 +19,7 @@ function convert_cert_to_SSL(cert_str:string){
         if(cert_str.length > 64){
             result += "\n" + cert_str.substring(0, 64);
             cert_str = cert_str.substring(64, cert_str.length);
-        }
-        else{
+        }else{
             result += "\n" + cert_str;
             cert_str = "";
         }

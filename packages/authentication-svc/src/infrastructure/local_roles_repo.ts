@@ -114,7 +114,7 @@ export class LocalRolesAssociationRepo implements ILocalRoleAssociationRepo{
 
 		const loadSuccess = await this._loadFromFile();
 		if (!loadSuccess) {
-			throw new Error("Error loading LocalRolesAssociationRepo file")
+			throw new Error("Error loading LocalRolesAssociationRepo file");
 		}
 
 
@@ -148,11 +148,11 @@ export class LocalRolesAssociationRepo implements ILocalRoleAssociationRepo{
 
 	/* interface methods */
 
-	fetchApplicationRoles(clientId: string): Promise<string[]> {
+	fetchApplicationPlatformRoles(clientId: string): Promise<string[]> {
 		return Promise.resolve(this._appRoles.get(clientId) || []);
 	}
 
-	fetchUserRoles(username: string): Promise<string[]> {
+	fetchUserPlatformRoles(username: string): Promise<string[]> {
 		return Promise.resolve(this._userRoles.get(username) || []);
 	}
 
@@ -167,6 +167,14 @@ export class LocalRolesAssociationRepo implements ILocalRoleAssociationRepo{
 		await this._saveToFile();
 		return Promise.resolve();
 	}
+
+    fetchApplicationPerParticipantRoles(clientId: string): Promise<{ participantId: string; roleId: string }[]> {
+        throw new Error("Not implemented");
+    }
+
+    fetchUserPerParticipantRoles(username: string): Promise<{ participantId: string; roleId: string }[]> {
+        throw new Error("Not implemented");
+    }
 
 
 }

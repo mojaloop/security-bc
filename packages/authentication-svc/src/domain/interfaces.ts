@@ -28,20 +28,16 @@
  --------------
  ******/
 
-"use strict"
+"use strict";
 
 
-import {IAMLoginResponse} from "@mojaloop/security-bc-public-types-lib";
+import {UserLoginResponse, LoginResponse} from "@mojaloop/security-bc-public-types-lib";
 
 export interface IAMAuthenticationAdapter {
     init(): Promise<void>;
-    loginUser(client_id:string, client_secret:string|null, username:string, password:string): Promise<IAMLoginResponse>;
-    loginApp(client_id:string, client_secret:string): Promise<IAMLoginResponse>;
-
-    userExists(username:string):Promise<boolean>;
-    appExists(client_id:string):Promise<boolean>;
+    loginUser(client_id:string, client_secret:string|null, username:string, password:string): Promise<UserLoginResponse | null>;
+    loginApp(client_id:string, client_secret:string): Promise<LoginResponse | null>;
 }
-
 
 export interface ICryptoAuthenticationAdapter {
     init(): Promise<void>;
@@ -54,8 +50,10 @@ export interface ICryptoAuthenticationAdapter {
 export interface ILocalRoleAssociationRepo {
     init(): Promise<void>;
 
-    fetchUserRoles(username:string): Promise<string[]>;
-    fetchApplicationRoles(clientId: string): Promise<string[]>;
+    fetchUserPlatformRoles(username:string): Promise<string[]>;
+    fetchApplicationPlatformRoles(clientId: string): Promise<string[]>;
+
+    fetchUserPerParticipantRoles(username:string): Promise<{participantId: string, roleId: string}[]>;
 
     storeUserRoles(username: string, roles: string[]): Promise<void>;
     storeApplicationRoles(clientId: string, roles: string[]): Promise<void>;

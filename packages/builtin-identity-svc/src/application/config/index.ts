@@ -28,32 +28,45 @@
  --------------
  ******/
 "use strict";
+/*
+import { ConfigParameterTypes } from "@mojaloop/platform-configuration-bc-public-types-lib";
+import {
+    ConfigurationClient,
+    DefaultConfigProvider
+} from "@mojaloop/platform-configuration-bc-client-lib";
 
-
-export type CallSecurityContext = {
-    /**
-     * This holds the username in case of a user made call, i.e.,  password grant,
-     * will be null for app to app calls, i.e., client_credentials grant
-     */
-    username: string | null;
-    /**
-     * This holds the client_id of the caller app, regardless of grant type
-     */
-    clientId: string;
-    /**
-     * Array of role identifiers for platform wide access this security principal has associated to itself
-     */
-    platformRoleIds: string[];
-    /**
-     * Original bearer token passed by the caller
-     */
-    accessToken: string;
-
-    /**
-     * Array of per participants roles identifiers this this security principal has associated to itself
-     */
-    participantRoleIds?: {
-        participantId: string,
-        roleId: string
-    }[]
+if(!process.env.npm_package_version){
+    throw new Error("This application must be launched by npm");
 }
+
+// configs - constants / code dependent
+const BC_NAME = "security-bc";
+const APP_NAME = "authentication-svc";
+const APP_VERSION = process.env.npm_package_version || "0.0.0";
+const CONFIGSET_VERSION = "0.0.3";
+
+// configs - non-constants
+const ENV_NAME = process.env["ENV_NAME"] || "dev";
+
+// use default url from PLATFORM_CONFIG_BASE_SVC_URL env var
+const defaultConfigProvider: DefaultConfigProvider = new DefaultConfigProvider();
+const configClient = new ConfigurationClient(ENV_NAME, BC_NAME, APP_NAME, APP_VERSION, CONFIGSET_VERSION, defaultConfigProvider);
+
+export const configKeys = {
+    "ROLES_FROM_IAM_PROVIDER": "ROLES_FROM_IAM_PROVIDER"
+}
+
+/!*
+* Add application parameters here
+* *!/
+configClient.appConfigs.addNewParam(
+        configKeys.ROLES_FROM_IAM_PROVIDER,
+        ConfigParameterTypes.BOOL,
+        false,
+        "Enable fetching of role association from the connected IAM prodiver (instead of the builtin authorization service)"
+);
+
+
+export default configClient;
+*/
+

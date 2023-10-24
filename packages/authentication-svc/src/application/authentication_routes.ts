@@ -53,6 +53,9 @@ export class AuthenticationRoutes {
         this._router.get("/.well-known/openid-configuration", this._handleGetOpenIdConfiguration.bind(this));
         this._router.get("/.well-known/jwks.json", this._handleGetJwks.bind(this));
 
+        // TODO: handler logout route to send message to other auth clients so the token gets in a blocked list
+        // this._router.post("/logout", this._handleLogout.bind(this));
+
         // user role associations
         // this._router.post("/userRoles/:username", this.bad);
         // this._router.delete("/userRoles/:username", this.bad);
