@@ -46,8 +46,6 @@ import {
 } from "@mojaloop/security-bc-public-types-lib";
 import {BuiltinIdentityPrivileges} from "./privileges";
 import {InvalidRequestError} from "./errors";
-import {NewRoleWithPrivsUsersOrAppsError} from "@mojaloop/security-bc-authorization-svc/dist/domain/errors";
-import {defaultDevUsers} from "../dev_defaults";
 
 const BCRYPT_SALT_ROUNDS = 12;
 const PASSWORD_MIN_LENGTH = 6;

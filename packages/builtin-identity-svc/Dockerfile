@@ -40,7 +40,7 @@ COPY packages/builtin-identity-svc ./packages/builtin-identity-svc
 # build
 RUN npm run build
 
-RUN ls -la ./packages/authentication-svc/dist
+RUN ls -la ./packages/builtin-identity-svc/dist
 
 
 FROM node:18.13-alpine
@@ -53,4 +53,4 @@ COPY --from=builder /app .
 # kafka handler, no http server yet
 EXPOSE 3203
 
-CMD [ "npm", "run", "start:authentication-svc" ]
+CMD [ "npm", "run", "start:identity-svc" ]
