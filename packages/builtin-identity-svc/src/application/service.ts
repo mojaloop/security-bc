@@ -143,8 +143,6 @@ export class Service {
         // authorization client
         if (!userManagementRepo) {
             userManagementRepo = new MongoDbBuiltinIdentityRepository(MONGO_URL, logger);
-
-
         }
         this.userManagementRepo = userManagementRepo;
 
