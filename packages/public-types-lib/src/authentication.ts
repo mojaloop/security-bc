@@ -33,6 +33,8 @@
 /*
 Authentication specific
 */
+import {CallSecurityContext} from "./generic_types";
+
 export type UserType = "HUB" | "DFSP";
 
 export type ParticipantRole = {
@@ -74,6 +76,7 @@ export interface ITokenHelper {
     init(): Promise<void>;
     decodeToken(accessToken: string): any | null;
     verifyToken(accessToken: string): Promise<boolean>;
+    getCallSecurityContextFromAccessToken(accessToken:string):Promise<CallSecurityContext|null>;
 }
 
 export interface ILoginHelper {

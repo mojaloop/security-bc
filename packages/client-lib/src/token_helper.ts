@@ -27,10 +27,10 @@
 
  --------------
  ******/
- "use strict";
+"use strict";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {ITokenHelper} from "@mojaloop/security-bc-public-types-lib";
+import {CallSecurityContext, ITokenHelper} from "@mojaloop/security-bc-public-types-lib";
 import jwt, {Jwt} from "jsonwebtoken";
 import jwks, {JwksClient} from "jwks-rsa";
 
@@ -125,5 +125,32 @@ export class TokenHelper implements ITokenHelper {
 
     }
 
+    async getCallSecurityContextFromAccessToken(accessToken:string):Promise<CallSecurityContext|null>{
+        try {
+            const verified = await this.verifyToken(accessToken);
+            if (!verified) {
+                return null;
+            }
+
+            const decoded = this.decodeToken(accessToken);
+            if (!decoded.sub || decoded.sub.indexOf("::") == -1) {
+                return null;
+            }
+
+            const subSplit = decoded.sub.split("::");
+            const subjectType = subSplit[0];
+            const subject = subSplit[1];
+
+            return {
+                accessToken: accessToken,
+                clientId: subjectType.toUpperCase().startsWith("APP") ? subject : null,
+                username: subjectType.toUpperCase().startsWith("USER") ? subject : null,
+                platformRoleIds: decoded.platformRoles,
+            };
+        } catch (err) {
+            this._logger.error(err, "unable to verify token");
+            return null;
+        }
+    }
 
 }

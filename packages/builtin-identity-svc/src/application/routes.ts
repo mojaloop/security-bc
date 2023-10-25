@@ -110,34 +110,13 @@ export class IdentifyManagementRoutes {
         }
 
         const bearerToken = bearer[1];
-        let verified;
-        try {
-            verified = await this._tokenHelper.verifyToken(bearerToken);
-        } catch (err) {
-            this._logger.error(err, "unable to verify token");
-            return res.sendStatus(401);
-        }
-        if (!verified) {
+        const callSecCtx:  CallSecurityContext | null = await this._tokenHelper.getCallSecurityContextFromAccessToken(bearerToken);
+
+        if(!callSecCtx){
             return res.sendStatus(401);
         }
 
-        const decoded = this._tokenHelper.decodeToken(bearerToken);
-        if (!decoded.sub || decoded.sub.indexOf("::") == -1) {
-            return res.sendStatus(401);
-        }
-
-        const subSplit = decoded.sub.split("::");
-        const subjectType = subSplit[0];
-        const subject = subSplit[1];
-
-        req.securityContext = {
-            accessToken: bearerToken,
-            clientId: subjectType.toUpperCase().startsWith("APP") ? subject : null,
-            username: subjectType.toUpperCase().startsWith("USER") ? subject : null,
-            platformRoleIds: decoded.platformRoles,
-            participantRoleIds: decoded.participantRoles,
-        };
-
+        req.securityContext = callSecCtx;
         return next();
     }
 
