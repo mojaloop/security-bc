@@ -31,7 +31,10 @@
 "use strict";
 
 
-import {Privilege, AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
+import {
+    AppPrivileges,
+    PlatformRole, PrivilegeWithOwnerAppInfo
+} from "@mojaloop/security-bc-public-types-lib";
 
 /*
 export interface IAMAuthorizationAdapter {
@@ -48,10 +51,13 @@ export interface IAuthorizationRepository {
     fetchPlatformRole(roleId:string):Promise<PlatformRole | null>;
     fetchAllPlatformRoles():Promise<PlatformRole[]>;
 
-    // AppPrivileges
+    // AppPrivileges (privs grouped by app/bc scope)
     storeAppPrivileges(priv:AppPrivileges):Promise<void>;
-    fetchPrivilege(privilegeId: string):Promise<Privilege | null>;
     fetchAppPrivileges(boundedContextName: string, applicationName: string):Promise<AppPrivileges | null>;
-    fetchAllAppPrivileges():Promise<AppPrivileges[]>;
+
+
+    // privilege simple types (flat privs with apps/bc/app_ver)
+    fetchPrivilegeById(privilegeId: string):Promise<PrivilegeWithOwnerAppInfo | null>;
+    fetchAllPrivileges():Promise<PrivilegeWithOwnerAppInfo[]>;
 }
 

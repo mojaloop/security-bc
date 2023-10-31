@@ -50,6 +50,7 @@ import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {BuiltinIdentityPrivilegesDefinition} from "../domain/privileges";
 import {MongoDbBuiltinIdentityRepository} from "../infrastructure/mongodb_repo";
 import {defaultDevApplications, defaultDevUsers} from "../dev_defaults";
+import { MLKafkaJsonConsumer, MLKafkaJsonConsumerOptions } from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJSON = require("../../package.json");
@@ -83,6 +84,11 @@ const SERVICE_START_TIMEOUT_MS = 60_000;
 // kafka logger
 const kafkaProducerOptions = {
     kafkaBrokerList: KAFKA_URL
+};
+
+const kafkaConsumerOptions: MLKafkaJsonConsumerOptions = {
+    kafkaBrokerList: KAFKA_URL,
+    kafkaGroupId: `${BC_NAME}_${APP_NAME}_authz_client`
 };
 
 // global
@@ -129,11 +135,19 @@ export class Service {
 
         // authorization client
         if (!authorizationClient) {
+            const consumerHandlerLogger = logger.createChild("authorizationClientConsumer");
+            const messageConsumer = new MLKafkaJsonConsumer(kafkaConsumerOptions, consumerHandlerLogger);
+
             // setup privileges - bootstrap app privs and get priv/role associations
-            authorizationClient = new AuthorizationClient(BC_NAME, APP_NAME, APP_VERSION, AUTH_Z_SVC_BASEURL, logger.createChild("AuthorizationClient"));
+            authorizationClient = new AuthorizationClient(
+                BC_NAME, APP_NAME, APP_VERSION,
+                AUTH_Z_SVC_BASEURL, logger.createChild("AuthorizationClient"),
+                messageConsumer
+            );
             authorizationClient.addPrivilegesArray(BuiltinIdentityPrivilegesDefinition);
             await (authorizationClient as AuthorizationClient).bootstrap(true);
             await (authorizationClient as AuthorizationClient).fetch();
+            await (authorizationClient as AuthorizationClient).init(); // init
         }
         this.authorizationClient = authorizationClient;
 

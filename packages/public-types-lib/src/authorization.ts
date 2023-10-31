@@ -48,6 +48,12 @@ export type Privilege = {
 	description: string;            // description to show on a UI
 }
 
+export type PrivilegeWithOwnerAppInfo = Privilege & {
+    boundedContextName: string;     // bounded context it belongs to
+    applicationName: string;        // application it belongs to
+    applicationVersion: string;     // semver
+}
+
 export type AppPrivileges = {
 	boundedContextName: string;
 	applicationName: string;

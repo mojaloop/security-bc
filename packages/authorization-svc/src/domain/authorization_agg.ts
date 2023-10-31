@@ -33,7 +33,12 @@
 import semver from "semver";
 import * as Crypto from "crypto";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {Privilege, AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
+import {
+    Privilege,
+    AppPrivileges,
+    PlatformRole,
+    PrivilegeWithOwnerAppInfo
+} from "@mojaloop/security-bc-public-types-lib";
 import {IAuthorizationRepository} from "./interfaces";
 import {
     ApplicationsPrivilegesNotFoundError,
@@ -45,19 +50,22 @@ import {
     InvalidPlatformRoleError,
     NewRoleWithPrivsUsersOrAppsError, PlatformRoleNotFoundError, PrivilegeNotFoundError
 } from "./errors";
-import {AllPrivilegesResp, PrivilegesByRole} from "../domain/types";
-
+import {PrivilegesByRole} from "../domain/types";
+import {IMessageProducer} from "@mojaloop/platform-shared-lib-messaging-types-lib";
+import {PlatformRoleChangedEvt} from "@mojaloop/platform-shared-lib-public-messages-lib";
 
 export class AuthorizationAggregate{
     private _logger:ILogger;
     //private _iamAuthNAdapter:IAMAuthorizationAdapter;
     private _authzRepo:IAuthorizationRepository;
+    private _producer:IMessageProducer;
 
 
     // constructor(authzRepo:IAuthorizationRepository, iamAuthN:IAMAuthorizationAdapter, logger:ILogger) {
-    constructor(authzRepo:IAuthorizationRepository, logger:ILogger) {
+    constructor(authzRepo:IAuthorizationRepository, producer:IMessageProducer, logger:ILogger) {
         this._logger = logger.createChild(this.constructor.name);
         this._authzRepo = authzRepo;
+        this._producer = producer;
         //this._iamAuthNAdapter = iamAuthN;
     }
 
@@ -83,6 +91,10 @@ export class AuthorizationAggregate{
         return true;
     }
 
+    private async _sendRoleChangedEvt(roleId: string){
+        const evt = new PlatformRoleChangedEvt({roleId: roleId});
+        await this._producer.send(evt);
+    }
     async processAppBootstrap(appPrivs: AppPrivileges):Promise<void> {
         if(!this._validateAppPrivileges(appPrivs)){
             this._logger.warn("Invalid AppPrivileges received in processAppBootstrap");
@@ -103,8 +115,8 @@ export class AuthorizationAggregate{
             }
         }
 
-
         try {
+            // TODO: maybe mark older versions as inactive
             await this._authzRepo.storeAppPrivileges(appPrivs);
             this._logger.info(`Created AppPrivileges set for BC: ${appPrivs.boundedContextName}, APP: ${appPrivs.applicationName}, version: ${appPrivs.applicationVersion}`);
         }catch(err:any){
@@ -113,28 +125,10 @@ export class AuthorizationAggregate{
         }
     }
 
-    async getAllPrivileges():Promise<AllPrivilegesResp[]> {
-        const ret : AllPrivilegesResp[] = [];
-        const allPrivs = await this._authzRepo.fetchAllAppPrivileges();
+    async getAllPrivileges():Promise<PrivilegeWithOwnerAppInfo[]> {
+        const allPrivs = await this._authzRepo.fetchAllPrivileges();
 
-        if(!allPrivs || allPrivs.length ==0) {
-            return ret;
-        }
-
-        allPrivs.forEach(appPrivs => {
-            appPrivs.privileges.forEach(priv=>{
-                ret.push({
-                    id: priv.id,
-                    labelName: priv.labelName,
-                    description: priv.description,
-                    boundedContextName: appPrivs.boundedContextName,
-                    applicationName: appPrivs.applicationName,
-                    applicationVersion: appPrivs.applicationVersion
-                });
-            });
-        });
-
-        return ret;
+        return allPrivs;
     }
 
     /**
@@ -143,9 +137,9 @@ export class AuthorizationAggregate{
      * @param appName Application name
      */
     async getAppPrivilegesByRole(bcName:string, appName:string):Promise<PrivilegesByRole>{
-        const appPrivIds = await this.getAppPrivilegeIds(bcName, appName);
+        const allPrivs = await this._authzRepo.fetchAllPrivileges();
 
-        if(appPrivIds.length<=0){
+        if(allPrivs.length<=0){
             throw new ApplicationsPrivilegesNotFoundError();
         }
 
@@ -157,7 +151,8 @@ export class AuthorizationAggregate{
             if(!role.privileges || role.privileges.length<=0) return;
 
             role.privileges.forEach(rolePriv => {
-                if(!appPrivIds.includes(rolePriv)) return;
+                const privDefinition = allPrivs.find(item => item.id === rolePriv);
+                if(!privDefinition) return;
 
                 if (!ret[role.id]){
                     ret[role.id] = {
@@ -166,39 +161,6 @@ export class AuthorizationAggregate{
                     };
                 }
                 ret[role.id].privileges.push(rolePriv);
-            });
-        });
-
-        return ret;
-    }
-
-    async getAppPrivilegeIds(bcName:string, appName:string, appVersion:string|null = null):Promise<string[]>{
-        const ret : string[] = [];
-        const allPrivs = await this._authzRepo.fetchAllAppPrivileges();
-
-        if(!allPrivs || allPrivs.length ==0) {
-            return ret;
-        }
-
-        const appPrivs = allPrivs.filter(value => value.boundedContextName==bcName && value.applicationName === appName);
-        if(!appPrivs || appPrivs.length ==0) {
-            return ret;
-        }
-
-        // TODO find lastest
-        if(!appVersion){
-            appVersion = appPrivs.sort((a, b) => semver.compare(a.applicationVersion, b.applicationVersion))[0].applicationVersion;
-        }
-
-        allPrivs.forEach(appPrivs => {
-            if(appPrivs.boundedContextName != bcName
-                    || appPrivs.applicationName != appName
-                    || appPrivs.applicationVersion != appVersion){
-                return;
-            }
-
-            appPrivs.privileges.forEach(priv=>{
-                ret.push(priv.id);
             });
         });
 
@@ -215,7 +177,7 @@ export class AuthorizationAggregate{
         return allRoles;
     }
 
-    async createLocalRole(role:PlatformRole):Promise<string>{
+    async createPlatformRole(role:PlatformRole):Promise<string>{
         if(role.isExternal && !role.externalId){
             throw new InvalidPlatformRoleError();
         }
@@ -248,6 +210,7 @@ export class AuthorizationAggregate{
             throw new CannotStorePlatformRoleError(err?.message);
         }
 
+        await this._sendRoleChangedEvt(role.id);
         return role.id;
     }
 
@@ -260,7 +223,7 @@ export class AuthorizationAggregate{
         if(!role.privileges) role.privileges = [];
 
         for (const privId of privilegeIds) {
-            const priv:Privilege | null = await this._authzRepo.fetchPrivilege(privId);
+            const priv:PrivilegeWithOwnerAppInfo | null = await this._authzRepo.fetchPrivilegeById(privId);
             if(!priv) {
                 throw new PrivilegeNotFoundError();
             }
@@ -277,6 +240,30 @@ export class AuthorizationAggregate{
             throw new CannotStorePlatformRoleError(err?.message);
         }
 
+        await this._sendRoleChangedEvt(roleId);
+    }
+
+    async dissociatePrivilegesToRole(privilegeIds:string[], roleId:string):Promise<void>{
+        const role:PlatformRole  | null = await this._authzRepo.fetchPlatformRole(roleId);
+        if(!role) {
+            throw new PlatformRoleNotFoundError();
+        }
+
+        if(!role.privileges) {
+            throw new PrivilegeNotFoundError("Role has no privileges to remove");
+        }
+
+        // filter out selected privilege ids
+        role.privileges = role.privileges.filter(value => !privilegeIds.includes(value));
+
+        try {
+            await this._authzRepo.storePlatformRole(role);
+        }catch(err:any){
+            this._logger.error(err);
+            throw new CannotStorePlatformRoleError(err?.message);
+        }
+
+        await this._sendRoleChangedEvt(roleId);
     }
 
 }

@@ -41,9 +41,9 @@ import {
     InvalidPlatformRoleError,
     NewRoleWithPrivsUsersOrAppsError, PlatformRoleNotFoundError, PrivilegeNotFoundError
 } from "../domain/errors";
-import {AllPrivilegesResp, PrivilegesByRole} from "../domain/types";
+import {PrivilegesByRole} from "../domain/types";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {AppPrivileges, PlatformRole} from "@mojaloop/security-bc-public-types-lib";
+import {AppPrivileges, PlatformRole, PrivilegeWithOwnerAppInfo} from "@mojaloop/security-bc-public-types-lib";
 import {AuthorizationAggregate} from "../domain/authorization_agg";
 
 
@@ -68,7 +68,8 @@ export class ExpressRoutes {
         // roles
         this._rolesRouter.get("/", this.getAllPlatformRole.bind(this));
         this._rolesRouter.post("/", this.postPlatformRole.bind(this));
-        this._rolesRouter.post("/:roleId/associatePrivileges", this.postAssociatePrivsToPlatformRole.bind(this));
+        this._rolesRouter.post("/:roleId/add_privileges", this.postAddPrivsToPlatformRole.bind(this));
+        this._rolesRouter.post("/:roleId/remove_privileges", this.postRemovePrivsFromPlatformRole.bind(this));
     }
 
     get MainRouter():express.Router{
@@ -148,7 +149,7 @@ export class ExpressRoutes {
     }
 
     private async getAllAppPrivileges(req: express.Request, res: express.Response){
-        await this._authorizationAggregate.getAllPrivileges().then((resp:AllPrivilegesResp[])=>{
+        await this._authorizationAggregate.getAllPrivileges().then((resp:PrivilegeWithOwnerAppInfo[])=>{
             return res.send(resp);
         }).catch(()=>{
             this._logger.error("error in getAllAppPrivileges route");
@@ -177,7 +178,7 @@ export class ExpressRoutes {
         const data: PlatformRole = req.body as PlatformRole;
         this._logger.debug(data);
 
-        await this._authorizationAggregate.createLocalRole(data).then((roleId:string)=>{
+        await this._authorizationAggregate.createPlatformRole(data).then((roleId:string)=>{
             return res.status(200).send({roleId: roleId});
         }).catch((error: Error)=>{
             if (error instanceof InvalidPlatformRoleError) {
@@ -204,11 +205,11 @@ export class ExpressRoutes {
         });
     }
 
-    private async postAssociatePrivsToPlatformRole(req: express.Request, res: express.Response){
+    private async postAddPrivsToPlatformRole(req: express.Request, res: express.Response){
         const roleId = req.params["roleId"] ?? null;
         // body is supposed to be an array of strings
         const data: string[] = req.body as string[];
-        this._logger.debug(data);
+        this._logger.debug(`Add privs to role: ${roleId}, privIds: ${data}`);
 
         if(!roleId){
             return res.status(400).json({
@@ -225,6 +226,49 @@ export class ExpressRoutes {
         }
 
         await this._authorizationAggregate.associatePrivilegesToRole(data, roleId).then(()=>{
+            return res.status(200).send();
+        }).catch((error: Error)=>{
+            if (error instanceof PlatformRoleNotFoundError) {
+                return res.status(404).json({
+                    status: "error",
+                    msg: "PlatformRole not found"
+                });
+            } else if (error instanceof PrivilegeNotFoundError) {
+                return res.status(400).json({
+                    status: "error",
+                    msg: "Privilege not found"
+                });
+            } else {
+                return res.status(500).json({
+                    status: "error",
+                    msg: "unknown error"
+                });
+            }
+        });
+        return;
+    }
+
+    private async postRemovePrivsFromPlatformRole(req: express.Request, res: express.Response){
+        const roleId = req.params["roleId"] ?? null;
+        // body is supposed to be an array of strings
+        const data: string[] = req.body as string[];
+        this._logger.debug(`Remove privs from role: ${roleId}, privIds: ${data}`);
+
+        if(!roleId){
+            return res.status(400).json({
+                status: "error",
+                msg: "invalid PlatformRole"
+            });
+        }
+
+        if(!Array.isArray(data) || data.length<=0){
+            return res.status(400).json({
+                status: "error",
+                msg: "invalid privilege id list in body"
+            });
+        }
+
+        await this._authorizationAggregate.dissociatePrivilegesToRole(data, roleId).then(()=>{
             return res.status(200).send();
         }).catch((error: Error)=>{
             if (error instanceof PlatformRoleNotFoundError) {

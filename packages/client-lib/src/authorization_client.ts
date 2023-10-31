@@ -33,6 +33,12 @@
 import axios, { AxiosResponse, AxiosInstance, AxiosError } from "axios";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {AppPrivileges, IAuthorizationClient, Privilege} from "@mojaloop/security-bc-public-types-lib";
+import {
+    IMessage,
+    IMessageConsumer,
+    MessageTypes
+} from "@mojaloop/platform-shared-lib-messaging-types-lib";
+import {SecurityAuthorizationBCTopics} from "@mojaloop/platform-shared-lib-public-messages-lib";
 
 export type PrivilegesByRole = {
     [roleId: string]: {
@@ -52,13 +58,15 @@ export class AuthorizationClient implements IAuthorizationClient{
     private _rolePrivileges:PrivilegesByRole | null = null;
     private _lastFetchTimestamp:number | null = null;
     private _privileges:Privilege[] = [];
+    private _messageConsumer:IMessageConsumer | null;
 
-    constructor(boundedContext: string, application: string, version: string, authSvcBaseUrl:string, logger:ILogger) {
+    constructor(boundedContext: string, application: string, version: string, authSvcBaseUrl:string, logger:ILogger, messageConsumer:IMessageConsumer|null = null) {
         this._logger = logger.createChild(this.constructor.name);
         this._boundedContextName = boundedContext;
         this._applicationName = application;
         this._applicationVersion = version;
         this._authSvcBaseUrl = authSvcBaseUrl;
+        this._messageConsumer = messageConsumer;
 
         axios.defaults.baseURL = authSvcBaseUrl;
         this._client = axios.create({
@@ -108,6 +116,27 @@ export class AuthorizationClient implements IAuthorizationClient{
                 reject(new Error(err.message));
             });
         });
+    }
+
+    async init():Promise<void>{
+        if(this._messageConsumer){
+            this._messageConsumer.setTopics([SecurityAuthorizationBCTopics.DomainEvents]);
+            this._messageConsumer.setCallbackFn(this._messageHandler.bind(this));
+            await this._messageConsumer.connect();
+            await this._messageConsumer.startAndWaitForRebalance();
+        }
+    }
+
+    private async _messageHandler(message:IMessage):Promise<void>{
+        if(message.msgType !== MessageTypes.DOMAIN_EVENT) return;
+
+        // for now, simply fetch everthing
+
+        await this.fetch();
+        // if(message.msgName === "PlatformRoleChangedEvt"){
+        //     const
+        //     await this._roleChangedHandler();
+        // }
     }
 
     roleHasPrivilege(roleId:string, privilegeId:string):boolean{

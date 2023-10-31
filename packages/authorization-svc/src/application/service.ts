@@ -42,6 +42,8 @@ import { IAuthorizationRepository} from "../domain/interfaces";
 import {ExpressRoutes} from "./routes";
 import {MongoDbAuthorizationRepo} from "../infrastructure/mongodb_authorization_repo";
 import process from "process";
+import {IMessageProducer} from "@mojaloop/platform-shared-lib-messaging-types-lib";
+import {MLKafkaJsonProducer} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib/dist/index";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJSON = require("../../package.json");
@@ -71,10 +73,15 @@ let globalLogger: ILogger;
 export class Service {
     static logger: ILogger;
     static authorizationRepo: IAuthorizationRepository;
+    static messageProducer: IMessageProducer;
     static authorizationAggregate:AuthorizationAggregate;
     static expressServer: Server;
 
-    static async start(logger?: ILogger, authNRepo?:IAuthorizationRepository):Promise<void>{
+    static async start(
+		logger?: ILogger,
+		authNRepo?:IAuthorizationRepository,
+        messageProducer?: IMessageProducer
+    ):Promise<void>{
         if (!logger) {
             logger = new KafkaLogger(
                     BC_NAME,
@@ -106,7 +113,15 @@ export class Service {
         }
         this.authorizationRepo = authNRepo;
 
-        this.authorizationAggregate = new AuthorizationAggregate(this.authorizationRepo, this.logger);
+        if (!messageProducer) {
+            const producerLogger = logger.createChild("producerLogger");
+            producerLogger.setLogLevel(LogLevel.INFO);
+            messageProducer = new MLKafkaJsonProducer(kafkaProducerOptions, producerLogger);
+            await messageProducer.connect();
+        }
+        this.messageProducer = messageProducer;
+
+        this.authorizationAggregate = new AuthorizationAggregate(this.authorizationRepo, this.messageProducer, this.logger);
 
         if (!PRODUCTION_MODE && ! await this.authorizationAggregate.getAllRoles()) {
             // create default roles

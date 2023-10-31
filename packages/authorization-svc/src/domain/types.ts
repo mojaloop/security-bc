@@ -30,14 +30,14 @@
 
 "use strict";
 
-export type AllPrivilegesResp = {
-    id: string;
-    labelName: string;
-    description: string;
-    boundedContextName: string;
-    applicationName: string;
-    applicationVersion: string;
-}
+// export type AllPrivilegesResp = {
+//     id: string;
+//     labelName: string;
+//     description: string;
+//     boundedContextName: string;
+//     applicationName: string;
+//     applicationVersion: string;
+// }
 
 export type PrivilegesByRole = {
     [roleId: string]: {
