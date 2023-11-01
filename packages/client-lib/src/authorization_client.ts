@@ -106,7 +106,7 @@ export class AuthorizationClient implements IAuthorizationClient{
 
         return await new Promise<void>((resolve, reject) => {
             this._client.get(url).then((resp: AxiosResponse) => {
-                this._logger.debug(resp.data);
+                this._logger.info("Role privileges associations received successfully");
                 this._rolePrivileges = resp.data;
                 this._lastFetchTimestamp = Date.now();
                 resolve();
@@ -130,8 +130,9 @@ export class AuthorizationClient implements IAuthorizationClient{
     private async _messageHandler(message:IMessage):Promise<void>{
         if(message.msgType !== MessageTypes.DOMAIN_EVENT) return;
 
-        // for now, simply fetch everthing
+        // for now, simply fetch everything
 
+        this._logger.info("PlatformRoleChangedEvt received, fetching updated Role privileges associations...");
         await this.fetch();
         // if(message.msgName === "PlatformRoleChangedEvt"){
         //     const
