@@ -1,6 +1,6 @@
 {
     "name": "@mojaloop/security-bc-builtin-identity-svc",
-    "version": "0.3.6",
+    "version": "0.3.7",
     "description": "mojaloop security builtin identity management service",
     "license": "Apache-2.0",
     "homepage": "https://github.com/mojaloop/security-bc/tree/main/packages/builtin-identity-svc",
