@@ -50,18 +50,19 @@ import {InvalidRequestError} from "./errors";
 const BCRYPT_SALT_ROUNDS = 12;
 const PASSWORD_MIN_LENGTH = 6;
 const USERNAME_MIN_LENGTH = 3; // for users and apps
-const DEFAULT_EXPIRY_SECS = 60*60;
 
 export class IdentityManagementAggregate{
     private _logger:ILogger;
     private _authorizationClient: IAuthorizationClient;
     private _repo: IBuiltinIdentityRepository;
+    private _expirySecs: number;
 
-    constructor(logger: ILogger, repo: IBuiltinIdentityRepository, authorizationClient: IAuthorizationClient) {
+    constructor(logger: ILogger, repo: IBuiltinIdentityRepository, authorizationClient: IAuthorizationClient, expirySecs:number) {
         this._logger = logger.createChild(this.constructor.name);
 
         this._repo = repo;
         this._authorizationClient = authorizationClient;
+        this._expirySecs = expirySecs;
     }
 
     async init(): Promise<void> {
@@ -107,7 +108,7 @@ export class IdentityManagementAggregate{
             userType: user.userType,
             platformRoles: user.platformRoles || [],
             participantRoles: user.participantRoles || [],
-            expires_in: DEFAULT_EXPIRY_SECS
+            expires_in: this._expirySecs
         };
     }
 
@@ -136,7 +137,7 @@ export class IdentityManagementAggregate{
         return {
             scope: null,
             platformRoles: app.platformRoles || [],
-            expires_in: DEFAULT_EXPIRY_SECS
+            expires_in: this._expirySecs
         };
     }
 

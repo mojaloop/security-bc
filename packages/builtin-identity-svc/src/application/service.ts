@@ -71,6 +71,8 @@ const KAFKA_LOGS_TOPIC = process.env["KAFKA_LOGS_TOPIC"] || "logs";
 
 const PRIVATE_CERT_PEM_FILE_PATH = process.env["PRIVATE_CERT_PEM_FILE_PATH"] || "/app/data/private.pem";
 
+// TODO: rename these env var to a specific name
+const AUTH_N_TOKEN_LIFE_SECS = process.env["AUTH_N_TOKEN_LIFE_SECS"] ? parseInt(process.env["AUTH_N_TOKEN_LIFE_SECS"]) : 3600;
 const AUTH_N_SVC_BASEURL = process.env["AUTH_N_SVC_BASEURL"] || "http://localhost:3201";
 const AUTH_N_SVC_TOKEN_URL = AUTH_N_SVC_BASEURL + "/token"; // TODO this should not be known here, libs that use the base should add the suffix
 const AUTH_N_TOKEN_ISSUER_NAME = process.env["AUTH_N_TOKEN_ISSUER_NAME"] || "mojaloop.vnext.dev.default_issuer";
@@ -162,7 +164,7 @@ export class Service {
 
         // construct the aggregate
         try {
-            this.aggregate = new IdentityManagementAggregate(this.logger, this.userManagementRepo, this.authorizationClient);
+            this.aggregate = new IdentityManagementAggregate(this.logger, this.userManagementRepo, this.authorizationClient, AUTH_N_TOKEN_LIFE_SECS);
             await this.aggregate.init();
 
             if(!PRODUCTION_MODE){
