@@ -53,4 +53,9 @@ export const defaultDevApplications = [
 	{client_id: "settlements-bc-event-handler-svc", client_secret: "superServiceSecret", platformRoles: ["settlements-bc-event-handler-svc"]},
 	{client_id: "settlements-bc-api-svc", client_secret: "superServiceSecret", platformRoles: ["settlements-bc-api-svc"]},
 	{client_id: "platform-configuration-bc-api-svc", client_secret: "superServiceSecret", platformRoles: ["platform-configuration-bc-api-svc"]},
+
+    {client_id: "reporting-bc-reporting-api-svc", client_secret: "superServiceSecret", platformRoles: ["reporting-bc-reporting-api-svc"]},
+    {client_id: "reporting-bc-participants-reporting-svc", client_secret: "superServiceSecret", platformRoles: ["reporting-bc-participants-reporting-svc"]},
+    {client_id: "reporting-bc-transfers-reporting-svc", client_secret: "superServiceSecret", platformRoles: []},
+    {client_id: "reporting-bc-quotes-reporting-svc", client_secret: "superServiceSecret", platformRoles: ["reporting-bc-quotes-reporting-svc"]},
 ];

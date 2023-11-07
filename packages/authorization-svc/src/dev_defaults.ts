@@ -386,6 +386,17 @@ export const defaultDevRoles:PlatformRole[] = [
 			"SETTLEMENTS_RETRIEVE_TRANSFERS"
 		]
 	},{
+        id: "reporting-bc-reporting-api-svc",
+        description: "reporting-bc-reporting-api-svc roles",
+        labelName: "reporting-bc-reporting-api-svc roles",
+        isExternal: false,
+        externalId: undefined,
+        isApplicationRole: true,
+        isPerParticipantRole: false,
+        privileges: [
+            "VIEW_PARTICIPANT"
+        ]
+    },{
         id: "reporting-bc-participants-reporting-svc",
         description: "reporting-bc-participants-reporting-svc roles",
         labelName: "reporting-bc-participants-reporting-svc roles",
@@ -395,6 +406,17 @@ export const defaultDevRoles:PlatformRole[] = [
         isPerParticipantRole: false,
         privileges: [
             "VIEW_PARTICIPANT",
+        ]
+    },{
+        id: "reporting-bc-quotes-reporting-svc",
+        description: "reporting-bc-quotes-reporting-svc roles",
+        labelName: "reporting-bc-quotes-reporting-svc roles",
+        isExternal: false,
+        externalId: undefined,
+        isApplicationRole: true,
+        isPerParticipantRole: false,
+        privileges: [
+            "QUOTING_VIEW_ALL_QUOTES",
         ]
     }
 

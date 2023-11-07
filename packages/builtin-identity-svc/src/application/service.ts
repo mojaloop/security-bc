@@ -36,8 +36,8 @@ import process from "process";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import { IBuiltinIdentityRepository} from "../domain/interfaces";
-import {LogLevel} from "@mojaloop/logging-bc-public-types-lib/dist/index";
-import {KafkaLogger} from "@mojaloop/logging-bc-client-lib/dist/index";
+import {LogLevel} from "@mojaloop/logging-bc-public-types-lib";
+import {KafkaLogger} from "@mojaloop/logging-bc-client-lib";
 import {IdentifyManagementRoutes} from "./routes";
 
 import {IdentityManagementAggregate} from "../domain/identity_management_agg";
@@ -51,6 +51,13 @@ import {BuiltinIdentityPrivilegesDefinition} from "../domain/privileges";
 import {MongoDbBuiltinIdentityRepository} from "../infrastructure/mongodb_repo";
 import {defaultDevApplications, defaultDevUsers} from "../dev_defaults";
 import { MLKafkaJsonConsumer, MLKafkaJsonConsumerOptions } from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
+import {existsSync} from "fs";
+import {
+    AuditClient,
+    KafkaAuditClientDispatcher,
+    LocalAuditClientCryptoProvider
+} from "@mojaloop/auditing-bc-client-lib";
+import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJSON = require("../../package.json");
@@ -69,12 +76,11 @@ const MONGO_URL = process.env["MONGO_URL"] || "mongodb://root:mongoDbPas42@local
 const KAFKA_AUDITS_TOPIC = process.env["KAFKA_AUDITS_TOPIC"] || "audits";
 const KAFKA_LOGS_TOPIC = process.env["KAFKA_LOGS_TOPIC"] || "logs";
 
-const PRIVATE_CERT_PEM_FILE_PATH = process.env["PRIVATE_CERT_PEM_FILE_PATH"] || "/app/data/private.pem";
+const AUDIT_KEY_FILE_PATH = process.env["AUDIT_KEY_FILE_PATH"] || "/app/data/audit_private_key.pem";
 
 // TODO: rename these env var to a specific name
 const AUTH_N_TOKEN_LIFE_SECS = process.env["AUTH_N_TOKEN_LIFE_SECS"] ? parseInt(process.env["AUTH_N_TOKEN_LIFE_SECS"]) : 3600;
 const AUTH_N_SVC_BASEURL = process.env["AUTH_N_SVC_BASEURL"] || "http://localhost:3201";
-const AUTH_N_SVC_TOKEN_URL = AUTH_N_SVC_BASEURL + "/token"; // TODO this should not be known here, libs that use the base should add the suffix
 const AUTH_N_TOKEN_ISSUER_NAME = process.env["AUTH_N_TOKEN_ISSUER_NAME"] || "mojaloop.vnext.dev.default_issuer";
 const AUTH_N_TOKEN_AUDIENCE = process.env["AUTH_N_TOKEN_AUDIENCE"] || "mojaloop.vnext.dev.default_audience";
 const AUTH_N_SVC_JWKS_URL = process.env["AUTH_N_SVC_JWKS_URL"] || `${AUTH_N_SVC_BASEURL}/.well-known/jwks.json`;
@@ -104,12 +110,14 @@ export class Service {
     static aggregate: IdentityManagementAggregate;
     static tokenHelper: TokenHelper;
     static authorizationClient: IAuthorizationClient;
+    static auditClient: IAuditClient;
     static startupTimer: NodeJS.Timeout;
 
     static async start(
         logger?: ILogger,
         authorizationClient?: IAuthorizationClient,
-        userManagementRepo?: IBuiltinIdentityRepository
+        userManagementRepo?: IBuiltinIdentityRepository,
+        auditClient?: IAuditClient
     ):Promise<void>{
         console.log(`Service starting with PID: ${process.pid}`);
 
@@ -162,9 +170,32 @@ export class Service {
         }
         this.userManagementRepo = userManagementRepo;
 
+        // start auditClient
+        if (!auditClient) {
+            if (!existsSync(AUDIT_KEY_FILE_PATH)) {
+                if (PRODUCTION_MODE) process.exit(9);
+                // create e tmp file
+                LocalAuditClientCryptoProvider.createRsaPrivateKeyFileSync(AUDIT_KEY_FILE_PATH, 2048);
+            }
+            const auditLogger = logger.createChild("AuditLogger");
+            auditLogger.setLogLevel(LogLevel.INFO);
+            const cryptoProvider = new LocalAuditClientCryptoProvider(AUDIT_KEY_FILE_PATH);
+            const auditDispatcher = new KafkaAuditClientDispatcher(kafkaProducerOptions, KAFKA_AUDITS_TOPIC, auditLogger);
+            // NOTE: to pass the same kafka logger to the audit client, make sure the logger is started/initialised already
+            auditClient = new AuditClient(BC_NAME, APP_NAME, APP_VERSION, cryptoProvider, auditDispatcher);
+            await auditClient.init();
+        }
+        this.auditClient = auditClient;
+
         // construct the aggregate
         try {
-            this.aggregate = new IdentityManagementAggregate(this.logger, this.userManagementRepo, this.authorizationClient, AUTH_N_TOKEN_LIFE_SECS);
+            this.aggregate = new IdentityManagementAggregate(
+                this.logger,
+                this.userManagementRepo,
+                this.authorizationClient,
+                this.auditClient,
+                AUTH_N_TOKEN_LIFE_SECS
+            );
             await this.aggregate.init();
 
             if(!PRODUCTION_MODE){
@@ -209,10 +240,10 @@ export class Service {
             this.app.get("/health", (req: express.Request, res: express.Response) => {
                 return res.send({ status: "OK" });
             });
-           /* this.app.get("/metrics", async (req: express.Request, res: express.Response) => {
-                const strMetrics = await (this.metrics as PrometheusMetrics).getMetricsForPrometheusScrapper();
-                return res.send(strMetrics);
-            });*/
+            /* this.app.get("/metrics", async (req: express.Request, res: express.Response) => {
+                 const strMetrics = await (this.metrics as PrometheusMetrics).getMetricsForPrometheusScrapper();
+                 return res.send(strMetrics);
+             });*/
 
             // app routes
             const globalConfigsRoutes = new IdentifyManagementRoutes(this.aggregate, this.tokenHelper, this.logger);
@@ -238,7 +269,7 @@ export class Service {
 
 
     static async stop():Promise<void>{
-       if(this.expressServer) this.expressServer.close();
+        if(this.expressServer) this.expressServer.close();
     }
 
 }
