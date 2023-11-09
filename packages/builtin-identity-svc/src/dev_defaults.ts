@@ -41,6 +41,7 @@ export const defaultDevApplications = [
 	{client_id: "admin-ui", client_secret: null},
     {client_id: "security-bc-ui", client_secret: null},
 
+    // TODO bad name, rename it to bcname-appname
     {client_id: "platform-configuration-bc-api-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application","platform-configuration-bc-api-svc"]},
 
     {client_id: "participants-bc-participants-svc", client_secret: "superServiceSecret", platformRoles:["basic-application","participants-bc-participants-svc"]},
