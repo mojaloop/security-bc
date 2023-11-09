@@ -75,6 +75,7 @@ class AuthenticatedHttpRequesterQueueItem {
 export class AuthenticatedHttpRequester implements IAuthenticatedHttpRequester{
 	private readonly _logger: ILogger;
 	private readonly _authTokenUrl: string;
+    private readonly _defaultTimeoutMs:number;
 	private _authMode: AuthMode;
 
 	private _client_id: string | null = null;
@@ -100,6 +101,7 @@ export class AuthenticatedHttpRequester implements IAuthenticatedHttpRequester{
 	) {
 		this._logger = logger;
 		this._authTokenUrl = authTokenUrl;
+        this._defaultTimeoutMs = timeoutMs;
 	}
 
 	get initialised(): boolean {
@@ -121,7 +123,7 @@ export class AuthenticatedHttpRequester implements IAuthenticatedHttpRequester{
 		this._initialised = true;
 	}
 
-	async fetch(requestInfo: RequestInfo, timeoutMs:number = DEFAULT_TIMEOUT_MS): Promise<Response>{
+	async fetch(requestInfo: RequestInfo, timeoutMs?:number): Promise<Response>{
 		if(!this._initialised) {
 			return Promise.reject(new Error("Uninitialised, please call setUserCredentials() or setAppCredentials() before using fetch()"));
 		}
@@ -135,7 +137,7 @@ export class AuthenticatedHttpRequester implements IAuthenticatedHttpRequester{
 				}
 				resolve(response!); // make sure below we only call either with error or with proper response
 			};
-			this._queue.push(new AuthenticatedHttpRequesterQueueItem(requestInfo, callback, timeoutMs));
+			this._queue.push(new AuthenticatedHttpRequesterQueueItem(requestInfo, callback, timeoutMs || this._defaultTimeoutMs));
 		});
 	}
 
@@ -160,36 +162,18 @@ export class AuthenticatedHttpRequester implements IAuthenticatedHttpRequester{
 
 		this._queue_processing = true;
 
-		const controller = new AbortController();
 		const options: RequestInit = {
-			signal: controller.signal,
+			signal: AbortSignal.timeout(item.timeoutMs),
 			headers: [
 				["Content-Type", "application/json"],
 				["Authorization", `Bearer: ${this._access_token}`]
 			]
 		};
 
-		const timeoutId = setTimeout(() => {
-			controller.abort();
-		}, item.timeoutMs);
-
-
 		fetch(item.requestInfo, options).then( (response) => {
-            clearTimeout(timeoutId);
-
-            // if (response.status === 401) { // UnauthorizedError (bad/no token)
-            //     item.callback(null, response);
-            //     return;
-			// }else if (response.status === 403) { // ForbiddenError (missing role/privs)
-            //     item.callback(null, response);
-            //     return;
-            // }
-
 			item.callback(null, response);
 		}).catch(reason => {
 			// When abort() is called, the fetch() promise rejects with a DOMException named AbortError
-			clearTimeout(timeoutId);
-
 			if(reason instanceof DOMException && reason.name === "AbortError"){
 				item.callback(new RequestTimeoutError(), null);
 			}else if(reason && reason.cause && reason.cause.code ==="ECONNREFUSED"){
