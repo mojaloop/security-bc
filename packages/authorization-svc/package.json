@@ -1,6 +1,6 @@
 {
   "name": "@mojaloop/security-bc-authorization-svc",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "Mojaloop security authorization service",
   "license": "Apache-2.0",
   "homepage": "https://github.com/mojaloop/security-bc/tree/main/packages/authorization-svc",
