@@ -194,7 +194,6 @@ export class IdentityManagementAggregate{
         };
     }
 
-
     private _removeUserPrivateInfo(user: IBuiltinIamUser): IBuiltinIamUser{
         if(Object.hasOwn(user, "passwordHash")) delete user.passwordHash;
 
@@ -262,7 +261,7 @@ export class IdentityManagementAggregate{
         this._logger.info("Bootstrapping IdentityManagementAggregate Default apps complete.");
     }
 
-    /* User functions */
+    /* User functions - all need privileges except change password */
 
     async registerUser(secCtx: CallSecurityContext, userCreate:IBuiltinIamUserCreate):Promise<void>{
         await this._enforcePrivilege(secCtx, BuiltinIdentityPrivileges.CREATE_USER, AuditedActionNames.USER_CREATE);
@@ -350,8 +349,6 @@ export class IdentityManagementAggregate{
         // make sure we remove all priv info
         return this._removeUserPrivateInfo(user);
     }
-
-
 
     async changeUserPassword(secCtx: CallSecurityContext, username:string, oldPassword:string, newPassword:string):Promise<void>{
         // Note: users can only change their own passwords (must be authenticated); all an "admin" can do is request a password reset
@@ -533,7 +530,7 @@ export class IdentityManagementAggregate{
         return Promise.resolve();
     }
 
-    /* Application functions */
+    /* Application functions  - all need privileges*/
 
     async registerApplication(secCtx: CallSecurityContext, appCreate:IBuiltinIamApplicationCreate):Promise<void>{
         await this._enforcePrivilege(secCtx, BuiltinIdentityPrivileges.CREATE_APP, AuditedActionNames.APP_CREATE);

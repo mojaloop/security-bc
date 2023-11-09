@@ -13,6 +13,7 @@ RUN npm install -g node-gyp
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
 COPY package*.json ./
 COPY packages/public-types-lib/package*.json ./packages/public-types-lib/
+COPY packages/client-lib/package*.json ./packages/client-lib/
 COPY packages/authorization-svc/package*.json ./packages/authorization-svc/
 
 # If you are building your code for production
@@ -31,6 +32,7 @@ COPY tsconfig.json ./
 
 # copy required supporting packages/packages (especially private ones not published to npm)
 COPY packages/public-types-lib ./packages/public-types-lib
+COPY packages/client-lib ./packages/client-lib
 
 # copy service code
 COPY packages/authorization-svc ./packages/authorization-svc

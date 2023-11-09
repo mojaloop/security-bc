@@ -43,6 +43,7 @@ import {IdentifyManagementRoutes} from "./routes";
 import {IdentityManagementAggregate} from "../domain/identity_management_agg";
 
 import {
+    AuthenticatedHttpRequester,
     AuthorizationClient,
     TokenHelper
 } from "@mojaloop/security-bc-client-lib";
@@ -81,11 +82,15 @@ const AUDIT_KEY_FILE_PATH = process.env["AUDIT_KEY_FILE_PATH"] || "/app/data/aud
 // TODO: rename these env var to a specific name
 const AUTH_N_TOKEN_LIFE_SECS = process.env["AUTH_N_TOKEN_LIFE_SECS"] ? parseInt(process.env["AUTH_N_TOKEN_LIFE_SECS"]) : 3600;
 const AUTH_N_SVC_BASEURL = process.env["AUTH_N_SVC_BASEURL"] || "http://localhost:3201";
+const AUTH_N_SVC_TOKEN_URL = AUTH_N_SVC_BASEURL + "/token"; // TODO this should not be known here, libs that use the base should add the suffix
 const AUTH_N_TOKEN_ISSUER_NAME = process.env["AUTH_N_TOKEN_ISSUER_NAME"] || "mojaloop.vnext.dev.default_issuer";
 const AUTH_N_TOKEN_AUDIENCE = process.env["AUTH_N_TOKEN_AUDIENCE"] || "mojaloop.vnext.dev.default_audience";
 const AUTH_N_SVC_JWKS_URL = process.env["AUTH_N_SVC_JWKS_URL"] || `${AUTH_N_SVC_BASEURL}/.well-known/jwks.json`;
 
 const AUTH_Z_SVC_BASEURL = process.env["AUTH_Z_SVC_BASEURL"] || "http://localhost:3202";
+
+const SVC_CLIENT_ID = process.env["SVC_CLIENT_ID"] || "security-bc-identity-svc";
+const SVC_CLIENT_SECRET = process.env["SVC_CLIENT_SECRET"] || "superServiceSecret";
 
 const SERVICE_START_TIMEOUT_MS = 60_000;
 
@@ -145,6 +150,10 @@ export class Service {
 
         // authorization client
         if (!authorizationClient) {
+            // create the instance of IAuthenticatedHttpRequester
+            const authRequester = new AuthenticatedHttpRequester(logger, AUTH_N_SVC_TOKEN_URL);
+            authRequester.setAppCredentials(SVC_CLIENT_ID, SVC_CLIENT_SECRET);
+
             const consumerHandlerLogger = logger.createChild("authorizationClientConsumer");
             const messageConsumer = new MLKafkaJsonConsumer(kafkaConsumerOptions, consumerHandlerLogger);
 
@@ -152,12 +161,10 @@ export class Service {
             authorizationClient = new AuthorizationClient(
                 BC_NAME, APP_NAME, APP_VERSION,
                 AUTH_Z_SVC_BASEURL, logger.createChild("AuthorizationClient"),
+                authRequester,
                 messageConsumer
             );
             authorizationClient.addPrivilegesArray(BuiltinIdentityPrivilegesDefinition);
-            await (authorizationClient as AuthorizationClient).bootstrap(true);
-            await (authorizationClient as AuthorizationClient).fetch();
-            await (authorizationClient as AuthorizationClient).init(); // init
         }
         this.authorizationClient = authorizationClient;
 
@@ -188,35 +195,39 @@ export class Service {
         this.auditClient = auditClient;
 
         // construct the aggregate
-        try {
-            this.aggregate = new IdentityManagementAggregate(
-                this.logger,
-                this.userManagementRepo,
-                this.authorizationClient,
-                this.auditClient,
-                AUTH_N_TOKEN_LIFE_SECS
-            );
-            await this.aggregate.init();
+        this.aggregate = new IdentityManagementAggregate(
+            this.logger,
+            this.userManagementRepo,
+            this.authorizationClient,
+            this.auditClient,
+            AUTH_N_TOKEN_LIFE_SECS
+        );
+        await this.aggregate.init();
 
-            if(!PRODUCTION_MODE){
-                const users = await userManagementRepo.fetchAllUsers();
-                if(users.length<=0) {
-                    await this.aggregate.boostrapDefaultUsers(defaultDevUsers);
-                }
-
-                const apps = await userManagementRepo.fetchAllApps();
-                if(apps.length<=0) {
-                    await this.aggregate.boostrapDefaultApps(defaultDevApplications);
-                }
-            }else{
-                // TODO Inject default production user and apps
+        if(!PRODUCTION_MODE){
+            const users = await userManagementRepo.fetchAllUsers();
+            if(users.length<=0) {
+                await this.aggregate.boostrapDefaultUsers(defaultDevUsers);
             }
 
-        }catch(err){
-            await Service.stop();
+            const apps = await userManagementRepo.fetchAllApps();
+            if(apps.length<=0) {
+                await this.aggregate.boostrapDefaultApps(defaultDevApplications);
+            }
+        }else{
+            // TODO Inject default production user and apps
         }
 
         await this.setupExpress();
+
+        // only now we can bootstrap the privileges, as it requires a login and this service needs to be serving logins
+        // the authorizationClient is only required for enforce privilege, without one nothing will be allowed, this is not a security issue
+        if(this.authorizationClient && this.authorizationClient instanceof AuthorizationClient) {
+            await (authorizationClient as AuthorizationClient).bootstrap(true);
+            await (authorizationClient as AuthorizationClient).fetch();
+            // init message consumer to automatically update on role changed events
+            await (authorizationClient as AuthorizationClient).init();
+        }
 
         // remove startup timeout
         clearTimeout(this.startupTimer);
@@ -293,7 +304,7 @@ process.on("SIGTERM", _handle_int_and_term_signals);
 
 //do something when app is closing
 process.on("exit", async () => {
-    globalLogger.info("Microservice - exiting...");
+    console.info("Microservice - exiting...");
 });
 process.on("uncaughtException", (err: Error) => {
     console.error(err);

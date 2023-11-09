@@ -30,9 +30,14 @@
 
 "use strict";
 
-import axios, { AxiosResponse, AxiosInstance, AxiosError } from "axios";
+// import axios, { AxiosResponse, AxiosInstance, AxiosError } from "axios";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {AppPrivileges, IAuthorizationClient, Privilege} from "@mojaloop/security-bc-public-types-lib";
+import {
+    AppPrivileges, ForbiddenError,
+    IAuthenticatedHttpRequester,
+    IAuthorizationClient,
+    Privilege, UnauthorizedError
+} from "@mojaloop/security-bc-public-types-lib";
 import {
     IMessage,
     IMessageConsumer,
@@ -52,28 +57,26 @@ export class AuthorizationClient implements IAuthorizationClient{
     private readonly _boundedContextName: string;
     private readonly _applicationName: string;
     private readonly _applicationVersion: string;
-    private _logger:ILogger;
-    private _authSvcBaseUrl:string;
-    private _client:AxiosInstance;
+    private readonly _authSvcBaseUrl:string;
+    private readonly _authRequester: IAuthenticatedHttpRequester;
+    private readonly _messageConsumer:IMessageConsumer | null;
+    private readonly _logger:ILogger;
     private _rolePrivileges:PrivilegesByRole | null = null;
     private _lastFetchTimestamp:number | null = null;
     private _privileges:Privilege[] = [];
-    private _messageConsumer:IMessageConsumer | null;
 
-    constructor(boundedContext: string, application: string, version: string, authSvcBaseUrl:string, logger:ILogger, messageConsumer:IMessageConsumer|null = null) {
+    constructor(
+        boundedContext: string, application: string, version: string,
+        authSvcBaseUrl:string, logger:ILogger,
+        authRequester: IAuthenticatedHttpRequester, messageConsumer:IMessageConsumer|null = null
+    ) {
         this._logger = logger.createChild(this.constructor.name);
         this._boundedContextName = boundedContext;
         this._applicationName = application;
         this._applicationVersion = version;
         this._authSvcBaseUrl = authSvcBaseUrl;
+        this._authRequester = authRequester;
         this._messageConsumer = messageConsumer;
-
-        axios.defaults.baseURL = authSvcBaseUrl;
-        this._client = axios.create({
-            baseURL: authSvcBaseUrl,
-            timeout: 1000,
-            //headers: {'X-Custom-Header': 'foobar'} TODO config svc authentication
-        });
     }
 
     async bootstrap(ignoreDuplicateError = true): Promise<boolean>{
@@ -84,38 +87,54 @@ export class AuthorizationClient implements IAuthorizationClient{
             privileges: this._privileges
         };
 
-        return await new Promise<boolean>((resolve, reject) => {
-            this._client.post("/bootstrap", appPrivileges).then((resp:AxiosResponse)=>{
-                //this._logger.debug(resp.data);
-                this._logger.info("Boostrap completed successfully");
-                resolve(true);
-            }).catch((err:AxiosError) => {
-                if(err.response && err.response.status === 409 && ignoreDuplicateError === true){
-                    return resolve(true);
-                }
-                this._logger.error(err, "Could not bootstrap privileges to Authentication Service");
-                // axios errors are too verbose for the caller, already logged line above
-                reject(new Error(err.message));
-            });
+        const url = new URL("/bootstrap",this._authSvcBaseUrl).toString();
+        const request = new Request(url, {
+            method: "POST",
+            body: JSON.stringify(appPrivileges),
         });
 
+        try{
+            const resp = await this._authRequester.fetch(request);
+            if(resp.status === 401){
+                throw new UnauthorizedError(`Could not bootstrap privileges to Authentication Service - UnauthorizedError - ${await resp.text()}`);
+            }else if(resp.status === 403){
+                throw new ForbiddenError(`Could not bootstrap privileges to Authentication Service - Forbidden - ${await resp.text()}`);
+            }else if(resp.status === 200 || (ignoreDuplicateError === true && resp.status === 409)){
+                this._logger.info("Boostrap completed successfully");
+                return true;
+            }else{
+                throw new Error("Could not bootstrap privileges to Authentication Service - http response code: "+resp.status);
+            }
+        }catch (err:any) {
+            this._logger.error(err, "Could not bootstrap privileges to Authentication Service");
+            throw new Error(err?.message  || "Could not bootstrap privileges to Authentication Service");
+        }
     }
 
     async fetch(): Promise<void>{
-        const url = `/appRoles?bcName=${this._boundedContextName}&appName=${this._applicationName}`;
+        const url = new URL("/appRoles",this._authSvcBaseUrl);
+        url.searchParams.append("bcName", this._boundedContextName);
+        url.searchParams.append("appName", this._applicationName);
 
-        return await new Promise<void>((resolve, reject) => {
-            this._client.get(url).then((resp: AxiosResponse) => {
+        try{
+            const resp = await this._authRequester.fetch(url.toString());
+            if(resp.status === 401){
+                throw new UnauthorizedError(`Error boostrapBoundedContextConfigs - UnauthorizedError - ${await resp.text()}`);
+            }else if(resp.status === 403){
+                throw new ForbiddenError(`Error boostrapBoundedContextConfigs - Forbidden - ${await resp.text()}`);
+            }else if(resp.status === 200){
                 this._logger.info("Role privileges associations received successfully");
-                this._rolePrivileges = resp.data;
+                const data = await resp.json();
+                this._rolePrivileges = data;
                 this._lastFetchTimestamp = Date.now();
-                resolve();
-            }).catch((err: AxiosError) => {
-                this._logger.error(err, "Could not fetch role privileges association from Authentication Service");
-                // axios errors are too verbose for the caller, already logged line above
-                reject(new Error(err.message));
-            });
-        });
+                return;
+            }else{
+                throw new Error("Invalid response from Authentication Service fetching role privileges association - http response code: "+resp.status);
+            }
+        }catch(err:any){
+            this._logger.error(err, "Could not fetch role privileges association from Authentication Service");
+            throw new Error(err?.message  || "Unknown error fetching role privileges association from Authentication Service");
+        }
     }
 
     async init():Promise<void>{

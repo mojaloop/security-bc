@@ -37,7 +37,7 @@ import {
     Privilege,
     AppPrivileges,
     PlatformRole,
-    PrivilegeWithOwnerAppInfo
+    PrivilegeWithOwnerAppInfo, CallSecurityContext, ForbiddenError
 } from "@mojaloop/security-bc-public-types-lib";
 import {IAuthorizationRepository} from "./interfaces";
 import {
@@ -51,22 +51,96 @@ import {
     NewRoleWithPrivsUsersOrAppsError, PlatformRoleNotFoundError, PrivilegeNotFoundError
 } from "./errors";
 import {PrivilegesByRole} from "../domain/types";
-import {IMessageProducer} from "@mojaloop/platform-shared-lib-messaging-types-lib";
-import {PlatformRoleChangedEvt} from "@mojaloop/platform-shared-lib-public-messages-lib";
+import {
+    IMessage,
+    IMessageConsumer,
+    IMessageProducer,
+    MessageTypes
+} from "@mojaloop/platform-shared-lib-messaging-types-lib";
+import {PlatformRoleChangedEvt, SecurityAuthorizationBCTopics} from "@mojaloop/platform-shared-lib-public-messages-lib";
+import {AuthorizationPrivileges, AuthorizationPrivilegesDefinition} from "./privileges";
 
 export class AuthorizationAggregate{
     private _logger:ILogger;
     //private _iamAuthNAdapter:IAMAuthorizationAdapter;
     private _authzRepo:IAuthorizationRepository;
-    private _producer:IMessageProducer;
+    private _messageProducer:IMessageProducer;
+    private _messageConsumer:IMessageConsumer;
+    private _bcName:string;
+    private _appName:string;
+    private _appVersion:string;
+    private _authzPrivsByRole: PrivilegesByRole;
+    private _lastChangedEvtMsgId:string | null = null;
 
+    async init():Promise<void>{
+        // bootstrap my own privs
+        this._logger.info("Bootstraping own privileges...");
+        await this._bootstrapLocalAppPrivileges();
+        this._logger.info("Bootstraping own privileges - done");
 
-    // constructor(authzRepo:IAuthorizationRepository, iamAuthN:IAMAuthorizationAdapter, logger:ILogger) {
-    constructor(authzRepo:IAuthorizationRepository, producer:IMessageProducer, logger:ILogger) {
+        // load role priv/associations to mem
+        this._logger.info("Reloading role privilege/associations to memory...");
+        await this._reloadFromRepo();
+        this._logger.info("Reloading role privilege/associations to memory - done");
+
+        this._logger.info("Starting message consumer...");
+        this._messageConsumer.setTopics([SecurityAuthorizationBCTopics.DomainEvents]);
+        this._messageConsumer.setCallbackFn(this._messageHandler.bind(this));
+        await this._messageConsumer.connect();
+        await this._messageConsumer.startAndWaitForRebalance();
+        this._logger.info("Starting message consumer - done");
+        this._logger.info("Init complete");
+    }
+
+    constructor(
+        authzRepo:IAuthorizationRepository,
+        producer:IMessageProducer,
+        consumer:IMessageConsumer,
+        bcName:string,
+        appName:string,
+        appVersion:string,
+        logger:ILogger
+    ) {
         this._logger = logger.createChild(this.constructor.name);
         this._authzRepo = authzRepo;
-        this._producer = producer;
-        //this._iamAuthNAdapter = iamAuthN;
+        this._messageProducer = producer;
+        this._messageConsumer = consumer;
+        this._bcName = bcName;
+        this._appName = appName;
+        this._appVersion = appVersion;
+    }
+
+    private async _bootstrapLocalAppPrivileges(){
+        const appPrivileges:AppPrivileges = {
+            boundedContextName: this._bcName,
+            applicationName: this._appName,
+            applicationVersion: this._appVersion,
+            privileges: AuthorizationPrivilegesDefinition.map(item=>{
+                return {
+                    id: item.privId,
+                    labelName: item.labelName,
+                    description: item.description
+                };
+            })
+        };
+
+        await this._localProcessAppBootstrap(appPrivileges, true);
+    }
+
+    private async _reloadFromRepo():Promise<void>{
+        this._authzPrivsByRole = await this._localGetAppPrivilegesByRole(this._bcName, this._appName);
+        if(!this._authzPrivsByRole) this._logger.warn("Not able to reloadFromRepo - Possible problem?");
+    }
+
+    private async _messageHandler(message:IMessage):Promise<void>{
+        if(message.msgType !== MessageTypes.DOMAIN_EVENT) return;
+
+        //ignore events sent from self
+        if(message.msgId === this._lastChangedEvtMsgId) return;
+
+        // for now, simply fetch everything, when we have more
+        this._logger.info("PlatformRoleChangedEvt received, reloading all data from the repo...");
+        await this._reloadFromRepo();
     }
 
     private _validateAppPrivileges(appPrivs: AppPrivileges): boolean{
@@ -93,9 +167,26 @@ export class AuthorizationAggregate{
 
     private async _sendRoleChangedEvt(roleId: string){
         const evt = new PlatformRoleChangedEvt({roleId: roleId});
-        await this._producer.send(evt);
+        this._lastChangedEvtMsgId = evt.msgId;
+        await this._messageProducer.send(evt);
     }
-    async processAppBootstrap(appPrivs: AppPrivileges):Promise<void> {
+
+    private _roleHasPrivilege(roleId:string, privilegeId:string):boolean{
+        if(!this._authzPrivsByRole || !this._authzPrivsByRole[roleId]) return false;
+
+        return this._authzPrivsByRole[roleId].privileges.includes(privilegeId);
+    }
+
+    private _enforcePrivilege(secCtx: CallSecurityContext, privName: string): void {
+        for (const roleId of secCtx.platformRoleIds) {
+            if (this._roleHasPrivilege(roleId, privName)) return;
+        }
+        throw new ForbiddenError(
+            `Required privilege "${privName}" not held by caller`
+        );
+    }
+
+    private async _localProcessAppBootstrap(appPrivs: AppPrivileges, ignoreDuplicates:boolean  = false):Promise<void> {
         if(!this._validateAppPrivileges(appPrivs)){
             this._logger.warn("Invalid AppPrivileges received in processAppBootstrap");
             throw new InvalidAppPrivilegesError();
@@ -104,7 +195,7 @@ export class AuthorizationAggregate{
         const foundAppPrivs = await this._authzRepo.fetchAppPrivileges(appPrivs.boundedContextName, appPrivs.applicationName);
 
         if(foundAppPrivs) {
-            if (semver.compare(foundAppPrivs.applicationVersion, appPrivs.applicationVersion)==0) {
+            if (semver.compare(foundAppPrivs.applicationVersion, appPrivs.applicationVersion)==0 && !ignoreDuplicates) {
                 const err = new CannotCreateDuplicateAppPrivilegesError(`Received duplicate AppPrivileges set for BC: ${foundAppPrivs.boundedContextName}, APP: ${foundAppPrivs.applicationName}, version: ${foundAppPrivs.applicationVersion}, IGNORING with error`);
                 this._logger.warn(err.message);
                 throw err;
@@ -125,7 +216,19 @@ export class AuthorizationAggregate{
         }
     }
 
-    async getAllPrivileges():Promise<PrivilegeWithOwnerAppInfo[]> {
+    async bootstrapDefaultRoles(defaultRoles: PlatformRole[]){
+        for(const role of defaultRoles){
+            await this._localCreatePlatformRole(role);
+        }
+    }
+
+    async processAppBootstrap(secCtx: CallSecurityContext, appPrivs: AppPrivileges):Promise<void> {
+        this._enforcePrivilege(secCtx, AuthorizationPrivileges.BOOTSTRAP_PRIVILEGES);
+        return this._localProcessAppBootstrap(appPrivs);
+    }
+
+    async getAllPrivileges(secCtx: CallSecurityContext):Promise<PrivilegeWithOwnerAppInfo[]> {
+        this._enforcePrivilege(secCtx, AuthorizationPrivileges.VIEW_PRIVILEGE);
         const allPrivs = await this._authzRepo.fetchAllPrivileges();
 
         return allPrivs;
@@ -133,17 +236,18 @@ export class AuthorizationAggregate{
 
     /**
      * Returns only the roles which include privileges for a certain app (and their relationship)
+     * WITHOUT enforce privileges, for local agg usage
      * @param bcName BoundedContext name
      * @param appName Application name
      */
-    async getAppPrivilegesByRole(bcName:string, appName:string):Promise<PrivilegesByRole>{
+    private async _localGetAppPrivilegesByRole(bcName:string, appName:string):Promise<PrivilegesByRole>{
         const allPrivs = await this._authzRepo.fetchAllPrivileges();
 
         if(allPrivs.length<=0){
             throw new ApplicationsPrivilegesNotFoundError();
         }
 
-        const allRoles = await this.getAllRoles();
+        const allRoles = await this._authzRepo.fetchAllPlatformRoles();
 
         const ret:PrivilegesByRole = {};
 
@@ -152,7 +256,9 @@ export class AuthorizationAggregate{
 
             role.privileges.forEach(rolePriv => {
                 const privDefinition = allPrivs.find(item => item.id === rolePriv);
-                if(!privDefinition) return;
+                if(!privDefinition || privDefinition.boundedContextName!=bcName || privDefinition.applicationName!=appName){
+                    return;
+                }
 
                 if (!ret[role.id]){
                     ret[role.id] = {
@@ -167,7 +273,19 @@ export class AuthorizationAggregate{
         return ret;
     }
 
-    async getAllRoles():Promise<PlatformRole[]> {
+    /**
+     * Returns only the roles which include privileges for a certain app (and their relationship) WITH enforce privileges
+     * @param secCtx CallSecurityContext
+     * @param bcName BoundedContext name
+     * @param appName Application name
+     */
+    async getAppPrivilegesByRole(secCtx: CallSecurityContext, bcName:string, appName:string):Promise<PrivilegesByRole>{
+        this._enforcePrivilege(secCtx, AuthorizationPrivileges.FETCH_APP_ROLE_PRIVILEGES_ASSOCIATIONS);
+        return this._localGetAppPrivilegesByRole(bcName, appName);
+    }
+
+    async getAllRoles(secCtx: CallSecurityContext):Promise<PlatformRole[]> {
+        this._enforcePrivilege(secCtx, AuthorizationPrivileges.VIEW_ROLE);
         const allRoles = await this._authzRepo.fetchAllPlatformRoles();
 
         if(!allRoles || allRoles.length ==0) {
@@ -177,31 +295,25 @@ export class AuthorizationAggregate{
         return allRoles;
     }
 
-    async createPlatformRole(role:PlatformRole):Promise<string>{
+    private async _localCreatePlatformRole(role:PlatformRole):Promise<void>{
         if(role.isExternal && !role.externalId){
-            throw new InvalidPlatformRoleError();
+            throw new InvalidPlatformRoleError("External roles require an externalId");
         }
 
-        if(!role.labelName && !role.description){
-            throw new InvalidPlatformRoleError();
+        if(!role.labelName || !role.description){
+            throw new InvalidPlatformRoleError("Roles must have labelName and description");
         }
 
-        if((role.privileges && role.privileges.length>0)
-                // || (role.memberUserIds && role.memberUserIds.length>0)
-                // || (role.memberAppIds && role.memberAppIds.length>0)
-        ){
-            throw new NewRoleWithPrivsUsersOrAppsError();
-        }
+        if(!role.privileges) role.privileges = [];
 
-        if(!role.id){
+        if (role.id) {
+            const existingRole = await this._authzRepo.fetchPlatformRole(role.id);
+            if (existingRole) {
+                throw new CannotCreateDuplicateRoleError();
+            }
+        } else {
             role.id = Crypto.randomUUID();
         }
-
-        const existingRole = await this._authzRepo.fetchPlatformRole(role.id);
-        if(existingRole){
-            throw new CannotCreateDuplicateRoleError();
-        }
-
 
         try {
             await this._authzRepo.storePlatformRole(role);
@@ -209,12 +321,19 @@ export class AuthorizationAggregate{
             this._logger.error(err);
             throw new CannotStorePlatformRoleError(err?.message);
         }
+    }
+
+    async createPlatformRole(secCtx: CallSecurityContext, role:PlatformRole):Promise<string>{
+        this._enforcePrivilege(secCtx, AuthorizationPrivileges.CREATE_ROLE);
+        await this._localCreatePlatformRole(role);
 
         await this._sendRoleChangedEvt(role.id);
+        await this._reloadFromRepo();
         return role.id;
     }
 
-    async associatePrivilegesToRole(privilegeIds:string[], roleId:string):Promise<void>{
+    async associatePrivilegesToRole(secCtx: CallSecurityContext, privilegeIds:string[], roleId:string):Promise<void>{
+        this._enforcePrivilege(secCtx, AuthorizationPrivileges.ADD_PRIVILEGES_TO_ROLE);
         const role:PlatformRole  | null = await this._authzRepo.fetchPlatformRole(roleId);
         if(!role) {
             throw new PlatformRoleNotFoundError();
@@ -241,9 +360,11 @@ export class AuthorizationAggregate{
         }
 
         await this._sendRoleChangedEvt(roleId);
+        await this._reloadFromRepo();
     }
 
-    async dissociatePrivilegesToRole(privilegeIds:string[], roleId:string):Promise<void>{
+    async dissociatePrivilegesToRole(secCtx: CallSecurityContext, privilegeIds:string[], roleId:string):Promise<void>{
+        this._enforcePrivilege(secCtx, AuthorizationPrivileges.REMOVE_PRIVILEGES_FROM_ROLE);
         const role:PlatformRole  | null = await this._authzRepo.fetchPlatformRole(roleId);
         if(!role) {
             throw new PlatformRoleNotFoundError();
@@ -264,6 +385,7 @@ export class AuthorizationAggregate{
         }
 
         await this._sendRoleChangedEvt(roleId);
+        await this._reloadFromRepo();
     }
 
 }

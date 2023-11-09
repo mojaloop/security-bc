@@ -30,7 +30,7 @@
 
 "use strict";
 
-import {defaultDevRoles} from "../dev_defaults";
+import {defaultDevRoles} from "../defaults/dev_defaults";
 import {Server} from "http";
 import express from "express";
 
@@ -42,8 +42,13 @@ import { IAuthorizationRepository} from "../domain/interfaces";
 import {ExpressRoutes} from "./routes";
 import {MongoDbAuthorizationRepo} from "../infrastructure/mongodb_authorization_repo";
 import process from "process";
-import {IMessageProducer} from "@mojaloop/platform-shared-lib-messaging-types-lib";
-import {MLKafkaJsonProducer} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib/dist/index";
+import {IMessageConsumer, IMessageProducer} from "@mojaloop/platform-shared-lib-messaging-types-lib";
+import {
+    MLKafkaJsonConsumer, MLKafkaJsonConsumerOptions,
+    MLKafkaJsonProducer
+} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib/dist/index";
+import {TokenHelper} from "@mojaloop/security-bc-client-lib";
+import {ITokenHelper} from "@mojaloop/security-bc-public-types-lib";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJSON = require("../../package.json");
@@ -56,6 +61,12 @@ const LOG_LEVEL:LogLevel = process.env["LOG_LEVEL"] as LogLevel || LogLevel.DEBU
 
 const SVC_DEFAULT_HTTP_PORT = 3202;
 
+const AUTH_N_SVC_BASEURL = process.env["AUTH_N_SVC_BASEURL"] || "http://localhost:3201";
+const AUTH_N_TOKEN_ISSUER_NAME = process.env["AUTH_N_TOKEN_ISSUER_NAME"] || "mojaloop.vnext.dev.default_issuer";
+const AUTH_N_TOKEN_AUDIENCE = process.env["AUTH_N_TOKEN_AUDIENCE"] || "mojaloop.vnext.dev.default_audience";
+const AUTH_N_SVC_JWKS_URL = process.env["AUTH_N_SVC_JWKS_URL"] || `${AUTH_N_SVC_BASEURL}/.well-known/jwks.json`;
+
+
 const KAFKA_URL = process.env["KAFKA_URL"] || "localhost:9092";
 const MONGO_URL = process.env["MONGO_URL"] || "mongodb://root:mongoDbPas42@localhost:27017/";
 
@@ -67,6 +78,11 @@ const kafkaProducerOptions = {
     kafkaBrokerList: KAFKA_URL
 };
 
+const kafkaConsumerOptions: MLKafkaJsonConsumerOptions = {
+    kafkaBrokerList: KAFKA_URL,
+    kafkaGroupId: `${BC_NAME}_${APP_NAME}`
+};
+
 // global
 let globalLogger: ILogger;
 
@@ -74,13 +90,16 @@ export class Service {
     static logger: ILogger;
     static authorizationRepo: IAuthorizationRepository;
     static messageProducer: IMessageProducer;
+    static messageConsumer: IMessageConsumer;
+    static tokenHelper: ITokenHelper;
     static authorizationAggregate:AuthorizationAggregate;
     static expressServer: Server;
 
     static async start(
 		logger?: ILogger,
 		authNRepo?:IAuthorizationRepository,
-        messageProducer?: IMessageProducer
+        messageProducer?: IMessageProducer,
+        messageConsumer?: IMessageConsumer
     ):Promise<void>{
         if (!logger) {
             logger = new KafkaLogger(
@@ -98,18 +117,6 @@ export class Service {
         if(!authNRepo){
             authNRepo = new MongoDbAuthorizationRepo(MONGO_URL, logger);
             await authNRepo.init();
-
-            // hard insert dev defaults into the repository
-            if (!PRODUCTION_MODE) {
-                if((await authNRepo.fetchAllPlatformRoles()).length <=0 ){
-                    this.logger.warn("Not in PRODUCTION_MODE and no platformRoles found - creating dev default platformRole(s)...");
-                    for(const role of defaultDevRoles){
-                        await authNRepo.storePlatformRole(role);
-                    }
-                    const newCount = (await authNRepo.fetchAllPlatformRoles()).length;
-                    this.logger.info(`Created ${newCount} dev default platformRole(s)`);
-                }
-            }
         }
         this.authorizationRepo = authNRepo;
 
@@ -121,11 +128,45 @@ export class Service {
         }
         this.messageProducer = messageProducer;
 
-        this.authorizationAggregate = new AuthorizationAggregate(this.authorizationRepo, this.messageProducer, this.logger);
-
-        if (!PRODUCTION_MODE && ! await this.authorizationAggregate.getAllRoles()) {
-            // create default roles
+        // message consumer for agg change detection (from other instances)
+        if(!messageConsumer){
+            const consumerHandlerLogger = logger.createChild("handlerConsumer");
+            consumerHandlerLogger.setLogLevel(LogLevel.INFO);
+            messageConsumer = new MLKafkaJsonConsumer(kafkaConsumerOptions, consumerHandlerLogger);
         }
+        this.messageConsumer = messageConsumer;
+
+        // instantiate and init the aggregate
+        this.authorizationAggregate = new AuthorizationAggregate(
+            this.authorizationRepo,
+            this.messageProducer,
+            this.messageConsumer,
+            BC_NAME,
+            APP_NAME,
+            APP_VERSION,
+            this.logger
+        );
+
+        // create default roles if non exist - CONSIDER moving this logic to inside the aggregate
+        const existingRoles = await this.authorizationRepo.fetchAllPlatformRoles();
+        if (existingRoles.length<=0){
+            if(PRODUCTION_MODE) {
+                //TODO create default PROD roles
+                this.logger.warn("In PRODUCTION_MODE and no platformRoles found");
+            }else{
+                // create default dev roles
+                this.logger.warn("Not in PRODUCTION_MODE and no platformRoles found - creating dev default platformRole(s)...");
+                await this.authorizationAggregate.bootstrapDefaultRoles(defaultDevRoles);
+                this.logger.warn(`Created ${defaultDevRoles.length} dev default platformRole(s)`);
+            }
+        }
+
+        // now we can init (after bootstrapping if needed)
+        await this.authorizationAggregate.init();
+
+        // token helper, needed by the http routes' middleware
+        this.tokenHelper = new TokenHelper(AUTH_N_SVC_JWKS_URL, logger, AUTH_N_TOKEN_ISSUER_NAME, AUTH_N_TOKEN_AUDIENCE);
+        await this.tokenHelper.init();
 
         this.setupAndStartExpress();
     }
@@ -135,7 +176,7 @@ export class Service {
         app.use(express.json()); // for parsing application/json
         app.use(express.urlencoded({extended: true})); // for parsing application/x-www-form-urlencoded
 
-        const routes = new ExpressRoutes(this.authorizationAggregate, this.logger);
+        const routes = new ExpressRoutes(this.authorizationAggregate, this.tokenHelper, this.logger);
         app.use("/", routes.MainRouter);
         app.use("/appPrivileges", routes.PrivilegesRouter);
 

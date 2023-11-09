@@ -33,18 +33,22 @@
 import {PlatformRole} from "@mojaloop/security-bc-public-types-lib";
 
 export const defaultDevRoles:PlatformRole[] = [
-	{
-		id: "tests",
-		description: "test role for automated unit/integration tests",
-		labelName: "tests",
-		isExternal: false,
-		externalId: undefined,
-		isApplicationRole: false,
+    {
+        id: "basic-application",
+        description: "Role for applications that can boostrap own privileges, fetch own priv/role associations, bootstrap and read own platform configurations",
+        labelName: "basic-application roles",
+        isExternal: false,
+        externalId: undefined,
+        isApplicationRole: true,
         isPerParticipantRole: false,
-		privileges: [
-			"TEST_EXAMPLE_PRIV"
-		]
-	},{
+        privileges: [
+            "SECURITY_BOOTSTRAP_PRIVILEGES",
+            "SECURITY_FETCH_APP_ROLE_PRIVILEGES_ASSOCIATIONS",
+            "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
+            "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
+            "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT",
+        ]
+    }, {
 		id: "hub_operator",
 		description: "Default dev Hub Operator Role",
 		labelName: "Hub Operator",
@@ -109,8 +113,7 @@ export const defaultDevRoles:PlatformRole[] = [
 			"ACCOUNT_LOOKUP_REMOVE_ORACLE",
 			"ACCOUNT_LOOKUP_VIEW_ALL_ORACLE_ASSOCIATIONS"
 		]
-	},
-	{
+	}, {
 		id: "admin",
 		description: "Default dev Admin Role",
 		labelName: "Admin",
@@ -174,9 +177,15 @@ export const defaultDevRoles:PlatformRole[] = [
 			"ACCOUNT_LOOKUP_VIEW_ALL_ORACLES",
 			"ACCOUNT_LOOKUP_CREATE_ORACLE",
 			"ACCOUNT_LOOKUP_REMOVE_ORACLE",
-			"ACCOUNT_LOOKUP_VIEW_ALL_ORACLE_ASSOCIATIONS"
+			"ACCOUNT_LOOKUP_VIEW_ALL_ORACLE_ASSOCIATIONS",
+            "SECURITY_VIEW_PRIVILEGE",
+            "SECURITY_VIEW_ROLE",
+            "SECURITY_CREATE_ROLE",
+            "SECURITY_DELETE_ROLE",
+            "SECURITY_ADD_PRIVILEGES_TO_ROLE",
+            "SECURITY_REMOVE_PRIVILEGES_FROM_ROLE"
 		]
-	},{
+	}, {
 		id: "participants-bc-participants-svc",
 		description: "participants-bc-participants-svc roles",
 		labelName: "participants-bc-participants-svc roles",
@@ -185,9 +194,6 @@ export const defaultDevRoles:PlatformRole[] = [
 		isApplicationRole: true,
         isPerParticipantRole: false,
 		privileges: [
-            "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
-            "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
-            "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT",
 			"COA_CREATE_ACCOUNT",
 			"COA_CREATE_JOURNAL_ENTRY",
 			"COA_VIEW_ACCOUNT",
@@ -205,9 +211,6 @@ export const defaultDevRoles:PlatformRole[] = [
 		isApplicationRole: true,
         isPerParticipantRole: false,
 		privileges: [
-            "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
-            "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
-            "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT",
 			"BUILTIN_LEDGER_CREATE_ACCOUNT",
 			"BUILTIN_LEDGER_CREATE_JOURNAL_ENTRY",
 			"BUILTIN_LEDGER_VIEW_ACCOUNT",
@@ -217,19 +220,6 @@ export const defaultDevRoles:PlatformRole[] = [
 			"BUILTIN_LEDGER_DELETE_ACCOUNT"
 		]
 	}, {
-        id: "accounts-and-balances-bc-builtinledger-grpc-svc",
-        description: "accounts-and-balances-bc-builtinledger-grpc-svc roles",
-        labelName: "accounts-and-balances-bc-builtinledger-grpc-svc roles",
-        isExternal: false,
-        externalId: undefined,
-        isApplicationRole: true,
-        isPerParticipantRole: false,
-        privileges: [
-            "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
-            "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
-            "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT"
-        ]
-    }, {
 		id: "transfers-bc-command-handler-svc",
 		description: "transfers-bc-command-handler-svc roles",
 		labelName: "transfers-bc-command-handler-svc roles",
@@ -238,9 +228,6 @@ export const defaultDevRoles:PlatformRole[] = [
 		isApplicationRole: true,
         isPerParticipantRole: false,
 		privileges: [
-            "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
-            "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
-            "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT",
 			"VIEW_PARTICIPANT",
 			"COA_VIEW_ACCOUNT",
 			"COA_VIEW_JOURNAL_ENTRY",
@@ -251,33 +238,7 @@ export const defaultDevRoles:PlatformRole[] = [
 			"BUILTIN_LEDGER_CREATE_ACCOUNT",
 			"BUILTIN_LEDGER_CREATE_JOURNAL_ENTRY",
 		]
-	}, {
-        id: "transfers-bc-event-handler-svc",
-        description: "transfers-bc-event-handler-svc roles",
-        labelName: "transfers-bc-event-handler-svc roles",
-        isExternal: false,
-        externalId: undefined,
-        isApplicationRole: true,
-        isPerParticipantRole: false,
-        privileges: [
-            "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
-            "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
-            "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT"
-        ]
-    },{
-        id: "transfers-bc-api-svc",
-        description: "transfers-bc-api-svc roles",
-        labelName: "transfers-bc-api-svc roles",
-        isExternal: false,
-        externalId: undefined,
-        isApplicationRole: true,
-        isPerParticipantRole: false,
-        privileges: [
-            "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
-            "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
-            "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT"
-        ]
-    },{
+	},{
 		id: "account-lookup-bc-account-lookup-svc",
 		description: "account-lookup-bc-account-lookup-svc roles",
 		labelName: "account-lookup-bc-account-lookup-svc roles",
@@ -286,9 +247,6 @@ export const defaultDevRoles:PlatformRole[] = [
 		isApplicationRole: true,
         isPerParticipantRole: false,
 		privileges: [
-            "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
-            "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
-            "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT",
 			"VIEW_PARTICIPANT"
 		]
 	}, {
@@ -300,9 +258,6 @@ export const defaultDevRoles:PlatformRole[] = [
 		isApplicationRole: true,
         isPerParticipantRole: false,
 		privileges: [
-            "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
-            "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
-            "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT",
 			"VIEW_PARTICIPANT"
 		]
 	}, {
@@ -314,9 +269,6 @@ export const defaultDevRoles:PlatformRole[] = [
 		isApplicationRole: true,
         isPerParticipantRole: false,
 		privileges: [
-            "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
-            "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
-            "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT",
 			"VIEW_PARTICIPANT"
 		]
 	}, {
@@ -328,9 +280,6 @@ export const defaultDevRoles:PlatformRole[] = [
 		isApplicationRole: true,
         isPerParticipantRole: false,
 		privileges: [
-            "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
-            "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
-            "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT",
 			"VIEW_PARTICIPANT",
 			"COA_VIEW_ACCOUNT",
 			"COA_VIEW_JOURNAL_ENTRY",
@@ -363,9 +312,6 @@ export const defaultDevRoles:PlatformRole[] = [
 		isApplicationRole: true,
         isPerParticipantRole: false,
 		privileges: [
-            "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
-            "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
-            "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT",
 			"VIEW_PARTICIPANT",
 			"COA_VIEW_ACCOUNT",
 			"COA_VIEW_JOURNAL_ENTRY",

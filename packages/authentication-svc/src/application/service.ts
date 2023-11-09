@@ -135,35 +135,6 @@ export class Service {
 */
 
         if(!iamAdapter){
-            /*// not sure why we would be running this FileIAMAdapter in production, but...
-            if(!existsSync(IAM_STORAGE_FILE_PATH) && PRODUCTION_MODE){
-                throw new Error("PRODUCTION_MODE and non existing IAM_STORAGE_FILE_PATH in: "+IAM_STORAGE_FILE_PATH);
-            }
-
-            const fileIAMAdapter = new FileIAMAdapter(IAM_STORAGE_FILE_PATH, this.logger);
-            await fileIAMAdapter.init();
-
-
-            // hard insert dev defaults into the repository
-            if(!PRODUCTION_MODE){
-                if(!fileIAMAdapter.userCount()) {
-                    this.logger.warn("In PRODUCTION_MODE and no users found - creating dev default users...");
-                    for(const user of defaultDevUsers){
-                        await fileIAMAdapter.createUser(user.username, user.password, user.roles);
-                    }
-                    this.logger.info(`Created ${fileIAMAdapter.userCount()} dev default users`);
-                }
-                if(!fileIAMAdapter.appCount()) {
-                    this.logger.warn("In PRODUCTION_MODE and no apps found - creating dev default apps...");
-                    for (const app of defaultDevApplications) {
-                        await fileIAMAdapter.createApp(app.client_id, app.client_secret, app.roles);
-                    }
-                    this.logger.info(`Created ${fileIAMAdapter.appCount()} dev default apps`);
-                }
-            }
-
-            iamAdapter = fileIAMAdapter;*/
-
             iamAdapter = new BuiltinIamAdapter(BUILTIN_IAM_BASE_URL, this.logger);
             await iamAdapter.init();
         }

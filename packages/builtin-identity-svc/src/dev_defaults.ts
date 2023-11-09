@@ -40,22 +40,32 @@ export const defaultDevUsers = [
 export const defaultDevApplications = [
 	{client_id: "admin-ui", client_secret: null},
     {client_id: "security-bc-ui", client_secret: null},
-	{client_id: "participants-bc-participants-svc", client_secret: "superServiceSecret", platformRoles:["participants-bc-participants-svc"]},
-	{client_id: "accounts-and-balances-bc-coa-grpc-svc", client_secret: "superServiceSecret", platformRoles:["accounts-and-balances-bc-coa-grpc-svc"]},
-	{client_id: "accounts-and-balances-bc-builtinledger-grpc-svc", client_secret: "superServiceSecret", platformRoles:["accounts-and-balances-bc-builtinledger-grpc-svc"]},
-	{client_id: "transfers-bc-command-handler-svc", client_secret: "superServiceSecret", platformRoles:["transfers-bc-command-handler-svc"]},
-	{client_id: "transfers-bc-event-handler-svc", client_secret: "superServiceSecret", platformRoles:["transfers-bc-event-handler-svc"]},
-	{client_id: "transfers-bc-api-svc", client_secret: "superServiceSecret", platformRoles:["transfers-bc-api-svc"]},
-	{client_id: "account-lookup-bc-account-lookup-svc", client_secret: "superServiceSecret", platformRoles:["account-lookup-bc-account-lookup-svc"]},
-	{client_id: "interop-api-bc-fspiop-api-svc", client_secret: "superServiceSecret", platformRoles:["interop-api-bc-fspiop-api-svc"]},
-	{client_id: "quoting-bc-quoting-svc", client_secret: "superServiceSecret", platformRoles: ["quoting-bc-quoting-svc"]},
-	{client_id: "settlements-bc-command-handler-svc", client_secret: "superServiceSecret", platformRoles: ["settlements-bc-command-handler-svc"]},
-	{client_id: "settlements-bc-event-handler-svc", client_secret: "superServiceSecret", platformRoles: ["settlements-bc-event-handler-svc"]},
-	{client_id: "settlements-bc-api-svc", client_secret: "superServiceSecret", platformRoles: ["settlements-bc-api-svc"]},
-	{client_id: "platform-configuration-bc-api-svc", client_secret: "superServiceSecret", platformRoles: ["platform-configuration-bc-api-svc"]},
 
-    {client_id: "reporting-bc-reporting-api-svc", client_secret: "superServiceSecret", platformRoles: ["reporting-bc-reporting-api-svc"]},
-    {client_id: "reporting-bc-participants-reporting-svc", client_secret: "superServiceSecret", platformRoles: ["reporting-bc-participants-reporting-svc"]},
-    {client_id: "reporting-bc-transfers-reporting-svc", client_secret: "superServiceSecret", platformRoles: []},
-    {client_id: "reporting-bc-quotes-reporting-svc", client_secret: "superServiceSecret", platformRoles: ["reporting-bc-quotes-reporting-svc"]},
+    {client_id: "platform-configuration-bc-api-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application","platform-configuration-bc-api-svc"]},
+
+    {client_id: "participants-bc-participants-svc", client_secret: "superServiceSecret", platformRoles:["basic-application","participants-bc-participants-svc"]},
+
+    {client_id: "accounts-and-balances-bc-coa-grpc-svc", client_secret: "superServiceSecret", platformRoles:["basic-application","accounts-and-balances-bc-coa-grpc-svc"]},
+    {client_id: "accounts-and-balances-bc-builtinledger-grpc-svc", client_secret: "superServiceSecret", platformRoles:["basic-application"]},
+
+    {client_id: "transfers-bc-api-svc", client_secret: "superServiceSecret", platformRoles:["basic-application"]},
+    {client_id: "transfers-bc-event-handler-svc", client_secret: "superServiceSecret", platformRoles:["basic-application"]},
+    {client_id: "transfers-bc-command-handler-svc", client_secret: "superServiceSecret", platformRoles:["basic-application","transfers-bc-command-handler-svc"]},
+
+    {client_id: "account-lookup-bc-account-lookup-svc", client_secret: "superServiceSecret", platformRoles:["basic-application","account-lookup-bc-account-lookup-svc"]},
+
+    {client_id: "interop-api-bc-fspiop-api-svc", client_secret: "superServiceSecret", platformRoles:["basic-application","interop-api-bc-fspiop-api-svc"]},
+
+    {client_id: "quoting-bc-quoting-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application","quoting-bc-quoting-svc"]},
+
+    {client_id: "settlements-bc-command-handler-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application","settlements-bc-command-handler-svc"]},
+    {client_id: "settlements-bc-event-handler-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application","settlements-bc-event-handler-svc"]},
+    {client_id: "settlements-bc-api-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application","settlements-bc-api-svc"]},
+
+    {client_id: "security-bc-identity-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application"]},
+
+    {client_id: "reporting-bc-reporting-api-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application","reporting-bc-reporting-api-svc"]},
+    {client_id: "reporting-bc-participants-reporting-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application","reporting-bc-participants-reporting-svc"]},
+    {client_id: "reporting-bc-transfers-reporting-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application"]},
+    {client_id: "reporting-bc-quotes-reporting-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application","reporting-bc-quotes-reporting-svc"]},
 ];
