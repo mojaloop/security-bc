@@ -316,7 +316,9 @@ export const defaultDevRoles:PlatformRole[] = [
             "SETTLEMENTS_RETRIEVE_TRANSFERS",
             "SETTLEMENTS_CLOSE_MATRIX",
             "SETTLEMENTS_SETTLE_MATRIX",
-            "SETTLEMENTS_DISPUTE_MATRIX"
+            "SETTLEMENTS_DISPUTE_MATRIX",
+            "SETTLEMENTS_LOCK_MATRIX",
+            "SETTLEMENTS_UNLOCK_MATRIX"
 		]
 	}, {
 		id: "settlements-bc-api-svc",
@@ -327,25 +329,7 @@ export const defaultDevRoles:PlatformRole[] = [
 		isApplicationRole: true,
         isPerParticipantRole: false,
 		privileges: [
-			"VIEW_PARTICIPANT",
-			"COA_VIEW_ACCOUNT",
-			"COA_VIEW_JOURNAL_ENTRY",
-			"COA_CREATE_ACCOUNT",
-			"COA_CREATE_JOURNAL_ENTRY",
-			"BUILTIN_LEDGER_VIEW_ACCOUNT",
-			"BUILTIN_LEDGER_VIEW_JOURNAL_ENTRY",
-			"BUILTIN_LEDGER_CREATE_ACCOUNT",
-			"BUILTIN_LEDGER_CREATE_JOURNAL_ENTRY",
-			"SETTLEMENTS_CREATE_BATCH_ACCOUNT",
-			"SETTLEMENTS_CREATE_BATCH",
-			"SETTLEMENTS_CREATE_TRANSFER",
-			"SETTLEMENTS_REQUEST_MATRIX",
-			"SETTLEMENTS_EXECUTE_MATRIX",
-			"SETTLEMENTS_GET_MATRIX_REQUEST",
-			"SETTLEMENTS_RETRIEVE_BATCH",
-			"SETTLEMENTS_RETRIEVE_BATCH_ACCOUNTS",
-			"SETTLEMENTS_RETRIEVE_TRANSFERS"
-		]
+]
 	},{
         id: "reporting-bc-reporting-api-svc",
         description: "reporting-bc-reporting-api-svc roles",
