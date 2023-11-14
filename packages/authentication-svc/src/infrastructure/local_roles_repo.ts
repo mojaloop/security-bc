@@ -30,11 +30,13 @@
 
 "use strict";
 
+/*
 import fs from "fs";
 import {readFile, writeFile} from "fs/promises";
 import {watch} from "node:fs";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {ILocalRoleAssociationRepo} from "../domain/interfaces";
+
 
 
 export class LocalRolesAssociationRepo implements ILocalRoleAssociationRepo{
@@ -146,7 +148,7 @@ export class LocalRolesAssociationRepo implements ILocalRoleAssociationRepo{
 		return this._appRoles.size;
 	}
 
-	/* interface methods */
+	/!* interface methods *!/
 
 	fetchApplicationPlatformRoles(clientId: string): Promise<string[]> {
 		return Promise.resolve(this._appRoles.get(clientId) || []);
@@ -178,3 +180,4 @@ export class LocalRolesAssociationRepo implements ILocalRoleAssociationRepo{
 
 
 }
+*/

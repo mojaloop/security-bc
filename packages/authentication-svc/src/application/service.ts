@@ -34,7 +34,7 @@ import {Server} from "http";
 import {existsSync} from "fs";
 import express from "express";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {LocalRolesAssociationRepo} from "../infrastructure/local_roles_repo";
+//import {LocalRolesAssociationRepo} from "../infrastructure/local_roles_repo";
 import {IAMAuthenticationAdapter, ICryptoAuthenticationAdapter, ILocalRoleAssociationRepo} from "../domain/interfaces";
 import {AuthenticationAggregate, AuthenticationAggregateOptions} from "../domain/authentication_agg";
 import {LogLevel} from "@mojaloop/logging-bc-public-types-lib/dist/index";
@@ -127,13 +127,6 @@ export class Service {
             defaultAudience: AUTH_N_DEFAULT_AUDIENCE
         };
 
-/*
-        const rolesFromIamProviderParam = configClient.appConfigs.getParam(configKeys.ROLES_FROM_IAM_PROVIDER);
-        if (rolesFromIamProviderParam) {
-            aggregateOptions.rolesFromIamProvider = rolesFromIamProviderParam.currentValue;
-        }
-*/
-
         if(!iamAdapter){
             iamAdapter = new BuiltinIamAdapter(BUILTIN_IAM_BASE_URL, this.logger);
             await iamAdapter.init();
@@ -153,6 +146,7 @@ export class Service {
         }
         this.crypto = cryptoAdapter;
 
+/*
         if(!localRoleAssociationRepo && aggregateOptions.rolesFromIamProvider){
             if (!existsSync(ROLES_STORAGE_FILE_PATH) && PRODUCTION_MODE) {
                 throw new Error("PRODUCTION_MODE and non existing IAM_STORAGE_FILE_PATH in: " + ROLES_STORAGE_FILE_PATH);
@@ -162,6 +156,7 @@ export class Service {
             await localRoleAssociationRepo.init();
         }
         this.localRoleAssociationRepo = localRoleAssociationRepo || null;
+*/
 
         // construct the aggregate
         try {

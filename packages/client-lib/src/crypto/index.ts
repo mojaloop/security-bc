@@ -30,34 +30,6 @@
 
 "use strict";
 
-import {ICryptoKeyManagement} from "@mojaloop/security-bc-public-types-lib";
-import crypto from "crypto";
-import {writeFileSync} from "fs";
-
-export class CryptoKeyManagementHelper implements ICryptoKeyManagement{
-    /***
-     * Creates a private RSA key file in PEM format using pkcs8 encoding
-     *
-     * Note: typical files have a "pem" extension.
-     * @param filePath - destination of file to be created
-     * @param modulusLength - Key size in bits, default modulus length is 2048 bits
-     */
-    createPrivateRsaKeyPEMFileSync(filePath: string, modulusLength = 2048): void{
-        const keyOptions = {
-            modulusLength: modulusLength,
-            publicKeyEncoding: {
-                type: "spki",
-                format: "pem"
-            },
-            privateKeyEncoding: {
-                type: "pkcs8",
-                format: "pem",
-            }
-        };
-        const {publicKey, privateKey} = crypto.generateKeyPairSync("rsa", keyOptions);
-        writeFileSync(filePath, Buffer.from(privateKey.toString()));
-    }
-
-
-
-}
+export * from "./keys";
+export * from "./certificate";
+export * from "./jws";

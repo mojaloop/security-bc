@@ -30,16 +30,58 @@
 
 "use strict";
 
-export interface ICryptoKeyManagement{
+import crypto from "crypto";
+
+import {writeFileSync} from "fs";
+
+import {ICryptoKeyManagement} from "@mojaloop/security-bc-public-types-lib";
+
+export class CryptoKeyManagementHelper implements ICryptoKeyManagement {
     /***
-     * Creates a private RSA key file in PEM format using pkcs8 encoding
+     * Creates an RSA key pair in PEM format using pkcs8 encoding for the private key and spki (SubjectPublicKeyInfo) encoded public key
+     *
+     * @param modulusLength - Key size in bits, default modulus length is 2048 bits
+     * @return crypto.KeyPairKeyObjectResult
+     */
+    createRsaKeyPairSync(modulusLength = 2048): crypto.KeyPairKeyObjectResult {
+        const keyOptions = {
+            modulusLength: modulusLength,
+            publicKeyEncoding: {
+                type: "spki",
+                format: "pem",
+            },
+            privateKeyEncoding: {
+                type: "pkcs8",
+                format: "pem",
+            }
+        };
+        return crypto.generateKeyPairSync("rsa", keyOptions);
+    }
+
+    /***
+     * Generates and saves in a file, a private RSA key file in PEM format using pkcs8 encoding
      *
      * Note: typical files have a "pem" extension.
      * @param filePath - destination of file to be created
      * @param modulusLength - Key size in bits, default modulus length is 2048 bits
      */
-    createPrivateRsaKeyPemFileSync(filePath: string, modulusLength:number): void;
+    createPrivateRsaKeyPemFileSync(filePath: string, modulusLength = 2048): void {
+        const result = this.createRsaKeyPairSync(modulusLength);
+        writeFileSync(filePath, Buffer.from(result.privateKey.toString()));
+    }
 
+    getPubKeyPemFromPrivateKeyPem(privateKeyPemStr: string) {
+        const pubKeyObject = crypto.createPublicKey({
+            key: privateKeyPemStr,
+            format: "pem"
+        });
 
+        const publicKey = pubKeyObject.export({
+            format: "pem",
+            type: "spki"
+        });
+
+        return publicKey;
+    }
 
 }

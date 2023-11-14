@@ -119,3 +119,12 @@ devspace*
 # for CircleCi docker build steps
 docker_tag
 /.circleci/local_config.yml
+
+# --------------- #
+# IntelliJ #
+# --------------- #
+.idea
+**/*.iml
+
+# Gedit backups.
+*~
