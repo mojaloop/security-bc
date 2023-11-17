@@ -87,7 +87,7 @@ export class TokenHelper implements ITokenHelper {
 
         // start the timer
         this._updateTimer = setInterval(()=>{
-            this.preFetch();
+            this._preFetch();
         }, PUB_KEYS_UPDATE_INTERVAL_MS);
 
         return Promise.resolve();

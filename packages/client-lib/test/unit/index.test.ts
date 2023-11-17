@@ -230,6 +230,8 @@ describe('authentication-client-lib tests', () => {
         const payload = tokenHelper.decodeToken(accessToken);
         expect(payload).not.toBeNull();
         expect(payload.testObj).toEqual("pedro1");
+
+        await tokenHelper.destroy();
     });
 
     test("Verify invalid token", async () => {
@@ -238,6 +240,8 @@ describe('authentication-client-lib tests', () => {
 
         const verified = await tokenHelper.verifyToken("blablabnot agoodtoken");
         expect(verified).toBe(false);
+
+        await tokenHelper.destroy();
     });
 
 
