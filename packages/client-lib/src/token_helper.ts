@@ -32,10 +32,10 @@
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {CallSecurityContext, ITokenHelper} from "@mojaloop/security-bc-public-types-lib";
 import jwt, {Jwt} from "jsonwebtoken";
-import jwks, {JwksClient} from "jwks-rsa";
+import jwks, {JwksClient, SigningKeyNotFoundError} from "jwks-rsa";
 
 export const DEFAULT_JWKS_PATH = "/.well-known/jwks.json";
-
+const PUB_KEYS_UPDATE_INTERVAL_MS = 5*60*1000;
 
 export class TokenHelper implements ITokenHelper {
     private _logger:ILogger;
@@ -43,6 +43,7 @@ export class TokenHelper implements ITokenHelper {
     private _issuerName: string | null;
     private _audience: string | null;
     private _jwksClient: JwksClient;
+    private _updateTimer: NodeJS.Timeout;
 
     constructor( jwksUrl: string, logger:ILogger, issuerName?: string, audience?: string) {
         this._jwksUrl = jwksUrl;
@@ -59,20 +60,48 @@ export class TokenHelper implements ITokenHelper {
         });
     }
 
-    /**
-     * @deprecated Please use preFetch() instead, this is not a required initialization function
-     */
-    async init(): Promise<void> {
-        //await this.preFetch();
-        return Promise.resolve();
-    }
-    async preFetch(): Promise<void> {
+    private async _preFetch(): Promise<void> {
         // do an initial request to test it works and cache it
         const keys = await this._jwksClient.getSigningKeys();
         for (const k of keys) {
             k.getPublicKey();
         }
-        // TODO setup timer
+    }
+
+    private async _getSigningKey(kid:string):Promise<jwks.SigningKey | null> {
+        let key: jwks.SigningKey;
+        try{
+            // this can throw a SigningKeyNotFoundError
+            key = await this._jwksClient.getSigningKey(kid);
+            return key;
+        }catch(err:any) {
+            return null;
+        }
+    }
+
+    /**
+     * Prefetches the public keys and starts the automatic update timer
+     */
+    async init(): Promise<void> {
+        await this._preFetch();
+
+        // start the timer
+        this._updateTimer = setInterval(()=>{
+            this.preFetch();
+        }, PUB_KEYS_UPDATE_INTERVAL_MS);
+
+        return Promise.resolve();
+    }
+
+    async destroy(): Promise<void> {
+        if(this._updateTimer) clearInterval(this._updateTimer);
+    }
+
+    /**
+     * @deprecated the new init already prefetches and starts the automatic update timer
+     */
+    async preFetch(): Promise<void> {
+        return this._preFetch();
     }
 
     /**
@@ -102,9 +131,16 @@ export class TokenHelper implements ITokenHelper {
             return false;
         }
 
-        const key = await this._jwksClient.getSigningKey(token.header.kid);
+        let key: jwks.SigningKey | null = await this._getSigningKey(token.header.kid);
+        // if not found, let's re-fetch the keys and try once more
+        if(!key){
+            await this._preFetch();
+            key = await this._getSigningKey(token.header.kid);
+        }
+
         if (!key) {
-            this._logger.warn(`public signing key not found for kid: ${token.header.kid}`);
+            // still not found... we give up
+            this._logger.warn(`Public signing key not found for kid: ${token.header.kid}`);
             return false;
         }
 
