@@ -69,4 +69,5 @@ export const defaultDevApplications = [
     {client_id: "reporting-bc-participants-reporting-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application","reporting-bc-participants-reporting-svc"]},
     {client_id: "reporting-bc-transfers-reporting-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application"]},
     {client_id: "reporting-bc-quotes-reporting-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application","reporting-bc-quotes-reporting-svc"]},
+    {client_id: "reporting-bc-settlements-reporting-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application","reporting-bc-settlements-reporting-svc"]},
 ];

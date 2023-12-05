@@ -138,6 +138,11 @@ export const defaultDevRoles:PlatformRole[] = [
             "APPROVE_PARTICIPANT_STATUS_CHANGE_REQUEST",
             "CREATE_PARTICIPANT_CONTACT_INFO_CHANGE_REQUEST",
             "APPROVE_PARTICIPANT_CONTACT_INFO_CHANGE_REQUEST",
+            "SECURITY_BUILTIN_IAM_CHANGE_APP_SECRETS",
+            "CREATE_LIQUIDITY_ADJUSTMENT_BULK_REQUEST",
+            "APPROVE_PENDING_APPROVAL_BULK_REQUEST",
+            "VIEW_ALL_PENDING_APPROVALS",
+            "APPROVE_PENDING_APPROVAL_BULK_REQUEST",
             "CREATE_NDC_CHANGE_REQUEST",
             "APPROVE_NDC_CHANGE_REQUEST",
 			"CREATE_FUNDS_DEPOSIT",
@@ -197,8 +202,7 @@ export const defaultDevRoles:PlatformRole[] = [
             "SECURITY_BUILTIN_IAM_VIEW_ALL_APPS",
             "SECURITY_BUILTIN_IAM_ENABLE_APP",
             "SECURITY_BUILTIN_IAM_DISABLE_APP",
-            "SECURITY_BUILTIN_IAM_MANAGE_APP_ROLES",
-            "SECURITY_BUILTIN_IAM_CHANGE_APP_SECRETS"
+            "SECURITY_BUILTIN_IAM_MANAGE_APP_ROLES"
 		]
 	}, {
 		id: "participants-bc-participants-svc",
@@ -362,6 +366,20 @@ export const defaultDevRoles:PlatformRole[] = [
         isPerParticipantRole: false,
         privileges: [
             "QUOTING_VIEW_ALL_QUOTES",
+        ]
+    },{
+        id: "reporting-bc-settlements-reporting-svc",
+        description: "reporting-bc-settlements-reporting-svc roles",
+        labelName: "reporting-bc-settlements-reporting-svc roles",
+        isExternal: false,
+        externalId: undefined,
+        isApplicationRole: true,
+        isPerParticipantRole: false,
+        privileges: [
+            "SETTLEMENTS_GET_MATRIX_REQUEST",
+            "SETTLEMENTS_RETRIEVE_BATCH",
+            "SETTLEMENTS_RETRIEVE_BATCH_ACCOUNTS",
+            "SETTLEMENTS_RETRIEVE_TRANSFERS",
         ]
     }
 
