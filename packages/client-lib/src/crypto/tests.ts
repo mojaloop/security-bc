@@ -472,7 +472,7 @@ function CA_signDfspCsr() {
 
     console.log("Creating certificate from CSR...");
     const DFSP_A_signed_cert = forge.pki.createCertificate();
-    DFSP_A_signed_cert.serialNumber =  crypto.randomUUID().replace(/-/g, '');
+    DFSP_A_signed_cert.serialNumber =  crypto.randomUUID().replace(/-/g, "");
 
     DFSP_A_signed_cert.validity.notBefore = new Date();
     DFSP_A_signed_cert.validity.notAfter = new Date();
@@ -532,7 +532,7 @@ function CA_signDfspCsr() {
     const fingerprint1 = pki.getPublicKeyFingerprint(CA_root_PublicKey!, {});
     const str1 = new Buffer(fingerprint1.data).toString("hex");
 
-    const fingerprint2 = pki.getPublicKeyFingerprint(CA_root_PublicKey!, {type: 'SubjectPublicKeyInfo'});
+    const fingerprint2 = pki.getPublicKeyFingerprint(CA_root_PublicKey!, {type: "SubjectPublicKeyInfo"});
     const str2 = new Buffer(fingerprint2.data).toString("hex");
 
     // CA_root_createCert();
@@ -566,7 +566,7 @@ function CA_signDfspCsr() {
             console.log("Certificate got verified successfully.!");
         }
     }catch (e) {
-
+        console.error(e);
     }
 
 

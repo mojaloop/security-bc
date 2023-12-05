@@ -85,12 +85,12 @@ export class CryptoKeyManagementHelper implements ICryptoKeyManagement {
         return publicKey;
     }
 
-    getHexEncodedRsaPublicKeyFingerprint(publicKey: KeyObject): string{
+/*    getHexEncodedRsaPublicKeyFingerprint(publicKey: KeyObject): string{
         try{
             const fingerprint = pki.getPublicKeyFingerprint(publicKey, {encoding: "hex", delimiter: "", type: "RSAPublicKey"});
             return fingerprint.toUpperCase();
         }catch(e){
-            throw new Exception("Invalid public key in getHexEncodedRsaPublicKeyFingerprint()");
+            throw new Error("Invalid public key in getHexEncodedRsaPublicKeyFingerprint()");
         }
-    }
+    }*/
 }

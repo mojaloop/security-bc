@@ -1,6 +1,6 @@
 {
     "name": "@mojaloop/security-bc-builtin-identity-svc",
-    "version": "0.3.10",
+    "version": "0.5.0",
     "description": "mojaloop security builtin identity management service",
     "license": "Apache-2.0",
     "homepage": "https://github.com/mojaloop/security-bc/tree/main/packages/builtin-identity-svc",
@@ -39,30 +39,33 @@
         "dep:update": "ncu -u"
     },
     "dependencies": {
-        "@mojaloop/auditing-bc-client-lib": "~0.3.2",
-        "@mojaloop/auditing-bc-public-types-lib": "~0.3.1",
-        "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib": "~0.3.70",
-        "@mojaloop/platform-shared-lib-messaging-types-lib": "~0.2.102",
-        "@mojaloop/logging-bc-client-lib": "~0.1.29",
-        "@mojaloop/platform-configuration-bc-client-lib": "~0.3.7",
+        "@mojaloop/auditing-bc-client-lib": "~0.3.3",
+        "@mojaloop/auditing-bc-public-types-lib": "~0.3.2",
+        "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib": "~0.5.1",
+        "@mojaloop/platform-shared-lib-messaging-types-lib": "~0.5.2",
+        "@mojaloop/logging-bc-client-lib": "~0.5.2",
+        "@mojaloop/platform-configuration-bc-client-lib": "~0.3.9",
         "@mojaloop/platform-configuration-bc-public-types-lib": "~0.3.5",
         "@mojaloop/security-bc-client-lib": "*",
         "@mojaloop/security-bc-public-types-lib": "*",
         "express": "^4.18.2",
         "tslib": "^2.6.2",
-        "mongodb": "~6.2.0",
+        "mongodb": "~6.3.0",
         "bcrypt": "~5.1.1"
     },
     "devDependencies": {
-        "@types/asn1": "^0.2.3",
+        "@types/asn1": "^0.2.4",
         "@types/express": "^4.17.21",
         "@types/jsonwebtoken": "^9.0.5",
         "@types/node-jose": "^1.1.13",
         "@types/bcrypt": "~5.0.2",
         "typescript": "^4.6.4",
-        "eslint": "^8.53.0",
+        "eslint": "^8.55.0",
         "jest": "^29.7.0",
-        "npm-check-updates": "~16.14.6",
+        "npm-check-updates": "~16.14.11",
         "ts-jest": "^29.1.1"
+    },
+    "engines": {
+        "node": ">=20.10.0"
     }
 }

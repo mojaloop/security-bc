@@ -176,7 +176,7 @@ export class IdentifyManagementRoutes {
             if (err instanceof Error) {
                 res.status(500).json({
                     status: "error",
-                    msg: `Internal error`,
+                    msg: "Internal error",
                 });
             } else {
                 this._logger.error(err);
@@ -192,7 +192,7 @@ export class IdentifyManagementRoutes {
     /* User routes */
 
     private async _handleGetAllUsers(req: express.Request, res: express.Response){
-        this._logger.debug(`Get users...`);
+        this._logger.debug("Get users...");
         const type = req.query.type as string;
         const id = req.query.id as string;
         const name = req.query.name as string;
@@ -246,7 +246,7 @@ export class IdentifyManagementRoutes {
             if (err instanceof Error) {
                 res.status(500).json({
                     status: "error",
-                    msg: `Unable get user`,
+                    msg: "Unable get user",
                 });
             } else {
                 this._logger.error(err);
@@ -472,7 +472,7 @@ export class IdentifyManagementRoutes {
     /* Application routes */
 
     private async _handleGetAllApps(req: express.Request, res: express.Response){
-        this._logger.debug(`Get apps...`);
+        this._logger.debug("Get apps...");
         const clientId = req.query.clientId as string;
 
         const canLoginStr = req.query.canLogin as string;
@@ -528,7 +528,7 @@ export class IdentifyManagementRoutes {
             if (err instanceof Error) {
                 res.status(500).json({
                     status: "error",
-                    msg: `Unable get application`,
+                    msg: "Unable get application",
                 });
             } else {
                 this._logger.error(err);

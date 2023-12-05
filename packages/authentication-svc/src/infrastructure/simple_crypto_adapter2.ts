@@ -73,7 +73,7 @@ export class SimpleCryptoAdapter2 implements ICryptoAuthenticationAdapter{
 
             const keyId = await key.thumbprint(HASH_ALG);
             this._publicKeyId = Buffer.from(keyId).toString("base64");
-            this._publicKeyId = this._publicKeyId.replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+            this._publicKeyId = this._publicKeyId.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
         }catch(err){
             // log
             this._logger.error(err);

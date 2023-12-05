@@ -48,7 +48,7 @@ export class CertificatesHelper{
 
         // fill the required fields
         cert.publicKey = publicKey;
-        cert.serialNumber = crypto.randomUUID().replace(/-/g, '');
+        cert.serialNumber = crypto.randomUUID().replace(/-/g, "");
         cert.validity.notBefore = new Date(now);
         cert.validity.notAfter = new Date(now);
         cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + expirationYears);
@@ -116,7 +116,7 @@ export class CertificatesHelper{
 
         // fill the required fields
         cert.publicKey = publicKey;
-        cert.serialNumber = crypto.randomUUID().replace(/-/g, '');
+        cert.serialNumber = crypto.randomUUID().replace(/-/g, "");
         cert.validity.notBefore = new Date(now);
         cert.validity.notAfter = new Date(now);
         cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + expirationYears);

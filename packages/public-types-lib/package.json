@@ -1,42 +1,45 @@
 {
-  "name": "@mojaloop/security-bc-public-types-lib",
-  "version": "0.3.6",
-  "description": "mojaloop security public types library",
-  "license": "Apache-2.0",
-  "homepage": "https://github.com/mojaloop/security-bc/tree/main/packages/public-types-lib",
-  "bugs": {
-    "url": "https://github.com/mojaloop/security-bc/issues#readme"
-  },
-  "contributors": [
-    "Pedro Sousa Barreto <pedrosousabarreto@gmail.com>"
-  ],
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "/dist"
-  ],
-  "scripts": {
-    "build": "tsc",
-    "watch": "tsc -w",
-    "clean": "npm run clean:npm; npm run clean:dist",
-    "clean:dist": "rm -rf dist",
-    "clean:npm": "rm -rf node_modules",
-    "pretest": "npm run build",
-    "standard": "npm run lint",
-    "lint": "npm run build && npx eslint ./src",
-    "lint:fix": "npm run build && npx eslint ./src --fix",
-    "test:unit": "jest",
-    "audit:resolve": "SHELL=sh resolve-audit",
-    "audit:check": "SHELL=sh check-audit",
-    "dep:check": "ncu -e 2",
-    "dep:update": "ncu -u"
-  },
-  "devDependencies": {
-    "eslint": "^8.53.0",
-    "jest": "^29.7.0",
-    "npm-check-updates": "~16.14.6",
-    "ts-jest": "^29.1.1",
-    "typescript": "^4.6.4",
-    "tslib": "^2.6.2"
-  }
+    "name": "@mojaloop/security-bc-public-types-lib",
+    "version": "0.5.1",
+    "description": "mojaloop security public types library",
+    "license": "Apache-2.0",
+    "homepage": "https://github.com/mojaloop/security-bc/tree/main/packages/public-types-lib",
+    "bugs": {
+        "url": "https://github.com/mojaloop/security-bc/issues#readme"
+    },
+    "contributors": [
+        "Pedro Sousa Barreto <pedrosousabarreto@gmail.com>"
+    ],
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "/dist"
+    ],
+    "scripts": {
+        "build": "tsc",
+        "watch": "tsc -w",
+        "clean": "npm run clean:npm; npm run clean:dist",
+        "clean:dist": "rm -rf dist",
+        "clean:npm": "rm -rf node_modules",
+        "pretest": "npm run build",
+        "standard": "npm run lint",
+        "lint": "npm run build && npx eslint ./src",
+        "lint:fix": "npm run build && npx eslint ./src --fix",
+        "test:unit": "jest",
+        "audit:resolve": "SHELL=sh resolve-audit",
+        "audit:check": "SHELL=sh check-audit",
+        "dep:check": "ncu -e 2",
+        "dep:update": "ncu -u"
+    },
+    "devDependencies": {
+        "eslint": "^8.55.0",
+        "jest": "^29.7.0",
+        "npm-check-updates": "~16.14.11",
+        "ts-jest": "^29.1.1",
+        "typescript": "^4.6.4",
+        "tslib": "^2.6.2"
+    },
+    "engines": {
+        "node": ">=20.10.0"
+    }
 }
