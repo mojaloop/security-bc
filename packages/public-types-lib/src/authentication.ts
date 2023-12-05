@@ -74,6 +74,7 @@ export type AuthToken = {
 
 export interface ITokenHelper {
     init(): Promise<void>;
+    destroy(): Promise<void>;
     decodeToken(accessToken: string): any | null;
     verifyToken(accessToken: string): Promise<boolean>;
     getCallSecurityContextFromAccessToken(accessToken:string):Promise<CallSecurityContext|null>;
