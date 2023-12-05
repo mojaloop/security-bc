@@ -30,11 +30,12 @@
 
 "use strict";
 
-import crypto from "crypto";
+import crypto, {KeyObject} from "crypto";
 
 import {writeFileSync} from "fs";
 
 import {ICryptoKeyManagement} from "@mojaloop/security-bc-public-types-lib";
+import {pki} from "node-forge";
 
 export class CryptoKeyManagementHelper implements ICryptoKeyManagement {
     /***
@@ -84,4 +85,12 @@ export class CryptoKeyManagementHelper implements ICryptoKeyManagement {
         return publicKey;
     }
 
+    getHexEncodedRsaPublicKeyFingerprint(publicKey: KeyObject): string{
+        try{
+            const fingerprint = pki.getPublicKeyFingerprint(publicKey, {encoding: "hex", delimiter: "", type: "RSAPublicKey"});
+            return fingerprint.toUpperCase();
+        }catch(e){
+            throw new Exception("Invalid public key in getHexEncodedRsaPublicKeyFingerprint()");
+        }
+    }
 }

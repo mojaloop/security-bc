@@ -29,7 +29,7 @@
  ******/
 
 "use strict";
-
+import crypto from "crypto";
 import forge from "node-forge";
 const pki = forge.pki;
 
@@ -95,7 +95,7 @@ export class CertificatesHelper{
         }]);
 
         // the actual certificate signing
-        cert.sign(privateKey);
+        cert.sign(privateKey, forge.md.sha256.create());
 
         // now convert the Forge certificate to PEM format
         const pem = pki.certificateToPem(cert);
@@ -105,7 +105,7 @@ export class CertificatesHelper{
     createX590CertificateAuthorityCert(
         signingKeyPEM:string,
         commonName: string, country:string, state:string, locality:string, orgName:string, orgUnit:string,
-        expirationYears:number
+        expirationYears:number, issuer?: forge.pki.CertificateField[]
     ):string {
         const now = Date.now();
         const privateKey = pki.privateKeyFromPem(signingKeyPEM);
@@ -133,7 +133,13 @@ export class CertificatesHelper{
 
         // here we set subject and issuer as the same one
         cert.setSubject(attrs);
-        cert.setIssuer(attrs);
+
+        // if an issuer is provided use it
+        if(issuer){
+            cert.setIssuer(issuer);
+        }else {
+            cert.setIssuer(attrs);
+        }
 
         cert.setExtensions([{
             name: "basicConstraints",
@@ -166,7 +172,7 @@ export class CertificatesHelper{
         }]);
 
         // the actual certificate signing
-        cert.sign(privateKey);
+        cert.sign(privateKey, forge.md.sha256.create());
 
         // now convert the Forge certificate to PEM format
         const pem = pki.certificateToPem(cert);
