@@ -1,4 +1,4 @@
-FROM node:20.10.0-alpine3.18 AS builder
+FROM node:18.19.0-alpine3.18 AS builder
 
 # Create the project directory inside the container.
 WORKDIR /app
@@ -43,7 +43,7 @@ RUN npm run build
 RUN ls -la ./packages/builtin-identity-svc/dist
 
 
-FROM node:20.10.0-alpine3.18
+FROM node:18.19.0-alpine3.18
 WORKDIR /app
 RUN mkdir /app/data
 
