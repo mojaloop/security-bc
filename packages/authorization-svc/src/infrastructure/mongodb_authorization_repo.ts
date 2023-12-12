@@ -200,7 +200,13 @@ export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
         return found as PlatformRole | null;
     }
 
-
+    async fetchPlatformRoleByLabelName(roleLabelName:string):Promise<PlatformRole | null>{
+        const found = await this._rolesCollection.findOne(
+            {labelName: roleLabelName},
+            {projection: {_id: 0}}
+        );
+        return found as PlatformRole | null;
+    }
 
     async storePlatformRole(role: PlatformRole): Promise<void> {
         try {
@@ -220,6 +226,5 @@ export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
             throw error;
         }
     }
-
 
 }

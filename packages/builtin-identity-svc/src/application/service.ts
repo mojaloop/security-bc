@@ -51,7 +51,11 @@ import {IAuthorizationClient} from "@mojaloop/security-bc-public-types-lib";
 import {BuiltinIdentityPrivilegesDefinition} from "../domain/privileges";
 import {MongoDbBuiltinIdentityRepository} from "../infrastructure/mongodb_repo";
 import {defaultDevApplications, defaultDevUsers} from "../dev_defaults";
-import { MLKafkaJsonConsumer, MLKafkaJsonConsumerOptions } from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
+import {
+    MLKafkaJsonConsumer,
+    MLKafkaJsonConsumerOptions,
+    MLKafkaJsonProducer
+} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
 import {existsSync} from "fs";
 import {
     AuditClient,
@@ -59,6 +63,7 @@ import {
     LocalAuditClientCryptoProvider
 } from "@mojaloop/auditing-bc-client-lib";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
+import {IMessageProducer} from "@mojaloop/platform-shared-lib-messaging-types-lib";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJSON = require("../../package.json");
@@ -94,14 +99,12 @@ const SVC_CLIENT_SECRET = process.env["SVC_CLIENT_SECRET"] || "superServiceSecre
 
 const SERVICE_START_TIMEOUT_MS = 60_000;
 
+const INSTANCE_NAME = `${BC_NAME}_${APP_NAME}`;
+const INSTANCE_ID = `${INSTANCE_NAME}__${crypto.randomUUID()}`;
+
 // kafka logger
 const kafkaProducerOptions = {
     kafkaBrokerList: KAFKA_URL
-};
-
-const kafkaConsumerOptions: MLKafkaJsonConsumerOptions = {
-    kafkaBrokerList: KAFKA_URL,
-    kafkaGroupId: `${BC_NAME}_${APP_NAME}_authz_client`
 };
 
 // global
@@ -116,12 +119,14 @@ export class Service {
     static tokenHelper: TokenHelper;
     static authorizationClient: IAuthorizationClient;
     static auditClient: IAuditClient;
+    static messageProducer: IMessageProducer;
     static startupTimer: NodeJS.Timeout;
 
     static async start(
         logger?: ILogger,
         authorizationClient?: IAuthorizationClient,
         userManagementRepo?: IBuiltinIdentityRepository,
+        messageProducer?: IMessageProducer,
         auditClient?: IAuditClient
     ):Promise<void>{
         console.log(`Service starting with PID: ${process.pid}`);
@@ -155,7 +160,13 @@ export class Service {
             authRequester.setAppCredentials(SVC_CLIENT_ID, SVC_CLIENT_SECRET);
 
             const consumerHandlerLogger = logger.createChild("authorizationClientConsumer");
-            const messageConsumer = new MLKafkaJsonConsumer(kafkaConsumerOptions, consumerHandlerLogger);
+            const messageConsumer = new MLKafkaJsonConsumer(
+                {
+                    kafkaBrokerList: KAFKA_URL,
+                    kafkaGroupId: `${BC_NAME}_${APP_NAME}_authz_client`
+                },
+                consumerHandlerLogger
+            );
 
             // setup privileges - bootstrap app privs and get priv/role associations
             authorizationClient = new AuthorizationClient(
@@ -169,7 +180,13 @@ export class Service {
         this.authorizationClient = authorizationClient;
 
         // token helper
-        this.tokenHelper = new TokenHelper(AUTH_N_SVC_JWKS_URL, logger, AUTH_N_TOKEN_ISSUER_NAME, AUTH_N_TOKEN_AUDIENCE);
+        this.tokenHelper = new TokenHelper(
+            AUTH_N_SVC_JWKS_URL,
+            logger,
+            AUTH_N_TOKEN_ISSUER_NAME,
+            AUTH_N_TOKEN_AUDIENCE,
+            new MLKafkaJsonConsumer({kafkaBrokerList: KAFKA_URL, autoOffsetReset: "earliest", kafkaGroupId: INSTANCE_ID}, logger) // for jwt list - no groupId
+        );
 
         // authorization client
         if (!userManagementRepo) {
@@ -194,12 +211,22 @@ export class Service {
         }
         this.auditClient = auditClient;
 
+        if (!messageProducer) {
+            messageProducer = new MLKafkaJsonProducer(
+                kafkaProducerOptions,
+                logger.createChild("producerLogger")
+            );
+            await messageProducer.connect();
+        }
+        this.messageProducer = messageProducer;
+
         // construct the aggregate
         this.aggregate = new IdentityManagementAggregate(
             this.logger,
             this.userManagementRepo,
             this.authorizationClient,
             this.auditClient,
+            this.messageProducer,
             AUTH_N_TOKEN_LIFE_SECS
         );
         await this.aggregate.init();
@@ -240,7 +267,7 @@ export class Service {
             this.app.use(express.urlencoded({extended: true})); // for parsing application/x-www-form-urlencoded
 
             this.app.use( (req: express.Request, res: express.Response, next: express.NextFunction) => {
-                this.logger.debug(`Received request to: ${req.protocol}://${req.headers.host}${req.originalUrl}`);
+                this.logger.debug(`Received request: ${req.method} - ${req.protocol}://${req.headers.host}${req.url}`);
                 // CORS allow from any
                 res.setHeader("Access-Control-Allow-Origin","*");
                 next();

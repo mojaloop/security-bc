@@ -341,7 +341,7 @@ export class ExpressRoutes {
             });
         }
 
-        await this._authorizationAggregate.dissociatePrivilegesToRole(req.securityContext!, data, roleId).then(()=>{
+        await this._authorizationAggregate.dissociatePrivilegesFromRole(req.securityContext!, data, roleId).then(()=>{
             return res.status(200).send();
         }).catch((error: Error)=>{
             if (this._handleUnauthorizedError((error as Error), res)) return;

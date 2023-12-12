@@ -35,7 +35,8 @@ Authorization specific
 */
 
 export interface IAuthorizationClient {
-	roleHasPrivilege(roleId: string, privilegeId: string): boolean;
+    roleHasPrivilege(roleId: string, privilegeId: string): boolean;
+    rolesHavePrivilege(roleIds: string[], privilegeId: string): boolean;
 
 	addPrivilege(privId: string, labelName: string, description: string): void;
 

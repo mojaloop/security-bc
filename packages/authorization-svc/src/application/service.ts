@@ -49,6 +49,7 @@ import {
 } from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib/dist/index";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {ITokenHelper} from "@mojaloop/security-bc-public-types-lib";
+import util from "util";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJSON = require("../../package.json");
@@ -73,15 +74,14 @@ const MONGO_URL = process.env["MONGO_URL"] || "mongodb://root:mongoDbPas42@local
 //const KAFKA_AUDITS_TOPIC = process.env["KAFKA_AUDITS_TOPIC"] || "audits";
 const KAFKA_LOGS_TOPIC = process.env["KAFKA_LOGS_TOPIC"] || "logs";
 
+const INSTANCE_NAME = `${BC_NAME}_${APP_NAME}`;
+const INSTANCE_ID = `${INSTANCE_NAME}__${crypto.randomUUID()}`;
+
 // kafka logger
 const kafkaProducerOptions = {
     kafkaBrokerList: KAFKA_URL
 };
 
-const kafkaConsumerOptions: MLKafkaJsonConsumerOptions = {
-    kafkaBrokerList: KAFKA_URL,
-    kafkaGroupId: `${BC_NAME}_${APP_NAME}`
-};
 
 // global
 let globalLogger: ILogger;
@@ -130,9 +130,10 @@ export class Service {
 
         // message consumer for agg change detection (from other instances)
         if(!messageConsumer){
-            const consumerHandlerLogger = logger.createChild("handlerConsumer");
-            consumerHandlerLogger.setLogLevel(LogLevel.INFO);
-            messageConsumer = new MLKafkaJsonConsumer(kafkaConsumerOptions, consumerHandlerLogger);
+            messageConsumer = new MLKafkaJsonConsumer({
+                kafkaBrokerList: KAFKA_URL,
+                kafkaGroupId: INSTANCE_ID
+            }, logger.createChild("handlerConsumer"));
         }
         this.messageConsumer = messageConsumer;
 
@@ -165,7 +166,13 @@ export class Service {
         await this.authorizationAggregate.init();
 
         // token helper, needed by the http routes' middleware
-        this.tokenHelper = new TokenHelper(AUTH_N_SVC_JWKS_URL, logger, AUTH_N_TOKEN_ISSUER_NAME, AUTH_N_TOKEN_AUDIENCE);
+        this.tokenHelper = new TokenHelper(
+            AUTH_N_SVC_JWKS_URL,
+            logger,
+            AUTH_N_TOKEN_ISSUER_NAME,
+            AUTH_N_TOKEN_AUDIENCE,
+            new MLKafkaJsonConsumer({kafkaBrokerList: KAFKA_URL, autoOffsetReset: "earliest", kafkaGroupId: INSTANCE_ID}, logger) // for jwt list - no groupId
+        );
         await this.tokenHelper.init();
 
         this.setupAndStartExpress();
@@ -202,7 +209,14 @@ export class Service {
     }
 
     static async stop():Promise<void>{
-        if(this.expressServer) this.expressServer.close();
+        if (this.expressServer){
+            const closeExpress = util.promisify(this.expressServer.close);
+            await closeExpress();
+        }
+
+        if(this.messageConsumer) await this.messageConsumer.destroy(false);
+        if(this.messageProducer) await this.messageProducer.destroy();
+
     }
 }
 

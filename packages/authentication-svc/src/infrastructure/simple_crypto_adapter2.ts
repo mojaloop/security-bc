@@ -39,6 +39,9 @@ import {ICryptoAuthenticationAdapter} from "../domain/interfaces";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import crypto from "crypto";
 import * as nodejose from "node-jose";
+import {Jwt} from "jsonwebtoken";
+import jwks from "jwks-rsa";
+import {CallSecurityContext} from "@mojaloop/security-bc-public-types-lib";
 
 const HASH_ALG = "SHA-256"; // these must match
 const SIGNATURE_ALG = "RS256";
@@ -81,7 +84,44 @@ export class SimpleCryptoAdapter2 implements ICryptoAuthenticationAdapter{
         }
     }
 
-    async generateJWT(additionalPayload:any, sub:string, aud:string, lifeInSecs:number):Promise<string>{
+    async verifyAndGetSecPrincipalFromToken(accessToken:string):Promise<string|null>{
+        const verify_opts: jwt.VerifyOptions = {complete: true};
+        if (this._issuerName) verify_opts.issuer = this._issuerName;
+
+        try {
+            const token = jwt.decode(accessToken, {complete: true}) as Jwt;
+            if (!token || !token.header || !token.header || !token.header.kid) {
+                this._logger.warn("could not decode token or token without kid");
+                return null;
+            }
+
+            // const publicKey = this._publicKeyObj.export({
+            //     format: "pem",
+            //     type: "spki"
+            // });
+
+            const decoded = jwt.verify(accessToken, this._publicKeyObj, verify_opts) as Jwt;
+
+            if (!decoded || !decoded.payload) {
+                this._logger.warn("Error verifying token, could not decode access token");
+                return null;
+            }
+
+            const payload:any = decoded.payload;
+
+            const subSplit = (payload.sub as string).split("::");
+            const subject = subSplit[1];
+
+            return subject;
+        } catch (err: any) {
+            this._logger.warn(`Error verifying token: ${err.message}`);
+            return null;
+        }
+    }
+
+    async generateJWT(additionalPayload:any, sub:string, aud:string, lifeInSecs:number):Promise<{accessToken:string, tokenId:string}>{
+
+        const jwtid = Crypto.randomUUID();
 
         // https://datatracker.ietf.org/doc/html/rfc7519
         const signOptions: jwt.SignOptions = {
@@ -89,13 +129,16 @@ export class SimpleCryptoAdapter2 implements ICryptoAuthenticationAdapter{
             audience: aud,
             expiresIn: lifeInSecs,
             issuer: this._issuerName,
-            jwtid: Crypto.randomUUID(),
+            jwtid: jwtid,
             keyid: this._publicKeyId,
             subject: sub
         };
 
-        const accessCode = jwt.sign(additionalPayload, this._privateKey, signOptions);
-        return accessCode;
+        const accessToken = jwt.sign(additionalPayload, this._privateKey, signOptions);
+        return {
+            accessToken: accessToken,
+            tokenId: jwtid
+        };
     }
     async getJwsKeys():Promise<any>{
         return this._joseKeyStore.toJSON();

@@ -35,7 +35,12 @@ import {existsSync} from "fs";
 import express from "express";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 //import {LocalRolesAssociationRepo} from "../infrastructure/local_roles_repo";
-import {IAMAuthenticationAdapter, ICryptoAuthenticationAdapter, ILocalRoleAssociationRepo} from "../domain/interfaces";
+import {
+    IAMAuthenticationAdapter,
+    ICryptoAuthenticationAdapter,
+    IJwtIdsRepository,
+    ILocalRoleAssociationRepo
+} from "../domain/interfaces";
 import {AuthenticationAggregate, AuthenticationAggregateOptions} from "../domain/authentication_agg";
 import {LogLevel} from "@mojaloop/logging-bc-public-types-lib/dist/index";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib/dist/index";
@@ -45,6 +50,10 @@ import {SimpleCryptoAdapter2} from "../infrastructure/simple_crypto_adapter2";
 import process from "process";
 import {BuiltinIamAdapter} from "../infrastructure/builtin_iam_adapter";
 import util from "util";
+import {IMessageConsumer, IMessageProducer} from "@mojaloop/platform-shared-lib-messaging-types-lib";
+import {MLKafkaJsonConsumer, MLKafkaJsonProducer} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
+import {JwtIdRedisRepo} from "../infrastructure/jwtid_redis_repo";
+import {AuthenticationEventHandler} from "./event_handler";
 
 // get configClient from dedicated file
 // import configClient, {configKeys} from "./config";
@@ -79,6 +88,13 @@ const AUTH_N_ISSUER_NAME = process.env["AUTH_N_ISSUER_NAME"] || "mojaloop.vnext.
 
 const BUILTIN_IAM_BASE_URL = process.env["BUILTIN_IAM_BASE_URL"] || "http://localhost:3203";
 
+const REDIS_HOST = process.env["REDIS_HOST"] || "localhost";
+const REDIS_PORT = (process.env["REDIS_PORT"] && parseInt(process.env["REDIS_PORT"])) || 6379;
+
+const INSTANCE_NAME = `${BC_NAME}_${APP_NAME}`;
+const INSTANCE_ID = `${BC_NAME}_${APP_NAME}__${crypto.randomUUID()}`;
+
+
 // kafka logger
 const kafkaProducerOptions = {
     kafkaBrokerList: KAFKA_URL
@@ -92,6 +108,9 @@ export class Service {
     static iam:IAMAuthenticationAdapter;
     static crypto:ICryptoAuthenticationAdapter;
     static localRoleAssociationRepo: ILocalRoleAssociationRepo | null;
+    static messageProducer: IMessageProducer;
+    static messageConsumer: IMessageConsumer;
+    static jwtIdsRepo:IJwtIdsRepository;
     static authenticationAgg: AuthenticationAggregate;
     static expressServer: Server;
 
@@ -99,7 +118,10 @@ export class Service {
         logger?: ILogger,
         iamAdapter?:IAMAuthenticationAdapter,
         cryptoAdapter?:ICryptoAuthenticationAdapter,
-        localRoleAssociationRepo?: ILocalRoleAssociationRepo
+        localRoleAssociationRepo?: ILocalRoleAssociationRepo,
+        messageProducer?: IMessageProducer,
+        messageConsumer?: IMessageConsumer,
+        jwtIdsRepo?:IJwtIdsRepository
     ):Promise<void>{
         console.log(`Service starting with PID: ${process.pid}`);
 
@@ -135,10 +157,13 @@ export class Service {
 
         if(!cryptoAdapter) {
             if(!existsSync(PRIVATE_CERT_PEM_FILE_PATH)){
-                SimpleCryptoAdapter2.createRsaPrivateKeyFileSync(PRIVATE_CERT_PEM_FILE_PATH);
                 if(PRODUCTION_MODE){
                     throw new Error("PRODUCTION_MODE and non existing PRIVATE_CERT_PEM_FILE_PATH in: "+PRIVATE_CERT_PEM_FILE_PATH);
                 }
+                SimpleCryptoAdapter2.createRsaPrivateKeyFileSync(PRIVATE_CERT_PEM_FILE_PATH);
+                this.logger.info(`A private key was not found in: "${PRIVATE_CERT_PEM_FILE_PATH}" - because we're not running in production mode, one was created.`);
+            }else{
+                this.logger.info(`Using private key in: "${PRIVATE_CERT_PEM_FILE_PATH}"`);
             }
 
             cryptoAdapter = new SimpleCryptoAdapter2(PRIVATE_CERT_PEM_FILE_PATH, AUTH_N_ISSUER_NAME, logger);
@@ -146,25 +171,61 @@ export class Service {
         }
         this.crypto = cryptoAdapter;
 
-/*
-        if(!localRoleAssociationRepo && aggregateOptions.rolesFromIamProvider){
-            if (!existsSync(ROLES_STORAGE_FILE_PATH) && PRODUCTION_MODE) {
-                throw new Error("PRODUCTION_MODE and non existing IAM_STORAGE_FILE_PATH in: " + ROLES_STORAGE_FILE_PATH);
-            }
+        /*
+                if(!localRoleAssociationRepo && aggregateOptions.rolesFromIamProvider){
+                    if (!existsSync(ROLES_STORAGE_FILE_PATH) && PRODUCTION_MODE) {
+                        throw new Error("PRODUCTION_MODE and non existing IAM_STORAGE_FILE_PATH in: " + ROLES_STORAGE_FILE_PATH);
+                    }
 
-            localRoleAssociationRepo = new LocalRolesAssociationRepo(ROLES_STORAGE_FILE_PATH, this.logger);
-            await localRoleAssociationRepo.init();
+                    localRoleAssociationRepo = new LocalRolesAssociationRepo(ROLES_STORAGE_FILE_PATH, this.logger);
+                    await localRoleAssociationRepo.init();
+                }
+                this.localRoleAssociationRepo = localRoleAssociationRepo || null;
+        */
+
+        if (!messageProducer) {
+            messageProducer = new MLKafkaJsonProducer(kafkaProducerOptions, this.logger.createChild("AggMessageProducer"));
+            await messageProducer.connect();
         }
-        this.localRoleAssociationRepo = localRoleAssociationRepo || null;
-*/
+        this.messageProducer = messageProducer;
+
+        if(!jwtIdsRepo){
+            jwtIdsRepo = new JwtIdRedisRepo(logger,REDIS_HOST, REDIS_PORT);
+        }
+        this.jwtIdsRepo = jwtIdsRepo;
 
         // construct the aggregate
         try {
-            this.authenticationAgg = new AuthenticationAggregate(this.iam, this.crypto, this.logger, this.localRoleAssociationRepo, aggregateOptions);
+            this.authenticationAgg = new AuthenticationAggregate(
+                this.iam,
+                this.crypto,
+                this.logger,
+                this.localRoleAssociationRepo,
+                this.jwtIdsRepo,
+                this.messageProducer,
+                aggregateOptions
+            );
         }catch(err){
             await Service.stop();
         }
 
+        // event handler
+        if(!messageConsumer){
+            messageConsumer = new MLKafkaJsonConsumer({
+                kafkaBrokerList: KAFKA_URL,
+                kafkaGroupId: INSTANCE_ID
+            }, logger.createChild("handlerConsumer"));
+        }
+        this.messageConsumer = messageConsumer;
+
+        const eventHandler = new AuthenticationEventHandler(
+            this.messageConsumer,
+            this.authenticationAgg,
+            this.logger
+        );
+        await eventHandler.start();
+
+        // start express http server
         this.setupAndStartExpress();
     }
 
@@ -212,6 +273,8 @@ export class Service {
             await closeExpress();
         }
         if (this.logger && this.logger instanceof KafkaLogger) await this.logger.destroy();
+
+        if(this.messageProducer) await this.messageProducer.destroy();
     }
 
 }

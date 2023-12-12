@@ -31,7 +31,7 @@
 "use strict";
 import express from "express";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {TokenEndpointResponse} from "@mojaloop/security-bc-public-types-lib";
+import {CallSecurityContext, TokenEndpointResponse, UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
 import {AuthenticationAggregate} from "../domain/authentication_agg";
 import {ICryptoAuthenticationAdapter} from "../domain/interfaces";
 
@@ -40,7 +40,7 @@ export class AuthenticationRoutes {
     private _router = express.Router();
     private _authAgg: AuthenticationAggregate;
     private _crypto:ICryptoAuthenticationAdapter;
-    private _issuerName:string;
+    private readonly _issuerName:string;
 
     constructor(authAgg: AuthenticationAggregate, crypto:ICryptoAuthenticationAdapter, issuerName:string, logger: ILogger) {
         this._logger = logger.createChild(this.constructor.name);
@@ -50,6 +50,7 @@ export class AuthenticationRoutes {
 
         // bind routes
         this._router.post("/token", this._handlePostToken.bind(this));
+        this._router.post("/logout", this._handlePostLogout.bind(this));
         this._router.get("/.well-known/openid-configuration", this._handleGetOpenIdConfiguration.bind(this));
         this._router.get("/.well-known/jwks.json", this._handleGetJwks.bind(this));
 
@@ -70,41 +71,75 @@ export class AuthenticationRoutes {
     }
 
     private async _handlePostToken(req: express.Request, res: express.Response, next: express.NextFunction){
-        const data: any = req.body;
-        this._logger.debug(data);
+        try{
+            const grant_type = req.body.grant_type;
+            const client_id = req.body.client_id;
+            const client_secret = req.body.client_secret;
+            const username = req.body.username;
+            const password = req.body.password;
+            const audience  = req.body.audience;
+            const scope  = req.body.scope;
 
-        const grant_type = req.body.grant_type;
-        const client_id = req.body.client_id;
-        const client_secret = req.body.client_secret;
-        const username = req.body.username;
-        const password = req.body.password;
-        const audience  = req.body.audience;
-        const scope  = req.body.scope;
+            // TODO check existing client_id first
 
-        // TODO check existing client_id first
+            const found = this._authAgg.getSupportedGrants().find(value => value.toUpperCase() === grant_type.toUpperCase());
+            if(!found){
+                this._logger.info(`Received token request for unsupported grant_type: ${grant_type}"`);
+                return res.status(401).send("Unsupported grant_type");
+            }
 
-        const found = this._authAgg.getSupportedGrants().find(value => value.toUpperCase() === grant_type.toUpperCase());
-        if(!found){
-            this._logger.info(`Received token request for unsupported grant_type: ${grant_type}"`);
-            return res.status(401).send("Unsupported grant_type");
+            let loginResp: TokenEndpointResponse | null;
+            if(grant_type.toUpperCase() === "password".toUpperCase()) {
+                loginResp = await this._authAgg.loginUser(client_id, client_secret, username, password, audience, scope);
+            }else if(grant_type.toUpperCase() === "client_credentials".toUpperCase()) {
+                loginResp = await this._authAgg.loginApp(client_id, client_secret, audience, scope);
+            }else {
+                return res.status(401).send("Unsupported grant_type");
+            }
+
+            if (!loginResp) {
+                this._logger.info(`Login FAILED for grant_type: ${grant_type} client_id: ${client_id} and username: ${username}`);
+                return res.status(401).send();
+            }
+
+            this._logger.info(`Login successful for grant_type: ${grant_type} client_id: ${client_id} and username: ${username}`);
+            return res.status(200).json(loginResp);
+        }catch(err){
+            this._logger.error(err);
+            return res.status(500).send("Unknown Error");
         }
+    }
 
-        let loginResp: TokenEndpointResponse | null;
-        if(grant_type.toUpperCase() === "password".toUpperCase()) {
-            loginResp = await this._authAgg.loginUser(client_id, client_secret, username, password, audience, scope);
-        }else if(grant_type.toUpperCase() === "client_credentials".toUpperCase()) {
-            loginResp = await this._authAgg.loginApp(client_id, client_secret, audience, scope);
-        }else {
-            return res.status(401).send("Unsupported grant_type");
+    private async _handlePostLogout(req: express.Request, res: express.Response, next: express.NextFunction){
+        try{
+            const authorizationHeader = req.headers["authorization"];
+
+            if (!authorizationHeader) return res.sendStatus(401);
+
+            const bearer = authorizationHeader.trim().split(" ");
+            if (bearer.length != 2) {
+                return res.sendStatus(401);
+            }
+
+            const bearerToken = bearer[1];
+
+            if(!bearerToken){
+                return res.sendStatus(401);
+            }
+
+            await this._authAgg.logoutToken(bearerToken);
+            return res.status(200).send();
+        }catch(err){
+            if (err instanceof UnauthorizedError) {
+                this._logger.warn("UnauthorizedError");
+                // we don't want to reveal anything, so all requests except errors are 200
+                res.status(200).send();
+                return;
+            }
+
+            this._logger.error(err);
+            return res.status(500).send("Unknown Error");
         }
-
-        if (!loginResp) {
-            this._logger.info(`Login FAILED for grant_type: ${grant_type} client_id: ${client_id} and username: ${username}`);
-            return res.status(401).send();
-        }
-
-        this._logger.info(`Login successful for grant_type: ${grant_type} client_id: ${client_id} and username: ${username}`);
-        return res.status(200).json(loginResp);
     }
 
     private async _handleGetOpenIdConfiguration(req: express.Request, res: express.Response, next: express.NextFunction){

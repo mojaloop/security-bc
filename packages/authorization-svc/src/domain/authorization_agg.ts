@@ -57,7 +57,11 @@ import {
     IMessageProducer,
     MessageTypes
 } from "@mojaloop/platform-shared-lib-messaging-types-lib";
-import {PlatformRoleChangedEvt, SecurityAuthorizationBCTopics} from "@mojaloop/platform-shared-lib-public-messages-lib";
+import {
+    AuthTokenInvalidatedEvt,
+    PlatformRoleChangedEvt,
+    SecurityBCTopics
+} from "@mojaloop/platform-shared-lib-public-messages-lib";
 import {AuthorizationPrivileges, AuthorizationPrivilegesDefinition} from "./privileges";
 
 export class AuthorizationAggregate{
@@ -84,7 +88,7 @@ export class AuthorizationAggregate{
         this._logger.info("Reloading role privilege/associations to memory - done");
 
         this._logger.info("Starting message consumer...");
-        this._messageConsumer.setTopics([SecurityAuthorizationBCTopics.DomainEvents]);
+        this._messageConsumer.setTopics([SecurityBCTopics.DomainEvents]);
         this._messageConsumer.setCallbackFn(this._messageHandler.bind(this));
         await this._messageConsumer.connect();
         await this._messageConsumer.startAndWaitForRebalance();
@@ -138,7 +142,10 @@ export class AuthorizationAggregate{
         //ignore events sent from self
         if(message.msgId === this._lastChangedEvtMsgId) return;
 
-        // for now, simply fetch everything, when we have more
+        // we only care about PlatformRoleChangedEvt for now
+        if(message.msgName !== PlatformRoleChangedEvt.name) return;
+
+
         this._logger.info("PlatformRoleChangedEvt received, reloading all data from the repo...");
         await this._reloadFromRepo();
     }
@@ -306,8 +313,13 @@ export class AuthorizationAggregate{
 
         if(!role.privileges) role.privileges = [];
 
+        let existingRole = await this._authzRepo.fetchPlatformRoleByLabelName(role.labelName);
+        if (existingRole) {
+            throw new CannotCreateDuplicateRoleError();
+        }
+
         if (role.id) {
-            const existingRole = await this._authzRepo.fetchPlatformRole(role.id);
+            existingRole = await this._authzRepo.fetchPlatformRole(role.id);
             if (existingRole) {
                 throw new CannotCreateDuplicateRoleError();
             }
@@ -363,7 +375,7 @@ export class AuthorizationAggregate{
         await this._reloadFromRepo();
     }
 
-    async dissociatePrivilegesToRole(secCtx: CallSecurityContext, privilegeIds:string[], roleId:string):Promise<void>{
+    async dissociatePrivilegesFromRole(secCtx: CallSecurityContext, privilegeIds:string[], roleId:string):Promise<void>{
         this._enforcePrivilege(secCtx, AuthorizationPrivileges.REMOVE_PRIVILEGES_FROM_ROLE);
         const role:PlatformRole  | null = await this._authzRepo.fetchPlatformRole(roleId);
         if(!role) {

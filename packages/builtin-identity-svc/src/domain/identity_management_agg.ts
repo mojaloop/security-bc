@@ -48,6 +48,13 @@ import {BuiltinIdentityPrivileges} from "./privileges";
 import {InvalidRequestError} from "./errors";
 import {IAuditClient} from "@mojaloop/auditing-bc-public-types-lib";
 import {AuditedActionNames} from "./types";
+import {IMessageProducer} from "@mojaloop/platform-shared-lib-messaging-types-lib";
+import {
+    AppDisabledEvt,
+    AppRoleRemovedEvt,
+    UserDisabledEvt,
+    UserRoleRemovedEvt
+} from "@mojaloop/platform-shared-lib-public-messages-lib";
 
 const BCRYPT_SALT_ROUNDS = 12;
 const PASSWORD_MIN_LENGTH = 6;
@@ -59,13 +66,22 @@ export class IdentityManagementAggregate{
     private _repo: IBuiltinIdentityRepository;
     private _auditClient: IAuditClient;
     private _expirySecs: number;
+    private _messageProducer:IMessageProducer;
 
-    constructor(logger: ILogger, repo: IBuiltinIdentityRepository, authorizationClient: IAuthorizationClient, auditClient: IAuditClient, expirySecs:number) {
+    constructor(
+        logger: ILogger,
+        repo: IBuiltinIdentityRepository,
+        authorizationClient: IAuthorizationClient,
+        auditClient: IAuditClient,
+        producer:IMessageProducer,
+        expirySecs:number
+    ) {
         this._logger = logger.createChild(this.constructor.name);
 
         this._repo = repo;
         this._authorizationClient = authorizationClient;
         this._auditClient = auditClient;
+        this._messageProducer = producer;
         this._expirySecs = expirySecs;
     }
 
@@ -459,7 +475,9 @@ export class IdentityManagementAggregate{
             [{ key: "username", value: username }]
         );
 
-        // TODO send message to void tokens (add them to block list on token helper instances)
+        // send message to void tokens (add them to block list on token helper instances)
+        const evt = new UserDisabledEvt({userId: username});
+        await this._messageProducer.send(evt);
 
         return Promise.resolve();
 
@@ -527,6 +545,10 @@ export class IdentityManagementAggregate{
             [{ key: "username", value: username }, {key: "role", value: roleId}]
         );
 
+        // send message to void tokens (add them to block list on token helper instances)
+        const evt = new UserRoleRemovedEvt({userId: username, roleIds: [roleId]});
+        await this._messageProducer.send(evt);
+
         return Promise.resolve();
     }
 
@@ -567,7 +589,7 @@ export class IdentityManagementAggregate{
             clientSecretHash: undefined
         };
 
-        // Applications that can't login on their own have a null secret and no roles
+        // Applications that can't log in on their own have a null secret and no roles
         if(appCreate.canLogin && appCreate.clientSecret!=undefined && appCreate.clientSecret) {
             newApp.clientSecretHash = bcrypt.hashSync(appCreate.clientSecret, BCRYPT_SALT_ROUNDS);
             newApp.platformRoles = appCreate.platformRoles || [];
@@ -725,7 +747,9 @@ export class IdentityManagementAggregate{
             [{ key: "client_id", value: clientId }]
         );
 
-        // TODO send message to void tokens (add them to block list on token helper instances)
+        // send message to void tokens (add them to block list on token helper instances)
+        const evt = new AppDisabledEvt({clientId: clientId});
+        await this._messageProducer.send(evt);
 
         return Promise.resolve();
 
@@ -792,6 +816,10 @@ export class IdentityManagementAggregate{
             {userId: secCtx.username, role: null, appId: secCtx.clientId},
             [{ key: "client_id", value: clientId}, {key: "role", value: roleId}]
         );
+
+        // send message to void tokens (add them to block list on token helper instances)
+        const evt = new AppRoleRemovedEvt({clientId: clientId, roleIds: [roleId]});
+        await this._messageProducer.send(evt);
 
         return Promise.resolve();
     }

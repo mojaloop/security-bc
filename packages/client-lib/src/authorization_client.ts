@@ -43,7 +43,8 @@ import {
     IMessageConsumer,
     MessageTypes
 } from "@mojaloop/platform-shared-lib-messaging-types-lib";
-import {SecurityAuthorizationBCTopics} from "@mojaloop/platform-shared-lib-public-messages-lib";
+import {PlatformRoleChangedEvt, SecurityBCTopics} from "@mojaloop/platform-shared-lib-public-messages-lib";
+import crypto from "crypto";
 
 export type PrivilegesByRole = {
     [roleId: string]: {
@@ -118,16 +119,16 @@ export class AuthorizationClient implements IAuthorizationClient{
 
         try{
             const resp = await this._authRequester.fetch(url.toString());
-            if(resp.status === 401){
-                throw new UnauthorizedError(`Error boostrapBoundedContextConfigs - UnauthorizedError - ${await resp.text()}`);
-            }else if(resp.status === 403){
-                throw new ForbiddenError(`Error boostrapBoundedContextConfigs - Forbidden - ${await resp.text()}`);
-            }else if(resp.status === 200){
+            if(resp.status === 200){
                 this._logger.info("Role privileges associations received successfully");
                 const data = await resp.json();
                 this._rolePrivileges = data;
                 this._lastFetchTimestamp = Date.now();
                 return;
+            }else if(resp.status === 401){
+                throw new UnauthorizedError(`Error boostrapBoundedContextConfigs - UnauthorizedError - ${await resp.text()}`);
+            }else if(resp.status === 403){
+                throw new ForbiddenError(`Error boostrapBoundedContextConfigs - Forbidden - ${await resp.text()}`);
             }else{
                 throw new Error("Invalid response from Authentication Service fetching role privileges association - http response code: "+resp.status);
             }
@@ -139,7 +140,7 @@ export class AuthorizationClient implements IAuthorizationClient{
 
     async init():Promise<void>{
         if(this._messageConsumer){
-            this._messageConsumer.setTopics([SecurityAuthorizationBCTopics.DomainEvents]);
+            this._messageConsumer.setTopics([SecurityBCTopics.DomainEvents]);
             this._messageConsumer.setCallbackFn(this._messageHandler.bind(this));
             await this._messageConsumer.connect();
             await this._messageConsumer.startAndWaitForRebalance();
@@ -148,21 +149,28 @@ export class AuthorizationClient implements IAuthorizationClient{
 
     private async _messageHandler(message:IMessage):Promise<void>{
         if(message.msgType !== MessageTypes.DOMAIN_EVENT) return;
+        if(message.msgName !== PlatformRoleChangedEvt.name) return;
 
         // for now, simply fetch everything
-
         this._logger.info("PlatformRoleChangedEvt received, fetching updated Role privileges associations...");
-        await this.fetch();
-        // if(message.msgName === "PlatformRoleChangedEvt"){
-        //     const
-        //     await this._roleChangedHandler();
-        // }
+
+        // randomize wait time, so we don't have all clients fetching at the exact same time
+        setTimeout(async ()=>{
+            await this.fetch();
+        }, crypto.randomInt(0,5000));
     }
 
     roleHasPrivilege(roleId:string, privilegeId:string):boolean{
         if(!this._rolePrivileges || !this._rolePrivileges[roleId]) return false;
 
         return this._rolePrivileges[roleId].privileges.includes(privilegeId);
+    }
+
+    rolesHavePrivilege(roleIds: string[], privilegeId: string): boolean{
+        for (const roleId of roleIds) {
+            if (this.roleHasPrivilege(roleId, privilegeId)) return true;
+        }
+        return false;
     }
 
     private _hasPrivilege(privId: string):boolean{

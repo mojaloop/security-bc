@@ -41,8 +41,9 @@ export interface IAMAuthenticationAdapter {
 
 export interface ICryptoAuthenticationAdapter {
     init(): Promise<void>;
-    generateJWT(additionalPayload:any, sub:string, aud:string, lifeInSecs:number):Promise<string>;
+    generateJWT(additionalPayload:any, sub:string, aud:string, lifeInSecs:number):Promise<{accessToken:string, tokenId:string }>;
     getJwsKeys():Promise<any[]>; // returns an JWS object array, no need to type it
+    verifyAndGetSecPrincipalFromToken(accessToken:string):Promise<string|null>;
     // generateRandomToken(length:number):Promise<string>;
 }
 
@@ -57,4 +58,18 @@ export interface ILocalRoleAssociationRepo {
 
     storeUserRoles(username: string, roles: string[]): Promise<void>;
     storeApplicationRoles(clientId: string, roles: string[]): Promise<void>;
+}
+
+export interface IJwtIdsRepository{
+    init(): Promise<void>;
+    destroy(): Promise<void>;
+
+    // Set jwt id / secPrincipalId association that will expire and be automatically removed after tokenExpirationDateTimestamp
+    set(secPrincipalId:string, jti:string, tokenExpirationDateTimestamp:number):Promise<void>;
+
+    // Get a list of jwt ids associated with the secPrincipalId (not expired)
+    get(secPrincipalId:string):Promise<{jti:string, tokenExpirationDateTimestamp:number}[]>;
+
+    // remove all token association for secPrincipalId
+    del(secPrincipalId:string):Promise<void>;
 }

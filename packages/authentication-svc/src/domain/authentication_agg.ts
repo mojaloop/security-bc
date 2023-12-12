@@ -31,9 +31,16 @@
 "use strict";
 
 
-import {IAMAuthenticationAdapter, ICryptoAuthenticationAdapter, ILocalRoleAssociationRepo} from "./interfaces";
+import {
+    IAMAuthenticationAdapter,
+    ICryptoAuthenticationAdapter,
+    IJwtIdsRepository,
+    ILocalRoleAssociationRepo
+} from "./interfaces";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {TokenEndpointResponse} from "@mojaloop/security-bc-public-types-lib";
+import {TokenEndpointResponse, UnauthorizedError} from "@mojaloop/security-bc-public-types-lib";
+import {IMessageProducer} from "@mojaloop/platform-shared-lib-messaging-types-lib";
+import {AuthTokenInvalidatedEvt} from "@mojaloop/platform-shared-lib-public-messages-lib";
 
 const SUPPORTED_GRANTS = ["password","client_credentials"];
 
@@ -54,13 +61,27 @@ export class AuthenticationAggregate{
     private _iam:IAMAuthenticationAdapter;
     private _crypto:ICryptoAuthenticationAdapter;
     private readonly _localRolesRepo: ILocalRoleAssociationRepo | null;
+    private readonly _jwtIdsRepo:IJwtIdsRepository;
+    private readonly _messageProducer:IMessageProducer;
     private readonly _options: AuthenticationAggregateOptions;
 
-    constructor(iam:IAMAuthenticationAdapter, crypto:ICryptoAuthenticationAdapter, logger: ILogger, localRolesRepo: ILocalRoleAssociationRepo | null, options?: AuthenticationAggregateOptions) {
+    constructor(
+        iam:IAMAuthenticationAdapter,
+        crypto:ICryptoAuthenticationAdapter,
+        logger: ILogger,
+        localRolesRepo: ILocalRoleAssociationRepo | null,
+        jwtIdsRepo:IJwtIdsRepository,
+        messageProducer:IMessageProducer,
+        options?: AuthenticationAggregateOptions
+    ) {
         this._logger = logger.createChild(this.constructor.name);
         this._iam = iam;
         this._crypto = crypto;
+        this._localRolesRepo = localRolesRepo;
+        this._jwtIdsRepo = jwtIdsRepo;
+        this._messageProducer = messageProducer;
         this._options = options || AuthenticationAggregateDefaultOptions;
+
 
         // apply individual defaults if options were provided
         if(options) {
@@ -79,6 +100,34 @@ export class AuthenticationAggregate{
             throw new Error("If using rolesFromIamProvider option, a valid ILocalRoleAssociationRepo must be provided");
         }
     }
+
+    private async _logout(secPrincipalId:string):Promise<void>{
+        this._logger.info(`Logging out secPrincipalId: ${secPrincipalId}`);
+
+        const tokenIds = await this._jwtIdsRepo.get(secPrincipalId);
+        if(!tokenIds) return;
+
+        const messages:AuthTokenInvalidatedEvt[] = [];
+
+        for(const item of tokenIds){
+            messages.push(new AuthTokenInvalidatedEvt({
+                tokenId: item.jti,
+                tokenExpirationDateTimestamp: item.tokenExpirationDateTimestamp
+            }));
+        }
+
+        if(messages.length>0) await this._messageProducer.send(messages);
+        await this._jwtIdsRepo.del(secPrincipalId);
+    }
+
+    async logoutToken(accessToken:string):Promise<void>{
+        const secPrincipal = await this._crypto.verifyAndGetSecPrincipalFromToken(accessToken);
+
+        if(!secPrincipal) throw new UnauthorizedError();
+
+        await this._logout(secPrincipal);
+    }
+
 
     async loginUser(client_id:string, client_secret:string | null, username:string, password:string, audience?:string, scope?:string):Promise<TokenEndpointResponse | null> {
         if(!username || !password){
@@ -115,24 +164,30 @@ export class AuthenticationAggregate{
         // apply the minimum duration between the local setting and the IAM response (if one was provided, ie, gt 0)
         const tokenLifeSecs = Math.min(this._options.tokenLifeSecs!, loginResponse.expires_in || this._options.tokenLifeSecs!);
 
-        const accessCode = await this._crypto.generateJWT(
+        const genJwtResp = await this._crypto.generateJWT(
             additionalPayload,
             `user::${username}`,
             audience || this._options.defaultAudience!,
             tokenLifeSecs
         );
 
+        await this._jwtIdsRepo.set(username, genJwtResp.tokenId, Date.now() + tokenLifeSecs * 1000);
+
         // TODO verify return
         const ret = {
             token_type: "Bearer",
             scope: null,
-            access_token: accessCode,
+            access_token: genJwtResp.accessToken,
             expires_in: tokenLifeSecs,
             refresh_token: null,
             refresh_token_expires_in: null
         };
         this._logger.info(`App Login successful for username: ${username}`);
         return ret;
+    }
+
+    async logoutUser(username:string):Promise<void>{
+        await this._logout(username);
     }
 
     async loginApp(client_id:string, client_secret:string, audience?:string, scope?:string):Promise<TokenEndpointResponse | null> {
@@ -166,18 +221,20 @@ export class AuthenticationAggregate{
         // apply the minimum duration between the local setting and the IAM response (if one was provided, ie, gt 0)
         const tokenLifeSecs = Math.min(this._options.tokenLifeSecs!, loginResponse.expires_in || this._options.tokenLifeSecs!);
 
-        const accessCode = await this._crypto.generateJWT(
+        const genJwtResp = await this._crypto.generateJWT(
             additionalPayload,
             `app::${client_id}`,
             audience || this._options.defaultAudience!,
             tokenLifeSecs
         );
 
+        await this._jwtIdsRepo.set(client_id, genJwtResp.tokenId, Date.now() + tokenLifeSecs * 1000);
+
         // TODO verify return
         const ret = {
             token_type: "Bearer",
             scope: null,
-            access_token: accessCode,
+            access_token: genJwtResp.accessToken,
             expires_in: tokenLifeSecs,
             refresh_token: null,
             refresh_token_expires_in: null
@@ -186,6 +243,10 @@ export class AuthenticationAggregate{
         this._logger.info(`App Login successful for client_id: ${client_id}`);
 
         return ret;
+    }
+
+    async logoutApp(client_id:string):Promise<void>{
+        await this._logout(client_id);
     }
 
     getSupportedGrants():string[]{

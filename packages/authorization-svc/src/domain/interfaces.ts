@@ -49,6 +49,8 @@ export interface IAuthorizationRepository {
     // PlatformRole
     storePlatformRole(role:PlatformRole):Promise<void>;
     fetchPlatformRole(roleId:string):Promise<PlatformRole | null>;
+    fetchPlatformRoleByLabelName(roleLabelName:string):Promise<PlatformRole | null>;
+
     fetchAllPlatformRoles():Promise<PlatformRole[]>;
 
     // AppPrivileges (privs grouped by app/bc scope)
