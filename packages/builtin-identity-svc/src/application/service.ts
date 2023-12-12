@@ -188,6 +188,7 @@ export class Service {
             AUTH_N_TOKEN_AUDIENCE,
             new MLKafkaJsonConsumer({kafkaBrokerList: KAFKA_URL, autoOffsetReset: "earliest", kafkaGroupId: INSTANCE_ID}, logger) // for jwt list - no groupId
         );
+        await this.tokenHelper.init();
 
         // authorization client
         if (!userManagementRepo) {

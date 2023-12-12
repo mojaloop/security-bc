@@ -96,17 +96,18 @@ export class AuthorizationClient implements IAuthorizationClient{
 
         try{
             const resp = await this._authRequester.fetch(request);
-            if(resp.status === 401){
-                throw new UnauthorizedError(`Could not bootstrap privileges to Authorization Service - UnauthorizedError - ${await resp.text()}`);
-            }else if(resp.status === 403){
-                throw new ForbiddenError(`Could not bootstrap privileges to Authorization Service - Forbidden - ${await resp.text()}`);
-            }else if(resp.status === 200 || (ignoreDuplicateError === true && resp.status === 409)){
+            if(resp.status === 200 || (ignoreDuplicateError === true && resp.status === 409)){
                 this._logger.info("Boostrap completed successfully");
                 return true;
             }else{
                 throw new Error("Could not bootstrap privileges to Authorization Service - http response code: "+resp.status);
             }
         }catch (err:any) {
+            if(err instanceof UnauthorizedError){
+                throw new UnauthorizedError(`Could not bootstrap privileges to Authorization Service - UnauthorizedError - ${err.message}`);
+            }else if(err instanceof ForbiddenError){
+                throw new ForbiddenError(`Could not bootstrap privileges to Authorization Service - Forbidden - ${err.message}`);
+            }
             this._logger.error(err, "Could not bootstrap privileges to Authorization Service");
             throw new Error(err?.message  || "Could not bootstrap privileges to Authorization Service");
         }
@@ -125,14 +126,15 @@ export class AuthorizationClient implements IAuthorizationClient{
                 this._rolePrivileges = data;
                 this._lastFetchTimestamp = Date.now();
                 return;
-            }else if(resp.status === 401){
-                throw new UnauthorizedError(`Error boostrapBoundedContextConfigs - UnauthorizedError - ${await resp.text()}`);
-            }else if(resp.status === 403){
-                throw new ForbiddenError(`Error boostrapBoundedContextConfigs - Forbidden - ${await resp.text()}`);
             }else{
                 throw new Error("Invalid response from Authorization Service fetching role privileges association - http response code: "+resp.status);
             }
         }catch(err:any){
+            if(err instanceof UnauthorizedError){
+                throw new UnauthorizedError(`Error boostrapBoundedContextConfigs - UnauthorizedError - ${err.message}`);
+            }else if(err instanceof ForbiddenError){
+                throw new ForbiddenError(`Error boostrapBoundedContextConfigs - Forbidden - ${err.message}`);
+            }
             this._logger.error(err, "Could not fetch role privileges association from Authorization Service");
             throw new Error(err?.message  || "Unknown error fetching role privileges association from Authorization Service");
         }
