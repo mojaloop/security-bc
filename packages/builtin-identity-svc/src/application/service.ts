@@ -33,6 +33,7 @@
 import {Server} from "http";
 import express, {Express} from "express";
 import process from "process";
+import crypto from "crypto";
 
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import { IBuiltinIdentityRepository} from "../domain/interfaces";
