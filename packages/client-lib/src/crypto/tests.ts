@@ -345,7 +345,7 @@ function CA_intermediate_createCert(){
 let DFSP_A_PrivateKeyPEM:string;
 let DFSP_A_PrivateKey: forge.pki.rsa.PrivateKey;
 let DFSP_A_PublicKey:  forge.pki.rsa.PublicKey;
-let DFSP_A_CSR: forge.pki.CertificateRequest;
+let DFSP_A_CSR: forge.pki.CertificateSigningRequest;
 let DFSP_A_CSR_PEM: string;
 
 function DFSP_A_loadKeys(){
@@ -508,7 +508,7 @@ function CA_signDfspCsr() {
         },
     ]);
 
-    DFSP_A_signed_cert.publicKey = RECEIVED_DFSP_A_CSR.publicKey;
+    DFSP_A_signed_cert.publicKey = RECEIVED_DFSP_A_CSR.publicKey as pki.PublicKey;
     DFSP_A_signed_cert.sign(CA_intermediate_PrivateKey, forge.md.sha256.create());
 
     DFSP_A_signed_cert_PEM = pki.certificateToPem(DFSP_A_signed_cert);
