@@ -39,11 +39,11 @@
         "dep:update": "ncu -u"
     },
     "dependencies": {
-        "@mojaloop/platform-shared-lib-messaging-types-lib": "~0.5.4",
-        "@mojaloop/platform-shared-lib-public-messages-lib": "~0.5.10",
-        "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib": "~0.5.6",
-        "@mojaloop/logging-bc-client-lib": "^0.5.2",
-        "@mojaloop/platform-configuration-bc-client-lib": "^0.5.2",
+        "@mojaloop/platform-shared-lib-messaging-types-lib": "~0.5.5",
+        "@mojaloop/platform-shared-lib-public-messages-lib": "~0.5.11",
+        "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib": "~0.5.7",
+        "@mojaloop/logging-bc-client-lib": "^0.5.6",
+        "@mojaloop/platform-configuration-bc-client-lib": "^0.5.3",
         "@mojaloop/platform-configuration-bc-public-types-lib": "~0.5.2",
         "@mojaloop/security-bc-public-types-lib": "*",
         "ioredis": "~5.3.2",
