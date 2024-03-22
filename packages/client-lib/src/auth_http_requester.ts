@@ -249,7 +249,7 @@ export class AuthenticatedHttpRequester implements IAuthenticatedHttpRequester{
 					return reject(err);
 				}
 			}).catch(reason => {
-				const err = new Error("Unknown error fetching token - err: " + (reason instanceof Error) ? reason.message:reason);
+				const err = new Error("Unknown error fetching token - err: " + (reason instanceof Error) ? reason.cause.message : reason);
 				this._logger.error(err);
 				reject(err);
 			});
