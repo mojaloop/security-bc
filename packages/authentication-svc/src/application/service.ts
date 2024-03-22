@@ -54,6 +54,7 @@ import {IMessageConsumer, IMessageProducer} from "@mojaloop/platform-shared-lib-
 import {MLKafkaJsonConsumer, MLKafkaJsonProducer} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
 import {JwtIdRedisRepo} from "../infrastructure/jwtid_redis_repo";
 import {AuthenticationEventHandler} from "./event_handler";
+import {KeycloakIamAdapter} from "../infrastructure/keycloak_iam_adapter";
 
 // get configClient from dedicated file
 // import configClient, {configKeys} from "./config";
@@ -93,6 +94,13 @@ const REDIS_PORT = (process.env["REDIS_PORT"] && parseInt(process.env["REDIS_POR
 
 const INSTANCE_NAME = `${BC_NAME}_${APP_NAME}`;
 const INSTANCE_ID = `${BC_NAME}_${APP_NAME}__${crypto.randomUUID()}`;
+
+// KEYCLOAK
+const USE_KEYCLOAK = process.env["USE_KEYCLOAK"] || true;
+const KEYCLOAK_URL = process.env["KEYCLOAK_URL"] || "http://localhost:8080/auth";
+const KEYCLOAK_REALM = process.env["KEYCLOAK_REALM"] || "master";
+const KEYCLOAK_CLIENT_ID = process.env["KEYCLOAK_CLIENT_ID"] || "mojaloop";
+const KEYCLOAK_CLIENT_SECRET = process.env["KEYCLOAK_CLIENT_SECRET"] || "mojaloop";
 
 
 // kafka logger
@@ -149,8 +157,12 @@ export class Service {
             defaultAudience: AUTH_N_DEFAULT_AUDIENCE
         };
 
-        if(!iamAdapter){
-            iamAdapter = new BuiltinIamAdapter(BUILTIN_IAM_BASE_URL, this.logger);
+        if(!iamAdapter) {
+            if(USE_KEYCLOAK) {
+                iamAdapter = new KeycloakIamAdapter(KEYCLOAK_URL, KEYCLOAK_REALM, logger);
+            }else {
+                iamAdapter = new BuiltinIamAdapter(BUILTIN_IAM_BASE_URL, this.logger);
+            }
             await iamAdapter.init();
         }
         this.iam = iamAdapter;
