@@ -28,7 +28,7 @@ See the Reference Architecture documentation [security section](https://mojaloop
   - [Documentation](#documentation)
 
 ## Packages
-The Account Lookup BC consists of the following packages;
+The Security BC consists of the following packages;
 
 `authentication-svc`
 Authentication Service.
@@ -139,6 +139,6 @@ The process includes five phases.
 ## Documentation
 The following documentation provides insight into the Settlements Bounded Context.
 
-- **Technical Flows** - [`../docs/flows`](docs/flows/)
+- **MIRO Board** - https://miro.com/app/board/o9J_lJyA1TA=/
 - **Reference Architecture** - https://mojaloop.github.io/reference-architecture-doc/boundedContexts/security/ 
 - **Work Sessions** - https://docs.google.com/document/d/1Nm6B_tSR1mOM0LEzxZ9uQnGwXkruBeYB2slgYK1Kflo/edit#heading=h.6w64vxvw6er4

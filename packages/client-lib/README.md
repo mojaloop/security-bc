@@ -6,7 +6,7 @@
 [![NPM Vulnerabilities](https://img.shields.io/snyk/vulnerabilities/npm/@mojaloop/security-bc-client-lib.svg?style=flat)](https://www.npmjs.com/package/@mojaloop/security-bc-client-lib)
 [![CircleCI](https://circleci.com/gh/mojaloop/security-bc.svg?style=shield)](https://circleci.com/github/mojaloop/security-bc)
 
-Mojaloop vNext Security Client Service
+Mojaloop vNext Security Client Library
 
 # TokenHelper
 
