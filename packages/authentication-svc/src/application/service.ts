@@ -414,7 +414,7 @@ export class Service {
 
             // associate roles with client
             // const clientRoles = await Promise.all(client.platformRoles.map(role => keycloakAdminClient.roles.findOneByName({name: role})));
-            await keycloakAdminClient.clients.addCompositeRole;
+            // await keycloakAdminClient.clients.addCompositeRole;
         }
     }
 
