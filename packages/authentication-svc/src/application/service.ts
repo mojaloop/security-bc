@@ -55,10 +55,14 @@ import {MLKafkaJsonConsumer, MLKafkaJsonProducer} from "@mojaloop/platform-share
 import {JwtIdRedisRepo} from "../infrastructure/jwtid_redis_repo";
 import {AuthenticationEventHandler} from "./event_handler";
 import {KeycloakIamAdapter} from "../infrastructure/keycloak_iam_adapter";
+import { Credentials, KeycloakAdminClient, RoleRepresentation } from "@dedel.alex/keycloak-admin-client-cjs";
 
+import {PlatformRole} from "@mojaloop/security-bc-public-types-lib";
 // get configClient from dedicated file
 // import configClient, {configKeys} from "./config";
-// import {defaultDevApplications, defaultDevUsers} from "../dev_defaults";
+import {defaultDevApplications, defaultDevRoles, defaultDevUsers} from "../dev_defaults";
+import axios from "axios";
+// import KeycloakAdminClient from "@keycloak/keycloak-admin-client";
 // import configClient from "./config";
 
 
@@ -97,16 +101,30 @@ const INSTANCE_ID = `${BC_NAME}_${APP_NAME}__${crypto.randomUUID()}`;
 
 // KEYCLOAK
 const USE_KEYCLOAK = process.env["USE_KEYCLOAK"] || true;
-const KEYCLOAK_URL = process.env["KEYCLOAK_URL"] || "http://localhost:8080/auth";
-const KEYCLOAK_REALM = process.env["KEYCLOAK_REALM"] || "master";
-const KEYCLOAK_CLIENT_ID = process.env["KEYCLOAK_CLIENT_ID"] || "mojaloop";
-const KEYCLOAK_CLIENT_SECRET = process.env["KEYCLOAK_CLIENT_SECRET"] || "mojaloop";
-
+const KEYCLOAK_URL = process.env["KEYCLOAK_URL"] || "http://localhost:8181";
+const KEYCLOAK_MASTER_REALM = process.env["KEYCLOAK_REALM"] || "master";
+const KEYCLOAK_MOJALOOP_REALM = process.env["KEYCLOAK_REALM"] || "mojaloop";
+const KEYCLOAK_ADMIN_CLIENT_ID = process.env["KEYCLOAK_ADMIN_CLIENT_ID"] || "admin-cli";
+const KEYCLOAK_ADMIN_USERNAME = process.env["KEYCLOAK_ADMIN_USERNAME"] || "admin";
+const KEYCLOAK_ADMIN_PASSWORD = process.env["KEYCLOAK_ADMIN_PASSWORD"] || "admin";
 
 // kafka logger
 const kafkaProducerOptions = {
     kafkaBrokerList: KAFKA_URL
 };
+
+// keycloak admin credentials
+const keycloakAdminCredentials: Credentials = {
+    username: KEYCLOAK_ADMIN_USERNAME,
+    password: KEYCLOAK_ADMIN_PASSWORD,
+    grantType: "password",
+    clientId: KEYCLOAK_ADMIN_CLIENT_ID
+};
+
+const keycloakAdminClient = new KeycloakAdminClient({
+    baseUrl: KEYCLOAK_URL,
+    realmName: KEYCLOAK_MASTER_REALM
+});
 
 // global
 let globalLogger: ILogger;
@@ -159,8 +177,13 @@ export class Service {
 
         if(!iamAdapter) {
             if(USE_KEYCLOAK) {
-                iamAdapter = new KeycloakIamAdapter(KEYCLOAK_URL, KEYCLOAK_REALM, logger);
+                this.logger.info("Using Keycloak as IAM provider instead of bultin IAM");
+                await this.bootstrapKeycloak();
+                // const token = await this.getKeycloakAdminToken(KEYCLOAK_URL, KEYCLOAK_REALM, KEYCLOAK_ADMIN_USERNAME, KEYCLOAK_ADMIN_PASSWORD, KEYCLOAK_ADMIN_CLIENT_ID);
+                // this.logger.info(`Obtained Keycloak admin token: ${token}`);
+                iamAdapter = new KeycloakIamAdapter(KEYCLOAK_URL, KEYCLOAK_MOJALOOP_REALM, logger);
             }else {
+                this.logger.info("Using builtin IAM provider");
                 iamAdapter = new BuiltinIamAdapter(BUILTIN_IAM_BASE_URL, this.logger);
             }
             await iamAdapter.init();
@@ -287,6 +310,134 @@ export class Service {
         if (this.logger && this.logger instanceof KafkaLogger) await this.logger.destroy();
 
         if(this.messageProducer) await this.messageProducer.destroy();
+    }
+
+    static async bootstrapKeycloak(): Promise<void> {
+        await keycloakAdminClient.auth(keycloakAdminCredentials);
+
+        // Check if the realm already exists
+        const realm = await keycloakAdminClient.realms.findOne({ realm: KEYCLOAK_MOJALOOP_REALM });
+        if (!realm || !realm.id) {
+            await keycloakAdminClient.realms.create({realm: KEYCLOAK_MOJALOOP_REALM, enabled: true});
+            this.logger.info(`Realm created: ${KEYCLOAK_MOJALOOP_REALM}`);
+        } else {
+            this.logger.info(`Realm already exists: ${KEYCLOAK_MOJALOOP_REALM}`);
+        }
+
+        // change to the new mojaloop realm from master realm
+        keycloakAdminClient.setConfig({ realmName: KEYCLOAK_MOJALOOP_REALM });
+
+        // Create roles and composite roles
+        for (const role of defaultDevRoles) {
+            // check if role already exists
+            const existingRole = await keycloakAdminClient.roles.findOneByName({name: role.id});
+            if (existingRole) {
+                this.logger.info(`Role already exists: ${role.id}. Skipping.`);
+                continue;
+            }
+
+            // Create roles for each privilege if not already created
+            for (const privilege of role.privileges) {
+                // Avoid creating duplicate roles
+                try {
+                    await keycloakAdminClient.roles.create({name: privilege});
+                    this.logger.info(`Privilege role created: ${privilege}`);
+                } catch (error) {
+                    this.logger.info(`Privilege role already exists or error creating: ${privilege}`);
+                }
+            }
+            try{
+              await keycloakAdminClient.roles.create({name: role.id});
+              this.logger.info(`Composite Role created: ${role.id}`);
+            } catch (error) {
+              this.logger.info(`Composite Role already exists or error creating: ${role.id}`);
+            }
+
+            // Associate privileges with role as composite roles
+            const compositeRoles = await Promise.all(role.privileges.map(privilege => keycloakAdminClient.roles.findOneByName({name: privilege})));
+            await keycloakAdminClient.roles.createComposite({
+                roleId: (await keycloakAdminClient.roles.findOneByName({name: role.id}))?.id || "",
+            },
+                compositeRoles.filter(role => role && role.id) as RoleRepresentation[]
+            );
+            this.logger.info(`Composite roles associated for: ${role.id}`);
+
+            // update roles with attributes
+            await this.updateCompositeRoleWithAttributes(role);
+        }
+
+        // create users
+        const users = await keycloakAdminClient.users.find();
+        for (const user of defaultDevUsers) {
+          // check if user already exists
+          const existingUser = users.find(u => u.username === user.id);
+          if (existingUser) {
+              this.logger.info(`User already exists: ${user.id}. Skipping.`);
+              continue;
+          }
+
+          await keycloakAdminClient.users.create({
+              username: user.id,
+              enabled: true,
+              credentials: [{ type: "password", value: user.password, temporary: false }],
+              firstName: user.fullName.split(" ")[0],
+              lastName: user.fullName.split(" ")[1] || "",
+              realmRoles: user.platformRoles,
+              realm: KEYCLOAK_MOJALOOP_REALM
+          });
+          this.logger.info(`User created: ${user.id}`);
+        }
+        // get compositeRoles
+
+
+        // create applications clients
+        const clients = await keycloakAdminClient.clients.find();
+        for(const client of defaultDevApplications){
+            // check if client already exists
+            const existingClient = clients.find(c => c.clientId === client.client_id);
+            if (existingClient) {
+                this.logger.info(`Client already exists: ${existingClient.id}. Skipping.`);
+                continue;
+            }
+
+            await keycloakAdminClient.clients.create({
+                clientId: client.client_id,
+                secret: client.client_secret ?? undefined,
+                authorizationServicesEnabled: true,
+                clientAuthenticatorType: "client-secret",
+                enabled: true,
+                protocol: "openid-connect",
+                realm: KEYCLOAK_MOJALOOP_REALM,
+                defaultRoles: client.platformRoles,
+            });
+            this.logger.info(`Client created: ${client.client_id}`);
+
+            // associate roles with client
+            // const clientRoles = await Promise.all(client.platformRoles.map(role => keycloakAdminClient.roles.findOneByName({name: role})));
+            await keycloakAdminClient.clients.addCompositeRole;
+        }
+    }
+
+    static async updateCompositeRoleWithAttributes(roleData: PlatformRole): Promise<void> {
+        const roleRepresentation = {
+            description: roleData.description,
+            attributes: {
+                labelName: [roleData.labelName],
+                // Convert boolean values to strings
+                isApplicationRole: [String(roleData.isApplicationRole)],
+                isExternal: [String(roleData.isExternal)],
+                externalId: [roleData.externalId ? roleData.externalId : ""], // Handle null or undefined
+                isPerParticipantRole: [String(roleData.isPerParticipantRole)]
+            }
+        };
+
+        const role = await keycloakAdminClient.roles.findOneByName({name: roleData.id});
+        if (!role) {
+            this.logger.error(`Role not found: ${roleData.id}`);
+            return;
+        }
+        await keycloakAdminClient.roles.updateByName({name: roleData.id}, roleRepresentation);
+        this.logger.info(`Role with attributes updated: ${roleData.id}`);
     }
 
 }
