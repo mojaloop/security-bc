@@ -35,3 +35,4 @@ export * from "./authorization_client";
 export * from "./errors";
 export * from "./auth_http_requester";
 export * from "./crypto";
+export * from "./key_management_http_client";

@@ -16,6 +16,7 @@
         "start:authentication-svc": "npm -w @mojaloop/security-bc-authentication-svc run start",
         "start:authorization-svc": "npm -w @mojaloop/security-bc-authorization-svc run start",
         "start:identity-svc": "npm -w @mojaloop/security-bc-builtin-identity-svc run start",
+        "start:key-management-svc": "npm -w @mojaloop/security-bc-key-management-svc run start",
         "pre_commit_check": "npm run build && npm run lint && npm run test:unit",
         "build": "npm -ws run build",
         "watch": "npm -ws run watch",

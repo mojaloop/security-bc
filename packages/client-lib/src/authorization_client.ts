@@ -121,11 +121,11 @@ export class AuthorizationClient implements IAuthorizationClient{
         try{
             const resp = await this._authRequester.fetch(url.toString());
             if(resp.status === 200){
-                this._logger.info("Role privileges associations received successfully");
                 const data = await resp.json();
+                this._logger.info("Role privileges associations received successfully", data);
                 this._rolePrivileges = data;
                 this._lastFetchTimestamp = Date.now();
-                return;
+                return data;
             }else{
                 throw new Error("Invalid response from Authorization Service fetching role privileges association - http response code: "+resp.status);
             }

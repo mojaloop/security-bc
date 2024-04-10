@@ -41,15 +41,15 @@ import {
     InvalidPlatformRoleError,
     NewRoleWithPrivsUsersOrAppsError, PlatformRoleNotFoundError, PrivilegeNotFoundError
 } from "../domain/errors";
-import {PrivilegesByRole} from "../domain/types";
-import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import { PrivilegesByRole } from "../domain/types";
+import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
 import {
     AppPrivileges,
     CallSecurityContext, ForbiddenError, ITokenHelper, MakerCheckerViolationError,
     PlatformRole,
     PrivilegeWithOwnerAppInfo, UnauthorizedError
 } from "@mojaloop/security-bc-public-types-lib";
-import {AuthorizationAggregate} from "../domain/authorization_agg";
+import { AuthorizationAggregate } from "../domain/authorization_agg";
 
 // Extend express request to include our security fields
 declare module "express-serve-static-core" {
@@ -59,14 +59,14 @@ declare module "express-serve-static-core" {
 }
 
 export class ExpressRoutes {
-    private _logger:ILogger;
+    private _logger: ILogger;
     private _tokenHelper: ITokenHelper;
     private _authorizationAggregate: AuthorizationAggregate;
     private _mainRouter = express.Router();
     private _privilegesRouter = express.Router();
     private _rolesRouter = express.Router();
 
-    constructor(authorizationAggregate: AuthorizationAggregate, tokenHelper: ITokenHelper, logger:ILogger) {
+    constructor(authorizationAggregate: AuthorizationAggregate, tokenHelper: ITokenHelper, logger: ILogger) {
         this._logger = logger.createChild(this.constructor.name);
         this._tokenHelper = tokenHelper;
         this._authorizationAggregate = authorizationAggregate;
@@ -103,9 +103,9 @@ export class ExpressRoutes {
         }
 
         const bearerToken = bearer[1];
-        const callSecCtx:  CallSecurityContext | null = await this._tokenHelper.getCallSecurityContextFromAccessToken(bearerToken);
+        const callSecCtx: CallSecurityContext | null = await this._tokenHelper.getCallSecurityContextFromAccessToken(bearerToken);
 
-        if(!callSecCtx){
+        if (!callSecCtx) {
             return res.sendStatus(401);
         }
 
@@ -134,23 +134,23 @@ export class ExpressRoutes {
         return handled;
     }
 
-    get MainRouter():express.Router{
+    get MainRouter(): express.Router {
         return this._mainRouter;
     }
-    get PrivilegesRouter():express.Router{
+    get PrivilegesRouter(): express.Router {
         return this._privilegesRouter;
     }
-    get RolesRouter():express.Router{
+    get RolesRouter(): express.Router {
         return this._rolesRouter;
     }
 
-    private async postBootstrap(req: express.Request, res: express.Response){
+    private async postBootstrap(req: express.Request, res: express.Response) {
         const data: AppPrivileges = req.body as AppPrivileges;
         this._logger.debug(data);
 
-        await this._authorizationAggregate.processAppBootstrap(req.securityContext!, data).then(()=>{
+        await this._authorizationAggregate.processAppBootstrap(req.securityContext!, data).then(() => {
             return res.status(200).send();
-        }).catch((error: Error)=>{
+        }).catch((error: Error) => {
             if (this._handleUnauthorizedError(error, res)) return;
 
             if (error instanceof InvalidAppPrivilegesError) {
@@ -173,7 +173,7 @@ export class ExpressRoutes {
                     status: "error",
                     msg: "Could not store appPrivileges"
                 });
-            }else {
+            } else {
                 return res.status(500).json({
                     status: "error",
                     msg: "unknown error"
@@ -182,11 +182,11 @@ export class ExpressRoutes {
         });
     }
 
-    private async getAppRoles(req: express.Request, res: express.Response){
+    private async getAppRoles(req: express.Request, res: express.Response) {
         const bcName = req.query["bcName"] ?? null;
         const appName = req.query["appName"] ?? null;
 
-        if(!bcName || !appName){
+        if (!bcName || !appName) {
             return res.status(400).json({
                 status: "error",
                 msg: "invalid bcName or appName"
@@ -197,16 +197,16 @@ export class ExpressRoutes {
             req.securityContext!,
             bcName.toString(),
             appName.toString()
-        ).then((resp:PrivilegesByRole)=>{
+        ).then((resp: PrivilegesByRole) => {
             return res.send(resp);
-        }).catch((error: Error)=>{
+        }).catch((error: Error) => {
             if (this._handleUnauthorizedError(error, res)) return;
             if (error instanceof ApplicationsPrivilegesNotFoundError) {
                 return res.status(404).json({
                     status: "error",
                     msg: "Application Privileges not found"
                 });
-            }else{
+            } else {
                 this._logger.error("error in getAppRoles route");
                 return res.status(500).json({
                     status: "error",
@@ -217,10 +217,10 @@ export class ExpressRoutes {
         return;
     }
 
-    private async getAllAppPrivileges(req: express.Request, res: express.Response){
-        await this._authorizationAggregate.getAllPrivileges(req.securityContext!).then((resp:PrivilegeWithOwnerAppInfo[])=>{
+    private async getAllAppPrivileges(req: express.Request, res: express.Response) {
+        await this._authorizationAggregate.getAllPrivileges(req.securityContext!).then((resp: PrivilegeWithOwnerAppInfo[]) => {
             return res.send(resp);
-        }).catch((error: Error)=>{
+        }).catch((error: Error) => {
             if (this._handleUnauthorizedError(error, res)) return;
             this._logger.error("error in getAllAppPrivileges route");
             return res.status(500).json({
@@ -232,10 +232,10 @@ export class ExpressRoutes {
 
 
     // roles
-    private async getAllPlatformRole(req: express.Request, res: express.Response){
-        await this._authorizationAggregate.getAllRoles(req.securityContext!).then((resp:PlatformRole[])=>{
+    private async getAllPlatformRole(req: express.Request, res: express.Response) {
+        await this._authorizationAggregate.getAllRoles(req.securityContext!).then((resp: PlatformRole[]) => {
             return res.send(resp);
-        }).catch((error: Error)=>{
+        }).catch((error: Error) => {
             if (this._handleUnauthorizedError(error, res)) return;
             this._logger.error("error in getAllPlatformRole route");
             return res.status(500).json({
@@ -245,13 +245,13 @@ export class ExpressRoutes {
         });
     }
 
-    private async postPlatformRole(req: express.Request, res: express.Response){
+    private async postPlatformRole(req: express.Request, res: express.Response) {
         const data: PlatformRole = req.body as PlatformRole;
         this._logger.debug(data);
 
-        await this._authorizationAggregate.createPlatformRole(req.securityContext!, data).then((roleId:string)=>{
-            return res.status(200).send({roleId: roleId});
-        }).catch((error: Error)=>{
+        await this._authorizationAggregate.createPlatformRole(req.securityContext!, data).then((roleId: string) => {
+            return res.status(200).send({ roleId: roleId });
+        }).catch((error: Error) => {
             if (this._handleUnauthorizedError(error, res)) return;
             if (error instanceof InvalidPlatformRoleError) {
                 return res.status(400).json({
@@ -277,29 +277,29 @@ export class ExpressRoutes {
         });
     }
 
-    private async postAddPrivsToPlatformRole(req: express.Request, res: express.Response){
+    private async postAddPrivsToPlatformRole(req: express.Request, res: express.Response) {
         const roleId = req.params["roleId"] ?? null;
         // body is supposed to be an array of strings
         const data: string[] = req.body as string[];
         this._logger.debug(`Add privs to role: ${roleId}, privIds: ${data}`);
 
-        if(!roleId){
+        if (!roleId) {
             return res.status(400).json({
                 status: "error",
                 msg: "invalid PlatformRole"
             });
         }
 
-        if(!Array.isArray(data) || data.length<=0){
+        if (!Array.isArray(data) || data.length <= 0) {
             return res.status(400).json({
                 status: "error",
                 msg: "invalid privilege id list in body"
             });
         }
 
-        await this._authorizationAggregate.associatePrivilegesToRole(req.securityContext!, data, roleId).then(()=>{
+        await this._authorizationAggregate.associatePrivilegesToRole(req.securityContext!, data, roleId).then(() => {
             return res.status(200).send();
-        }).catch((error: Error)=>{
+        }).catch((error: Error) => {
             if (this._handleUnauthorizedError(error, res)) return;
             if (error instanceof PlatformRoleNotFoundError) {
                 return res.status(404).json({
@@ -321,29 +321,29 @@ export class ExpressRoutes {
         return;
     }
 
-    private async postRemovePrivsFromPlatformRole(req: express.Request, res: express.Response){
+    private async postRemovePrivsFromPlatformRole(req: express.Request, res: express.Response) {
         const roleId = req.params["roleId"] ?? null;
         // body is supposed to be an array of strings
         const data: string[] = req.body as string[];
         this._logger.debug(`Remove privs from role: ${roleId}, privIds: ${data}`);
 
-        if(!roleId){
+        if (!roleId) {
             return res.status(400).json({
                 status: "error",
                 msg: "invalid PlatformRole"
             });
         }
 
-        if(!Array.isArray(data) || data.length<=0){
+        if (!Array.isArray(data) || data.length <= 0) {
             return res.status(400).json({
                 status: "error",
                 msg: "invalid privilege id list in body"
             });
         }
 
-        await this._authorizationAggregate.dissociatePrivilegesFromRole(req.securityContext!, data, roleId).then(()=>{
+        await this._authorizationAggregate.dissociatePrivilegesFromRole(req.securityContext!, data, roleId).then(() => {
             return res.status(200).send();
-        }).catch((error: Error)=>{
+        }).catch((error: Error) => {
             if (this._handleUnauthorizedError((error as Error), res)) return;
             if (error instanceof PlatformRoleNotFoundError) {
                 return res.status(404).json({

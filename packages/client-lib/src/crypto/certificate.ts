@@ -33,15 +33,15 @@ import crypto from "crypto";
 import forge from "node-forge";
 const pki = forge.pki;
 
-export class CertificatesHelper{
+export class CertificatesHelper {
     createX590Certificate(
-        signingKeyPEM:string,
-        commonName: string, country:string, state:string, locality:string, orgName:string, orgUnit:string,
-        expirationYears:number
-    ):string {
+        signingKeyPEM: string,
+        commonName: string, country: string, state: string, locality: string, orgName: string, orgUnit: string,
+        expirationYears: number
+    ): string {
         const now = Date.now();
         const privateKey = pki.privateKeyFromPem(signingKeyPEM);
-        const publicKey  = pki.setRsaPublicKey(privateKey.n, privateKey.e);
+        const publicKey = pki.setRsaPublicKey(privateKey.n, privateKey.e);
 
         // create a new certificate
         const cert = pki.createCertificate();
@@ -103,13 +103,13 @@ export class CertificatesHelper{
     }
 
     createX590CertificateAuthorityCert(
-        signingKeyPEM:string,
-        commonName: string, country:string, state:string, locality:string, orgName:string, orgUnit:string,
-        expirationYears:number, issuer?: forge.pki.CertificateField[]
-    ):string {
+        signingKeyPEM: string,
+        commonName: string, country: string, state: string, locality: string, orgName: string, orgUnit: string,
+        expirationYears: number, issuer?: forge.pki.CertificateField[]
+    ): string {
         const now = Date.now();
         const privateKey = pki.privateKeyFromPem(signingKeyPEM);
-        const publicKey  = pki.setRsaPublicKey(privateKey.n, privateKey.e);
+        const publicKey = pki.setRsaPublicKey(privateKey.n, privateKey.e);
 
         // create a new certificate
         const cert = pki.createCertificate();
@@ -135,9 +135,9 @@ export class CertificatesHelper{
         cert.setSubject(attrs);
 
         // if an issuer is provided use it
-        if(issuer){
+        if (issuer) {
             cert.setIssuer(issuer);
-        }else {
+        } else {
             cert.setIssuer(attrs);
         }
 
@@ -178,6 +178,30 @@ export class CertificatesHelper{
         const pem = pki.certificateToPem(cert);
 
         return pem;
+    }
+
+    createCSR(
+        privateKeyPem: string, publicKeyPem: string,
+        commonName: string, country: string, state: string, locality: string, orgName: string, orgUnit: string
+    ): string {
+        const privateKey = pki.privateKeyFromPem(privateKeyPem);
+        const publicKey = pki.publicKeyFromPem(publicKeyPem);
+
+        const csr = pki.createCertificationRequest();
+
+        csr.publicKey = publicKey;
+        csr.setSubject([
+            { name: "commonName", value: commonName },
+            { name: "countryName", value: country },
+            { shortName: "ST", value: state },
+            { name: "localityName", value: locality },
+            { name: "organizationName", value: orgName },
+            { shortName: "OU", value: orgUnit }
+        ]);
+
+        csr.sign(privateKey, forge.md.sha256.create());
+
+        return pki.certificationRequestToPem(csr);
     }
 }
 

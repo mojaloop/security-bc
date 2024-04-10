@@ -30,9 +30,9 @@
 
 "use strict";
 
-import {PlatformRole} from "@mojaloop/security-bc-public-types-lib";
+import { PlatformRole } from "@mojaloop/security-bc-public-types-lib";
 
-export const defaultDevRoles:PlatformRole[] = [
+export const defaultDevRoles: PlatformRole[] = [
     {
         id: "basic-application",
         description: "Role for applications that can boostrap own privileges, fetch own priv/role associations, bootstrap and read own platform configurations",
@@ -44,6 +44,13 @@ export const defaultDevRoles:PlatformRole[] = [
         privileges: [
             "SECURITY_BOOTSTRAP_PRIVILEGES",
             "SECURITY_FETCH_APP_ROLE_PRIVILEGES_ASSOCIATIONS",
+            "SECURITY_VIEW_PUB_CERTIFICATE",
+            "SECURITY_VIEW_HUB_PUB_CERTIFICATE",
+            "SECURITY_VIEW_CSR_APPROVALS",
+            "SECURITY_UPLOAD_CSR",
+            "SECURITY_CREATE_CERTIFICATE",
+            "SECURITY_REMOVE_CERTIFICATE",
+            "SECURITY_VERIFY_CERTIFICATE",
             "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
             "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
             "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT",
@@ -112,10 +119,13 @@ export const defaultDevRoles:PlatformRole[] = [
 			"ACCOUNT_LOOKUP_CREATE_ORACLE",
 			"ACCOUNT_LOOKUP_REMOVE_ORACLE",
 			"ACCOUNT_LOOKUP_VIEW_ALL_ORACLE_ASSOCIATIONS",
-            "CERTIFICATES_VIEW_CERTIFICATES",
-            "CERTIFICATES_CREATE_REQUEST",
-            "CERTIFICATES_APPROVE_REQUEST",
-            "CERTIFICATES_REJECT_REQUEST",
+            "SECURITY_VIEW_PUB_CERTIFICATE",
+            "SECURITY_VIEW_HUB_PUB_CERTIFICATE",
+            "SECURITY_VIEW_HUB_PRIVATE_KEY",
+            "SECURITY_VIEW_CSR_APPROVALS",
+            "SECURITY_UPLOAD_CSR",
+            "SECURITY_CREATE_CERTIFICATE",
+            "SECURITY_REMOVE_CERTIFICATE",
 		]
 	}, {
 		id: "admin",
@@ -207,10 +217,13 @@ export const defaultDevRoles:PlatformRole[] = [
             "SECURITY_BUILTIN_IAM_ENABLE_APP",
             "SECURITY_BUILTIN_IAM_DISABLE_APP",
             "SECURITY_BUILTIN_IAM_MANAGE_APP_ROLES",
-            "CERTIFICATES_VIEW_CERTIFICATES",
-            "CERTIFICATES_CREATE_REQUEST",
-            "CERTIFICATES_APPROVE_REQUEST",
-            "CERTIFICATES_REJECT_REQUEST"
+            "SECURITY_VIEW_PUB_CERTIFICATE",
+            "SECURITY_VIEW_HUB_PRIVATE_KEY",
+            "SECURITY_VIEW_HUB_PUB_CERTIFICATE",
+            "SECURITY_VIEW_CSR_APPROVALS",
+            "SECURITY_UPLOAD_CSR",
+            "SECURITY_CREATE_CERTIFICATE",
+            "SECURITY_REMOVE_CERTIFICATE",
 		]
 	}, {
 		id: "participants-bc-participants-svc",
@@ -285,7 +298,10 @@ export const defaultDevRoles:PlatformRole[] = [
 		isApplicationRole: true,
         isPerParticipantRole: false,
 		privileges: [
-			"VIEW_PARTICIPANT"
+			"VIEW_PARTICIPANT",
+            "SECURITY_VIEW_PUB_CERTIFICATE",
+            "SECURITY_VIEW_HUB_PUB_CERTIFICATE",
+            "SECURITY_VIEW_HUB_PRIVATE_KEY",
 		]
 	}, {
 		id: "quoting-bc-quoting-svc",
