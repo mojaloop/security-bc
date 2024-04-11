@@ -81,7 +81,7 @@ export class KeyManagementRoutes {
             const signedCertPem = await this._keyMgmtAgg.signCSR(csrPem);
             return res.type("application/x-pem-file").send(signedCertPem);
         } catch (error) {
-            this._logger.error("Failed to sign CSR.", error);
+            this._logger.error("Failed to sign CSR.", (error as Error).message);
             return res.status(500).send("Failed to sign CSR.");
         }
     }
@@ -91,7 +91,7 @@ export class KeyManagementRoutes {
             const hubCAPubCert = await this._keyMgmtAgg.getHubCAPubCert();
             return res.type("application/x-pem-file").send(hubCAPubCert);
         } catch (error) {
-            this._logger.error("Failed to get Hub CA Public Certificate.", error);
+            this._logger.error("Failed to get Hub CA Public Certificate.", (error as Error).message);
             return res.status(500).send("Failed to get Hub CA Public Certificate.");
         }
     }
@@ -105,7 +105,7 @@ export class KeyManagementRoutes {
             const verified = await this._keyMgmtAgg.verifyCert(cert);
             return res.status(200).json({verified});
         } catch (error) {
-            this._logger.error("Failed to verify certificate.", error);
+            this._logger.error("Failed to verify certificate.", (error as Error).message);
             return res.status(200).json({verified: false});
         }
     }
