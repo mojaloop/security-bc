@@ -31,6 +31,7 @@
 "use strict";
 
 import {
+    AuthenticatedHttpRequester,
     AuthorizationClient,
     LoginHelper,
     TokenHelper,
@@ -42,15 +43,16 @@ import nock from "nock";
 const BC_NAME = "test-bc";
 const APP_NAME = "test-app1";
 const APP_VERSION = "0.0.2"; // NOTE increase this if the privs change
-const AUTH_N_SVC_BASEURL = "http://localhost:3202";
 
-const AUTH_Z_SVC_BASE_URL = "http://localhost:3201";
+const AUTH_N_SVC_BASE_URL = "http://localhost:3201";
+const AUTH_Z_SVC_BASE_URL = "http://localhost:3202";
+
 const TOKEN_URL = `${AUTH_Z_SVC_BASE_URL}/token`;
 const JWKS_URL = `${AUTH_Z_SVC_BASE_URL}/.well-known/jwks.json`;
 
 // these must match the token
-const AUTH_Z_DEFAULT_ISSUER_NAME = "http://localhost:3201/";
-const AUTH_Z_DEFAULT_AUDIENCE = "mojaloop.vnext.default_audience";
+const AUTH_N_DEFAULT_AUDIENCE = "mojaloop.vnext.dev.default_audience";
+const AUTH_N_ISSUER_NAME = "mojaloop.vnext.dev.default_issuer";
 
 const APP_CLIENT_ID = "participants-bc-participants-svc";
 const APP_CLIENT_SECRET = "superServiceSecret";
@@ -66,15 +68,22 @@ const PRIV_TEST_ROLE_HAS = "TEST_EXAMPLE_PRIV";
 const PRIV_TEST_ROLE_DOES_NOT_HAVE = "non-existent priv";
 
 const logger = new ConsoleLogger();
-let authorizationClient:AuthorizationClient;
+let authorizationClient: AuthorizationClient;
 
 describe("authorization-client-lib tests", () => {
     beforeAll(async () => {
+        const loginHelper = new LoginHelper(TOKEN_URL, logger);
+        loginHelper.setUserCredentials(CLIENT_ID, LOGIN_USERNAME, LOGIN_PASSWORD);
 
+        const authRequester = new AuthenticatedHttpRequester(logger, AUTH_N_SVC_BASE_URL + "/token");
+        authRequester.setAppCredentials(APP_CLIENT_ID, APP_CLIENT_SECRET);
 
-        authorizationClient = new AuthorizationClient(BC_NAME, APP_NAME, APP_VERSION, AUTH_N_SVC_BASEURL, logger);
+        authorizationClient = new AuthorizationClient(BC_NAME, APP_NAME, APP_VERSION, AUTH_Z_SVC_BASE_URL, logger, authRequester);
 
-       authorizationClient.addPrivilege(PRIV_TEST_ROLE_HAS, "test example prov", "desc");
+        authorizationClient.addPrivilege(PRIV_TEST_ROLE_HAS, "test example prov", "desc");
+        // await authorizationClient.bootstrap(true);
+        // await authorizationClient.init();
+        // await authorizationClient.fetch();
     });
 
     afterAll(async () => {
@@ -88,6 +97,10 @@ describe("authorization-client-lib tests", () => {
     test("fetch", async () => {
         await authorizationClient.fetch();
     });
+
+    test("init", async () => {
+      await authorizationClient.init();
+    })
 
     test("test roleHasPrivilege", async () => {
         const hasPriv = authorizationClient.roleHasPrivilege(TEST_ROLE_ID, PRIV_TEST_ROLE_HAS);
@@ -112,8 +125,10 @@ describe('authentication-client-lib tests', () => {
         expect(tokenResp).not.toBeNull();
         expect(tokenResp.accessToken).not.toBeNull();
 
-        const tokenHelper = new TokenHelper( JWKS_URL, logger, AUTH_Z_DEFAULT_ISSUER_NAME, AUTH_Z_DEFAULT_AUDIENCE);
+        const tokenHelper = new TokenHelper(JWKS_URL, logger, AUTH_N_ISSUER_NAME, AUTH_N_DEFAULT_AUDIENCE);
         await tokenHelper.init();
+
+        console.log('token: ', tokenResp.accessToken);
 
         const verified = await tokenHelper.verifyToken(tokenResp.accessToken);
         expect(verified).toBe(true);
@@ -128,7 +143,7 @@ describe('authentication-client-lib tests', () => {
         expect(tokenResp).not.toBeNull();
         expect(tokenResp.accessToken).not.toBeNull();
 
-        const tokenHelper = new TokenHelper(JWKS_URL, logger, AUTH_Z_DEFAULT_ISSUER_NAME, AUTH_Z_DEFAULT_AUDIENCE);
+        const tokenHelper = new TokenHelper(JWKS_URL, logger, AUTH_N_ISSUER_NAME, AUTH_N_DEFAULT_AUDIENCE);
         await tokenHelper.init();
 
         const verified = await tokenHelper.verifyToken(tokenResp.accessToken);
@@ -152,7 +167,7 @@ describe('authentication-client-lib tests', () => {
         expect(tokenResp).not.toBeNull();
         expect(tokenResp.accessToken).not.toBeNull();
 
-        const tokenHelper = new TokenHelper(JWKS_URL, logger, AUTH_Z_DEFAULT_ISSUER_NAME, AUTH_Z_DEFAULT_AUDIENCE);
+        const tokenHelper = new TokenHelper(JWKS_URL, logger, AUTH_N_ISSUER_NAME, AUTH_N_DEFAULT_AUDIENCE);
         await tokenHelper.init();
 
         const verified = await tokenHelper.verifyToken(tokenResp.accessToken);
@@ -195,7 +210,7 @@ describe('authentication-client-lib tests', () => {
         const loginHelper = new LoginHelper("http://nowaythiscan.exist.just_to_be_sure.void", logger);
         loginHelper.setUserCredentials(CLIENT_ID, LOGIN_USERNAME, LOGIN_WRONG_PASSWORD);
 
-        await expect(loginHelper.getToken()).rejects.toThrow(Error("getaddrinfo ENOTFOUND nowaythiscan.exist.just_to_be_sure.void"));
+        await expect(loginHelper.getToken()).rejects.toThrow(Error("Could not get authentication service public keys, cannot continue"));
     });
 
     // test("Test login ConnectionRefusedError", async () => {
