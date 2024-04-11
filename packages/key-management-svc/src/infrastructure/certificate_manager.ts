@@ -57,6 +57,19 @@ export class CertificateManager {
         newParticipantCert.setSubject(participantCSR.subject.attributes); // use the same subject as the CSR
         newParticipantCert.setIssuer(this._caPubCert.subject.attributes); // use the CA subject as the issuer
         newParticipantCert.publicKey = participantCSR.publicKey;
+        newParticipantCert.setExtensions([
+        {
+            name: "basicConstraints",
+            cA: false
+        },
+        {
+            name: "keyUsage",
+            keyCertSign: true,
+            digitalSignature: true,
+            nonRepudiation: true,
+            keyEncipherment: true,
+            dataEncipherment: true,
+        }]);
 
         newParticipantCert.sign(this._caPrivateKey, forge.md.sha256.create());
 
