@@ -58,16 +58,5 @@ npm run start
 ## Docker build
 (Must be executed at the root of the monorepo)
 ```bash
-docker build -f packages/key-management-svc/Dockerfile -t mojaloop/security-bc-authentication-svc:0.1.0 .
-```
-
-## Docker run (dev env)
-```bash
-# example using a local authN_TempStorageFile a custom KAFKA_URL
-docker run -ti --rm -p 3201:3201 \
-  --name mojaloop_security-bc-authentication-svc \
-  -v $(pwd)/packages/authentication-svc/dist/authN_TempStorageFile:/app/data/authN_TempStorageFile \
-  -e KAFKA_URL=192.168.1.103:9092 mojaloop/security-bc-authentication-svc
-
-#to run as daemon replace "-ti --rm" with "-d"
+docker build -f packages/key-management-svc/Dockerfile -t mojaloop/security-bc-key-management-svc:0.1.0 .
 ```
