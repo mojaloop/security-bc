@@ -63,6 +63,10 @@ export class CertificateManager {
         return forge.pki.certificateToPem(newParticipantCert);
     }
 
+    getHubCAPubCert(): string {
+        return this._caPubKeyPem;
+    }
+
     private _generateCAKeyPair(caPrivateKeyPath: string, caPublicKeyPath: string): string {
         // Generate a keypair
         const keys = forge.pki.rsa.generateKeyPair(2048);

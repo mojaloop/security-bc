@@ -51,4 +51,7 @@ export class KeyManagementAggregate{
         return this._certificateManager.signCSR(csr.toString());
     }
 
+    async getHubCAPubCert(): Promise<string> {
+        return this._certificateManager.getHubCAPubCert();
+    }
 }

@@ -34,13 +34,14 @@
 "use strict";
 
 import {Server} from "http";
-import {existsSync} from "fs";
 import express from "express";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
 import {KeyManagementAggregate } from "../domain/aggregate";
 import {LogLevel} from "@mojaloop/logging-bc-public-types-lib/dist/index";
 import {KafkaLogger} from "@mojaloop/logging-bc-client-lib/dist/index";
+
+import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 
 import process from "process";
 import util from "util";
@@ -72,10 +73,20 @@ const PRIVATE_CERT_PEM_FILE_PATH = process.env["PRIVATE_CERT_PEM_FILE_PATH"] || 
 const PUBLIC_CERT_PEM_FILE_PATH = process.env["PUBLIC_CERT_PEM_FILE_PATH"] || "/app/data/public.pem";
 
 const AUTH_N_TOKEN_LIFE_SECS = process.env["AUTH_N_TOKEN_LIFE_SECS"] ? parseInt(process.env["AUTH_N_TOKEN_LIFE_SECS"]) : 3600;
-const AUTH_N_DEFAULT_AUDIENCE = process.env["AUTH_N_DEFAULT_AUDIENCE"] || "mojaloop.vnext.dev.default_audience";
+// const AUTH_N_DEFAULT_AUDIENCE = process.env["AUTH_N_DEFAULT_AUDIENCE"] || "mojaloop.vnext.dev.default_audience";
 const AUTH_N_ISSUER_NAME = process.env["AUTH_N_ISSUER_NAME"] || "mojaloop.vnext.dev.default_issuer";
 
+const AUTH_N_SVC_BASEURL = process.env["AUTH_N_SVC_BASEURL"] || "http://localhost:3201";
+const AUTH_N_SVC_TOKEN_URL = AUTH_N_SVC_BASEURL + "/token"; // TODO this should not be known here, libs that use the base should add the suffix
 
+const AUTH_N_TOKEN_ISSUER_NAME = process.env["AUTH_N_TOKEN_ISSUER_NAME"] || "mojaloop.vnext.dev.default_issuer";
+const AUTH_N_TOKEN_AUDIENCE = process.env["AUTH_N_TOKEN_AUDIENCE"] || "mojaloop.vnext.dev.default_audience";
+const AUTH_N_SVC_JWKS_URL = process.env["AUTH_N_SVC_JWKS_URL"] || `${AUTH_N_SVC_BASEURL}/.well-known/jwks.json`;
+
+const INSTANCE_NAME = `${BC_NAME}_${APP_NAME}`;
+const INSTANCE_ID = `${INSTANCE_NAME}__${crypto.randomUUID()}`;
+
+import {MLKafkaJsonConsumer} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
 // kafka logger
 const kafkaProducerOptions = {
     kafkaBrokerList: KAFKA_URL
@@ -88,6 +99,7 @@ export class Service {
     static logger: ILogger;
     static keyManagementAgg: KeyManagementAggregate;
     static expressServer: Server;
+    static tokenHelper: TokenHelper;
     static certificateManager: CertificateManager;
 
     static async start(
@@ -113,6 +125,16 @@ export class Service {
             this.certificateManager = new CertificateManager(PRIVATE_CERT_PEM_FILE_PATH, PUBLIC_CERT_PEM_FILE_PATH, this.logger);
         }
 
+        // token helper
+        this.tokenHelper = new TokenHelper(
+            AUTH_N_SVC_JWKS_URL,
+            logger,
+            AUTH_N_TOKEN_ISSUER_NAME,
+            AUTH_N_TOKEN_AUDIENCE,
+            new MLKafkaJsonConsumer({kafkaBrokerList: KAFKA_URL, autoOffsetReset: "earliest", kafkaGroupId: INSTANCE_ID}, logger) // for jwt list - no groupId
+        );
+
+        await this.tokenHelper.init();
         try {
             this.keyManagementAgg = new KeyManagementAggregate(
                 this.logger,
@@ -138,7 +160,7 @@ export class Service {
 
         const globalConfigsRoutes = new KeyManagementRoutes(
             this.keyManagementAgg,
-            AUTH_N_ISSUER_NAME,
+            this.tokenHelper,
             this.logger,
         );
         app.use(globalConfigsRoutes.Router);
@@ -162,6 +184,7 @@ export class Service {
             this.logger.fatal(err);
             process.exit(9);
         });
+
     }
 
     static async stop():Promise<void>{

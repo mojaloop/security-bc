@@ -33,22 +33,33 @@ import express from "express";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {KeyManagementAggregate} from "../domain/aggregate";
 import multer from "multer";
+import {CallSecurityContext, ITokenHelper} from "@mojaloop/security-bc-public-types-lib";
+
+ declare module "express-serve-static-core" {
+     export interface Request {
+         securityContext: null | CallSecurityContext;
+     }
+ }
+
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 export class KeyManagementRoutes {
     private _logger: ILogger;
+    private _tokenHelper: ITokenHelper;
     private _router = express.Router();
     private _keyMgmtAgg: KeyManagementAggregate;
-    private readonly _issuerName:string;
 
-    constructor(keyMgmtAgg: KeyManagementAggregate, issuerName:string, logger: ILogger) {
+    constructor(keyMgmtAgg: KeyManagementAggregate, tokenHelper: ITokenHelper, logger: ILogger) {
         this._logger = logger.createChild(this.constructor.name);
         this._keyMgmtAgg = keyMgmtAgg;
-        this._issuerName = issuerName;
+        this._tokenHelper = tokenHelper;
 
+        // this._router.use(this._authenticationMiddleware.bind(this));
         // bind routes
-        this._router.post("/upload-csr", upload.single("csr"), this.uploadCSR.bind(this));
+        this._router.post("/certs/upload-csr", upload.single("csr"), this.uploadCSR.bind(this));
+
+        this._router.get("/certs/hub-pub-cert", this.getHubCAPubCert.bind(this)); // for verifying the hub's signature
     }
 
     async uploadCSR(req: express.Request, res: express.Response) {
@@ -56,6 +67,9 @@ export class KeyManagementRoutes {
         if (req.file && req.file.buffer) {
             // Check if the CSR was uploaded as a file
             csrPem = req.file.buffer.toString();
+
+        } else if (req.body && typeof req.body.csr === "string") {
+            csrPem = req.body.csr;
         } else {
             this._logger.error("No CSR provided.");
             return res.status(400).send("No CSR provided. Please upload a CSR file.");
@@ -69,6 +83,41 @@ export class KeyManagementRoutes {
             return res.status(500).send("Failed to sign CSR.");
         }
     }
+
+    async getHubCAPubCert(req: express.Request, res: express.Response) {
+        try {
+            const hubCAPubCert = await this._keyMgmtAgg.getHubCAPubCert();
+            return res.type("application/x-pem-file").send(hubCAPubCert);
+        } catch (error) {
+            this._logger.error("Failed to get Hub CA Public Certificate.", error);
+            return res.status(500).send("Failed to get Hub CA Public Certificate.");
+        }
+    }
+
+     private async _authenticationMiddleware(
+         req: express.Request,
+         res: express.Response,
+         next: express.NextFunction
+     ) {
+         const authorizationHeader = req.headers["authorization"];
+
+         if (!authorizationHeader) return res.sendStatus(401);
+
+         const bearer = authorizationHeader.trim().split(" ");
+         if (bearer.length != 2) {
+             return res.sendStatus(401);
+         }
+
+         const bearerToken = bearer[1];
+         const callSecCtx:  CallSecurityContext | null = await this._tokenHelper.getCallSecurityContextFromAccessToken(bearerToken);
+
+         if(!callSecCtx){
+             return res.sendStatus(401);
+         }
+
+         req.securityContext = callSecCtx;
+         return next();
+     }
 
     get Router(): express.Router {
         return this._router;
