@@ -47,7 +47,7 @@ export class KeyMgmtHttpClient {
         this._authRequester = authRequester;
     }
 
-    public async UploadCSR(csr: string): Promise<string> {
+    public async uploadCSR(csr: string): Promise<string> {
         const requestInfo = new Request(`${this._baseUrlHttpService}/certs/upload-csr`, {
             method: "POST",
             headers: {
@@ -66,7 +66,7 @@ export class KeyMgmtHttpClient {
         return await response.text();
     }
 
-    public async GetHubCAPubCert(): Promise<string> {
+    public async getHubCAPubCert(): Promise<string> {
         const requestInfo = new Request(`${this._baseUrlHttpService}/certs/hub-pub-cert`, {
             method: "GET",
             headers: {
@@ -79,6 +79,21 @@ export class KeyMgmtHttpClient {
             throw new Error(`Failed to get Hub CA Public Cert: ${await response.text()}`);
         }
         return await response.text();
+    }
+
+    public async verifyCert(cert: string): Promise<boolean> {
+        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/verify`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                cert,
+            }),
+        });
+        // const response = await this._authRequester.fetch(requestInfo);
+        const response = await fetch(requestInfo); // Temporary fix
+        return await response.json();
     }
 
 }

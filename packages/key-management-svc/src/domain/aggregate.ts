@@ -54,4 +54,8 @@ export class KeyManagementAggregate{
     async getHubCAPubCert(): Promise<string> {
         return this._certificateManager.getHubCAPubCert();
     }
+
+    async verifyCert(certPem: string): Promise<boolean> {
+        return this._certificateManager.verifyCert(certPem);
+    }
 }

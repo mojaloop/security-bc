@@ -60,6 +60,8 @@ export class KeyManagementRoutes {
         this._router.post("/certs/upload-csr", upload.single("csr"), this.uploadCSR.bind(this));
 
         this._router.get("/certs/hub-pub-cert", this.getHubCAPubCert.bind(this)); // for verifying the hub's signature
+
+        this._router.post("/certs/verify", this.verifyCert.bind(this));
     }
 
     async uploadCSR(req: express.Request, res: express.Response) {
@@ -91,6 +93,20 @@ export class KeyManagementRoutes {
         } catch (error) {
             this._logger.error("Failed to get Hub CA Public Certificate.", error);
             return res.status(500).send("Failed to get Hub CA Public Certificate.");
+        }
+    }
+
+    async verifyCert(req: express.Request, res: express.Response) {
+        if (!req.body.cert) {
+            return res.status(400).send("No certificate provided.");
+        }
+        try {
+            const cert = req.body.cert;
+            const verified = await this._keyMgmtAgg.verifyCert(cert);
+            return res.status(200).json({verified});
+        } catch (error) {
+            this._logger.error("Failed to verify certificate.", error);
+            return res.status(200).json({verified: false});
         }
     }
 

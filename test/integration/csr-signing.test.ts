@@ -71,10 +71,11 @@ describe('key-management-client-lib tests', () => {
         authRequester = new AuthenticatedHttpRequester(logger, AUTH_N_SVC_BASEURL+ "/token");
         authRequester.setAppCredentials(APP_CLIENT_ID, APP_CLIENT_SECRET);
         keyMgmtHttpClient = new KeyMgmtHttpClient('http://localhost:3204', authRequester);
+        authRequester.initialised
 
     })
     test("Obtain Hub CA Public Cert", async () => {
-        const hubCAPubCert = await keyMgmtHttpClient.GetHubCAPubCert();
+        const hubCAPubCert = await keyMgmtHttpClient.getHubCAPubCert();
         expect(hubCAPubCert).toBeDefined();
         expect(hubCAPubCert).toContain('-----BEGIN CERTIFICATE-----');
 
@@ -88,7 +89,7 @@ describe('key-management-client-lib tests', () => {
     test("Sign CSR", async () => {
         expect(DFSP_A_CSR_PEM).toContain('-----BEGIN CERTIFICATE REQUEST-----');
 
-        const signedCertStr = await keyMgmtHttpClient.UploadCSR(DFSP_A_CSR_PEM);
+        const signedCertStr = await keyMgmtHttpClient.uploadCSR(DFSP_A_CSR_PEM);
         expect(signedCertStr).toBeDefined();
         expect(signedCertStr).toContain('-----BEGIN CERTIFICATE-----');
 
@@ -99,12 +100,14 @@ describe('key-management-client-lib tests', () => {
         expect(cert.issuer.getField('O').value).toBe('Mojaloop'); // The issuer is the Hub CA
 
         // Verify the signature with the CA public
-        const hubCAPubCert = await keyMgmtHttpClient.GetHubCAPubCert();
+        const hubCAPubCert = await keyMgmtHttpClient.getHubCAPubCert();
         const caCert = pki.certificateFromPem(hubCAPubCert);
         const verified = caCert.verify(cert);
         expect(verified).toBe(true);
 
-
+        // Verify the signature with the API
+        const verificationResult = await keyMgmtHttpClient.verifyCert(signedCertStr);
+        expect(verificationResult).toEqual({verified: true});
     });
 
 });

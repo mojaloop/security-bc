@@ -80,6 +80,11 @@ export class CertificateManager {
         return this._caPubKeyPem;
     }
 
+    verifyCert(certPem: string): boolean {
+        const cert = pki.certificateFromPem(certPem);
+        return pki.verifyCertificateChain(this._ca_store, [cert]);
+    }
+
     private _generateCAKeyPair(caPrivateKeyPath: string, caPublicKeyPath: string): string {
         // Generate a keypair
         const keys = forge.pki.rsa.generateKeyPair(2048);
