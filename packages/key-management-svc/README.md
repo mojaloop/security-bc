@@ -12,7 +12,7 @@ Mojaloop vNext Key Management Service
 
 ## How to create RSA private and public keys without password
 
-*These keys should be injected to the authentication-svc, or at this early stage put in the test_keys directory*
+*These keys should be injected to the key-management-svc, or at this early stage put in the test_keys directory*
 
 Create an RSA certificate
 
