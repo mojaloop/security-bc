@@ -6,28 +6,16 @@ import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
 import {CertificatesHelper} from "@mojaloop/security-bc-client-lib";
 
-const PRODUCTION_MODE = process.env["PRODUCTION_MODE"] || false;
-
 export class CertificateManager {
     private _caPubKeyPem: string;
     private _caPrivateKeyPem: string;
     private _caPubCert: forge.pki.Certificate;
     private _caPrivateKey: forge.pki.PrivateKey;
     private _logger: ILogger;
-    private _certHelper: CertificatesHelper;
     private _ca_store: pki.CAStore = pki.createCaStore();
 
     constructor(caPrivateKeyPath: string, caPublicKeyPath: string, logger: ILogger) {
         this._logger = logger;
-        this._certHelper = new CertificatesHelper();
-
-        if (!fs.existsSync(caPrivateKeyPath) || !fs.existsSync(caPublicKeyPath)) {
-            if (PRODUCTION_MODE) {
-                throw new Error("Production mode: both CA Private and Public keys are required.");
-            }
-            this._logger.info("CA Private and Public Keys  not found. Generating new ones...");
-            this._generateCAKeyPair(caPrivateKeyPath, caPublicKeyPath);
-        }
 
         this._caPubKeyPem = fs.readFileSync(caPublicKeyPath, "utf8");
         this._caPrivateKeyPem = fs.readFileSync(caPrivateKeyPath, "utf8");
@@ -85,11 +73,13 @@ export class CertificateManager {
         return pki.verifyCertificateChain(this._ca_store, [cert]);
     }
 
-    private _generateCAKeyPair(caPrivateKeyPath: string, caPublicKeyPath: string): string {
+    static generateCAKeyPair(caPrivateKeyPath: string, caPublicKeyPath: string): string {
+        const certHelper = new CertificatesHelper();
         // Generate a keypair
         const keys = forge.pki.rsa.generateKeyPair(2048);
         const signingKeyPem = forge.pki.privateKeyToPem(keys.privateKey);
-        const certPem = this._certHelper.createX590CertificateAuthorityCert(
+        const certPem = certHelper.createX590CertificateAuthorityCert(
+
             signingKeyPem,
             // commonName, country, state, locality, orgName, orgUnit,
             "vNextHub CA", "US", "Virginia", "Blacksburg", "Mojaloop", "vNextHub CA",
@@ -97,8 +87,6 @@ export class CertificateManager {
 
         fs.writeFileSync(caPrivateKeyPath, signingKeyPem, "utf8");
         fs.writeFileSync(caPublicKeyPath, certPem, "utf8");
-
-        this._logger.info("CA certificate and private key generated and saved to disk.");
         return certPem;
     }
 }

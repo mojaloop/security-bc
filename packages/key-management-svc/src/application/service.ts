@@ -32,7 +32,7 @@
  ******/
 
 "use strict";
-
+import fs from "fs";
 import {Server} from "http";
 import express from "express";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
@@ -121,7 +121,17 @@ export class Service {
         }
         globalLogger = this.logger = logger.createChild("Service");
 
+        if (!fs.existsSync(PRIVATE_CERT_PEM_FILE_PATH) || !fs.existsSync(PUBLIC_CERT_PEM_FILE_PATH)) {
+            if (PRODUCTION_MODE) {
+                throw new Error("Production mode: both CA Private and Public keys are required.");
+            }
+            this.logger.info("CA Private and Public Keys  not found. Generating new ones...");
+            CertificateManager.generateCAKeyPair(PRIVATE_CERT_PEM_FILE_PATH, PUBLIC_CERT_PEM_FILE_PATH);
+            this.logger.info("CA Private and Public Keys generated.");
+        }
+
         if(!certificateManager){
+
             this.certificateManager = new CertificateManager(PRIVATE_CERT_PEM_FILE_PATH, PUBLIC_CERT_PEM_FILE_PATH, this.logger);
         }
 
