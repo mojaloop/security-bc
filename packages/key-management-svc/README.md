@@ -8,7 +8,39 @@
 
 Mojaloop vNext Key Management Service
 
-#Notes
+## Configuration for Secure Certificate Storage
+
+The Key Management Service supports multiple secure storage options for certificates. You can configure the storage type through environment variables.
+
+### Supported Storage Types
+
+- `LOCAL`: Local file system storage.
+- `MONGODB`: MongoDB storage.
+- `REDIS`: Redis storage.
+- `VAULT`: Vault storage.
+
+### Environment Variables
+
+- `SECURE_STORAGE_TYPE`: Specifies the type of secure storage (`local`, `mongodb`, `redis`, `vault`). Default is `vault`.
+- `CA_ENCRYPTION_SECRET_KEY`: Secret key used for encrypting certificates. Default is `test_secret_key`.
+- `PRIVATE_CERT_PEM_FILE_PATH`: Path to private certificate file for local storage. Only needed For `local` storage type.
+- `PUBLIC_CERT_PEM_FILE_PATH`: Path to public certificate file for local storage. Only needed For `local` storage type.
+- `PUBLIC_CERT_STORAGE_PATH`: Path to directory for storing public certificates in local storage. Only needed For `local` storage type.
+- `MONGO_URL`: MongoDB connection URL. Default is `mongodb://root:mongoDbPas42@localhost:27017/`.
+- `REDIS_URL`: Redis connection URL. Default is `redis://localhost:6379`.
+- `VAULT_URL`: Vault server URL. Default is `http://localhost:8200`.
+- `VAULT_TOKEN`: Token for accessing Vault. Default is `myroot`.
+
+### Deployment Instructions for Vault (Development Mode)
+
+For local development, you can run Vault in development mode using Docker:
+
+```bash
+docker run --cap-add=IPC_LOCK -e 'VAULT_DEV_ROOT_TOKEN_ID=myroot' -e 'VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200' -p 8200:8200 --name=vault vault server
+```
+
+This command sets up a Vault server accessible at localhost:8200 with the root token set to `myroot`. Note that this configuration is not secure and should only be used for development purposes.
+## Notes
 
 ## How to create RSA private and public keys without password
 
@@ -25,8 +57,6 @@ Extract public certificate from private certificate
 Put the keys in the `dist` directory.
 
 ---
-docker run --cap-add=IPC_LOCK -e 'VAULT_LOCAL_CONFIG={"storage": {"file": {"path": "/vault/file"}}, "listener": [{"tcp": { "address": "0.0.0.0:8200", "tls_disable": true}}], "default_lease_ttl": "168h", "max_lease_ttl": "720h", "ui": true}' -p 8200:8200 vault:1.13.3 server
-
 ### Install
 See nodes in root dir of this repository
 
