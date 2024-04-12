@@ -32,9 +32,9 @@
  ******/
 
 "use strict";
-import fs from "fs";
 import { Server } from "http";
 import express from "express";
+import Vault from "node-vault";
 import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
 
 import { KeyManagementAggregate } from "../domain/aggregate";
@@ -54,6 +54,7 @@ import { ISecureCertificateStorage, SECURE_CERTIFICATE_STORAGE_TYPE } from "../d
 import { LocalCertificateStorage } from "../implementation/local_certificate_storage";
 import { MongoCertificateStorage } from "../implementation/mongo_certificate_storage";
 import { RedisCertificateStorage } from "../implementation/redis_certificate_storage";
+import { VaultCertificateStorage } from "../implementation/vault_certificate_storage";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJSON = require("../../package.json");
@@ -87,7 +88,7 @@ const INSTANCE_ID = `${INSTANCE_NAME}__${crypto.randomUUID()}`;
 
 // ---- Certificate Storage Environment Variables ----
 const SECURE_STORAGE_TYPE =
-    process.env["SECURE_STORAGE_TYPE"] as SECURE_CERTIFICATE_STORAGE_TYPE || SECURE_CERTIFICATE_STORAGE_TYPE.LOCAL;
+    process.env["SECURE_STORAGE_TYPE"] as SECURE_CERTIFICATE_STORAGE_TYPE || SECURE_CERTIFICATE_STORAGE_TYPE.VAULT;
 const CA_ENCRYPTION_SECRET_KEY = process.env["CA_ENCRYPTION_SECRET_KEY"] || "test_secret_key";
 // const CA_ENCRYPTION_ENABLED = process.env["CA_ENCRYPTION_ENABLED"] === "true" || false;
 
@@ -99,7 +100,9 @@ const PUBLIC_CERT_STORAGE_PATH = process.env["PUBLIC_CERT_STORAGE_PATH"] || "/ap
 const MONGO_URL = process.env["MONGO_URL"] || "mongodb://root:mongoDbPas42@localhost:27017/";
 // redis storage env
 const REDIS_URL = process.env["REDIS_URL"] || "redis://localhost:6379";
-
+// vault storage env
+const VAULT_URL = process.env["VAULT_URL"] || "http://localhost:8200";
+const VAULT_TOKEN = process.env["VAULT_TOKEN"] || "myroot";
 
 
 // kafka logger
@@ -158,14 +161,20 @@ export class Service {
                     this.logger.info("Using Redis storage for certificates.");
                     break;
                 case SECURE_CERTIFICATE_STORAGE_TYPE.VAULT:
-                    throw new Error("Vault storage not implemented yet.");
+                    this.secureStorage = new VaultCertificateStorage({
+                        apiVersion: "v1",
+                        endpoint: VAULT_URL,
+                        token: VAULT_TOKEN,
+                    } as Vault.Option, this.logger);
+                    this.logger.info("Using Vault storage for certificates.");
+                    break;
                 default:
                     throw new Error(`Unknown secure storage type: ${SECURE_STORAGE_TYPE}`);
             }
 
             // await this.secureStorage.init(CA_ENCRYPTION_SECRET_KEY, CA_ENCRYPTION_ENABLED);
             await this.secureStorage.init(CA_ENCRYPTION_SECRET_KEY, false);
-            await CertificateManager._checkKeyOrGenerateCAKeyPair(this.secureStorage);
+            await CertificateManager._checkKeyOrGenerateCAKeyPair(this.secureStorage, this.logger);
         }
 
         if (!certificateManager) {

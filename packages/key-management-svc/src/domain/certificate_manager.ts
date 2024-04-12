@@ -81,7 +81,7 @@ export class CertificateManager {
         return pki.verifyCertificateChain(this._ca_store, [cert]);
     }
 
-    static async _checkKeyOrGenerateCAKeyPair(secureStorage: ISecureCertificateStorage): Promise<void> {
+    static async _checkKeyOrGenerateCAKeyPair(secureStorage: ISecureCertificateStorage, logger: ILogger): Promise<void> {
         try {
             await secureStorage.getCAHubPrivateKey();
             await secureStorage.getCAHubPublicKey();
@@ -100,6 +100,7 @@ export class CertificateManager {
 
             await secureStorage.storeCAHubPrivateKey(signingKeyPem);
             await secureStorage.storeCAHubPublicKey(certPem);
+            logger.createChild("CertificateManager._checkKeyOrGenerateCAKeyPair").info("Generated new CA keypair and stored in secure storage.");
         }
     }
 }

@@ -25,6 +25,7 @@ Extract public certificate from private certificate
 Put the keys in the `dist` directory.
 
 ---
+docker run --cap-add=IPC_LOCK -e 'VAULT_LOCAL_CONFIG={"storage": {"file": {"path": "/vault/file"}}, "listener": [{"tcp": { "address": "0.0.0.0:8200", "tls_disable": true}}], "default_lease_ttl": "168h", "max_lease_ttl": "720h", "ui": true}' -p 8200:8200 vault:1.13.3 server
 
 ### Install
 See nodes in root dir of this repository
