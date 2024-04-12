@@ -156,7 +156,7 @@ export class Service {
                 case SECURE_CERTIFICATE_STORAGE_TYPE.REDIS:
                     this.secureStorage = new RedisCertificateStorage(REDIS_URL, this.logger);
                     this.logger.info("Using Redis storage for certificates.");
-                    break
+                    break;
                 case SECURE_CERTIFICATE_STORAGE_TYPE.VAULT:
                     throw new Error("Vault storage not implemented yet.");
                 default:

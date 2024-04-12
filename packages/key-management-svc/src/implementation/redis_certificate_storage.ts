@@ -29,10 +29,10 @@
  ******/
 "use strict";
 
-import Redis from 'ioredis';
-import { createCipheriv, randomBytes, createDecipheriv, scryptSync } from 'crypto';
+import Redis from "ioredis";
+import { createCipheriv, randomBytes, createDecipheriv, scryptSync } from "crypto";
 import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
-import { ISecureCertificateStorage } from '../domain/isecure_storage';
+import { ISecureCertificateStorage } from "../domain/isecure_storage";
 
 export class RedisCertificateStorage implements ISecureCertificateStorage {
     private _redisClient: Redis;
@@ -47,13 +47,13 @@ export class RedisCertificateStorage implements ISecureCertificateStorage {
     }
 
     public async init(CAEncryptionKey: string, isCAEncrypted: boolean = false): Promise<void> {
-        this._scryptKey = scryptSync(CAEncryptionKey, 'salt', 32);
+        this._scryptKey = scryptSync(CAEncryptionKey, "salt", 32);
         this._isCAEncrypted = isCAEncrypted;
 
-        this._redisClient.on('connect', () => {
+        this._redisClient.on("connect", () => {
             this._logger.debug("Redis connection established.");
         });
-        this._redisClient.on('error', (err) => {
+        this._redisClient.on("error", (err) => {
             this._logger.error("Redis connection error: ", err);
         });
     }
@@ -72,13 +72,13 @@ export class RedisCertificateStorage implements ISecureCertificateStorage {
     }
 
     public async storeCAHubPrivateKey(privateKey: string): Promise<void> {
-        let encryptedPrivateKey = this._encrypt(privateKey);
-        await this._redisClient.set('ca:privateKey', encryptedPrivateKey);
+        const encryptedPrivateKey = this._encrypt(privateKey);
+        await this._redisClient.set("ca:privateKey", encryptedPrivateKey);
         this._logger.debug("CA private key stored.");
     }
 
     public async getCAHubPrivateKey(): Promise<string> {
-        const privateKey = await this._redisClient.get('ca:privateKey');
+        const privateKey = await this._redisClient.get("ca:privateKey");
         if (!privateKey) {
             throw new Error("Private key not found for hub");
         }
@@ -86,12 +86,12 @@ export class RedisCertificateStorage implements ISecureCertificateStorage {
     }
 
     public async storeCAHubPublicKey(publicKey: string): Promise<void> {
-        await this._redisClient.set('ca:publicKey', publicKey);
+        await this._redisClient.set("ca:publicKey", publicKey);
         this._logger.debug("CA public key stored.");
     }
 
     public async getCAHubPublicKey(): Promise<string> {
-        const publicKey = await this._redisClient.get('ca:publicKey');
+        const publicKey = await this._redisClient.get("ca:publicKey");
         if (!publicKey) {
             throw new Error("Public key not found for hub");
         }
@@ -109,11 +109,11 @@ export class RedisCertificateStorage implements ISecureCertificateStorage {
             return text;
         }
         const iv = randomBytes(16); // IV should be random for each encryption
-        const cipher = createCipheriv('aes-256-gcm', this._scryptKey, iv);
-        let encrypted = cipher.update(text, 'utf8', 'hex');
-        encrypted += cipher.final('hex');
+        const cipher = createCipheriv("aes-256-gcm", this._scryptKey, iv);
+        let encrypted = cipher.update(text, "utf8", "hex");
+        encrypted += cipher.final("hex");
         const tag = cipher.getAuthTag();
-        return `${iv.toString('hex')}:${tag.toString('hex')}:${encrypted}`;
+        return `${iv.toString("hex")}:${tag.toString("hex")}:${encrypted}`;
     }
 
     _decrypt(encrypted: string): string {
@@ -121,14 +121,14 @@ export class RedisCertificateStorage implements ISecureCertificateStorage {
             // data is not encrypted.. return as is
             return encrypted;
         }
-        const parts = encrypted.split(':');
-        const iv = Buffer.from(parts[0], 'hex');
-        const tag = Buffer.from(parts[1], 'hex');
+        const parts = encrypted.split(":");
+        const iv = Buffer.from(parts[0], "hex");
+        const tag = Buffer.from(parts[1], "hex");
         const text = parts[2];
-        const decipher = createDecipheriv('aes-256-gcm', this._scryptKey, iv);
+        const decipher = createDecipheriv("aes-256-gcm", this._scryptKey, iv);
         decipher.setAuthTag(tag);
-        let decrypted = decipher.update(text, 'hex', 'utf8');
-        decrypted += decipher.final('utf8');
+        let decrypted = decipher.update(text, "hex", "utf8");
+        decrypted += decipher.final("utf8");
         return decrypted;
     }
 

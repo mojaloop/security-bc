@@ -28,10 +28,10 @@
  --------------
  ******/
 
-import { createCipheriv, randomBytes, createDecipheriv, scryptSync } from 'crypto';
-import { MongoClient, Collection } from 'mongodb';
+import { createCipheriv, randomBytes, createDecipheriv, scryptSync } from "crypto";
+import { MongoClient, Collection } from "mongodb";
 import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
-import { ISecureCertificateStorage } from '../domain/isecure_storage';
+import { ISecureCertificateStorage } from "../domain/isecure_storage";
 
 export class MongoCertificateStorage implements ISecureCertificateStorage {
     private _mongoClient: MongoClient;
@@ -49,7 +49,7 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
     }
 
     public async init(CAEncryptionKey: string, isCAEncrypted: boolean = false): Promise<void> {
-        this._scryptKey = scryptSync(CAEncryptionKey, 'salt', 32);
+        this._scryptKey = scryptSync(CAEncryptionKey, "salt", 32);
         this._isCAEncrypted = isCAEncrypted;
 
         await this._mongoClient.connect();
@@ -88,7 +88,7 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
     }
 
     public async storeCAHubPrivateKey(privateKey: string): Promise<void> {
-        let encryptedKey = this._encrypt(privateKey);
+        const encryptedKey = this._encrypt(privateKey);
         try {
             const result = await this._collection.updateOne(
                 { client_id: this._hubID },
@@ -101,10 +101,10 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
                 { upsert: true }
             );
             if (result.modifiedCount === 0 && result.upsertedCount === 0) {
-                throw new Error(`Failed to store private key for hub`);
+                throw new Error("Failed to store private key for hub");
             }
         } catch (error) {
-            throw new Error(`Failed to store private key for hub`);
+            throw new Error("Failed to store private key for hub");
         }
     }
 
@@ -114,9 +114,9 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
             .findOne({ client_id: this._hubID }, { projection: { _id: 0, client_id: 0 } });
 
         if (!privateKey) {
-            throw new Error(`Private key not found for hub`);
+            throw new Error("Private key not found for hub");
         }
-        let decryptedKey = this._decrypt(privateKey.privateKey);
+        const decryptedKey = this._decrypt(privateKey.privateKey);
         return decryptedKey;
     }
 
@@ -132,10 +132,10 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
                 },
                 { upsert: true });
             if (result.modifiedCount === 0 && result.upsertedCount === 0) {
-                throw new Error(`Failed to store public key for hub`);
+                throw new Error("Failed to store public key for hub");
             }
         } catch (error) {
-            throw new Error(`Failed to store public key for hub`);
+            throw new Error("Failed to store public key for hub");
         }
     }
 
@@ -144,7 +144,7 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
             .findOne({ client_id: this._hubID }, { projection: { _id: 0, client_id: 0 } });
 
         if (!publicKey) {
-            throw new Error(`Public key not found for hub`);
+            throw new Error("Public key not found for hub");
         }
         return publicKey.publicKey;
     }
@@ -154,25 +154,25 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
             return text; // don't encrypt.. return as is
         }
         const iv = randomBytes(16); // IV should be random for each encryption
-        const cipher = createCipheriv('aes-256-gcm', this._scryptKey, iv);
-        let encrypted = cipher.update(text, 'utf8', 'hex');
-        encrypted += cipher.final('hex');
+        const cipher = createCipheriv("aes-256-gcm", this._scryptKey, iv);
+        let encrypted = cipher.update(text, "utf8", "hex");
+        encrypted += cipher.final("hex");
         const tag = cipher.getAuthTag();
-        return `${iv.toString('hex')}:${tag.toString('hex')}:${encrypted}`;
+        return `${iv.toString("hex")}:${tag.toString("hex")}:${encrypted}`;
     }
 
     _decrypt(encrypted: string): string {
         if (!this._isCAEncrypted) {
             return encrypted; // don't decrypt.. return as is
         }
-        const parts = encrypted.split(':');
-        const iv = Buffer.from(parts[0], 'hex');
-        const tag = Buffer.from(parts[1], 'hex');
+        const parts = encrypted.split(":");
+        const iv = Buffer.from(parts[0], "hex");
+        const tag = Buffer.from(parts[1], "hex");
         const text = parts[2];
-        const decipher = createDecipheriv('aes-256-gcm', this._scryptKey, iv);
+        const decipher = createDecipheriv("aes-256-gcm", this._scryptKey, iv);
         decipher.setAuthTag(tag);
-        let decrypted = decipher.update(text, 'hex', 'utf8');
-        decrypted += decipher.final('utf8');
+        let decrypted = decipher.update(text, "hex", "utf8");
+        decrypted += decipher.final("utf8");
         return decrypted;
     }
 
