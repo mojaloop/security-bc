@@ -33,20 +33,20 @@
 
 "use strict";
 import fs from "fs";
-import {Server} from "http";
+import { Server } from "http";
 import express from "express";
-import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
+import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
 
-import {KeyManagementAggregate } from "../domain/aggregate";
-import {LogLevel} from "@mojaloop/logging-bc-public-types-lib/dist/index";
-import {KafkaLogger} from "@mojaloop/logging-bc-client-lib/dist/index";
+import { KeyManagementAggregate } from "../domain/aggregate";
+import { LogLevel } from "@mojaloop/logging-bc-public-types-lib/dist/index";
+import { KafkaLogger } from "@mojaloop/logging-bc-client-lib/dist/index";
 
-import {TokenHelper} from "@mojaloop/security-bc-client-lib";
+import { TokenHelper } from "@mojaloop/security-bc-client-lib";
 
 import process from "process";
 import util from "util";
-import {KeyManagementRoutes} from "./routes";
-import {CertificateManager} from "../infrastructure/certificate_manager";
+import { KeyManagementRoutes } from "./routes";
+import { CertificateManager } from "../domain//certificate_manager";
 
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -57,7 +57,7 @@ const BC_NAME = "security-bc";
 const APP_NAME = "key-management-svc";
 const APP_VERSION = packageJSON.version;
 const PRODUCTION_MODE = process.env["PRODUCTION_MODE"] || false;
-const LOG_LEVEL:LogLevel = process.env["LOG_LEVEL"] as LogLevel || LogLevel.DEBUG;
+const LOG_LEVEL: LogLevel = process.env["LOG_LEVEL"] as LogLevel || LogLevel.DEBUG;
 
 const SVC_DEFAULT_HTTP_PORT = 3204;
 
@@ -71,6 +71,8 @@ const PRIVATE_CERT_PEM_FILE_PATH = process.env["PRIVATE_CERT_PEM_FILE_PATH"] || 
 
 // Public Cert Will be used to verify CSR from participants
 const PUBLIC_CERT_PEM_FILE_PATH = process.env["PUBLIC_CERT_PEM_FILE_PATH"] || "/app/data/public.pem";
+
+const PUBLIC_CERT_STORAGE_PATH = process.env["PUBLIC_CERT_STORAGE_PATH"] || "/app/data/certs";
 
 const AUTH_N_TOKEN_LIFE_SECS = process.env["AUTH_N_TOKEN_LIFE_SECS"] ? parseInt(process.env["AUTH_N_TOKEN_LIFE_SECS"]) : 3600;
 // const AUTH_N_DEFAULT_AUDIENCE = process.env["AUTH_N_DEFAULT_AUDIENCE"] || "mojaloop.vnext.dev.default_audience";
@@ -86,7 +88,9 @@ const AUTH_N_SVC_JWKS_URL = process.env["AUTH_N_SVC_JWKS_URL"] || `${AUTH_N_SVC_
 const INSTANCE_NAME = `${BC_NAME}_${APP_NAME}`;
 const INSTANCE_ID = `${INSTANCE_NAME}__${crypto.randomUUID()}`;
 
-import {MLKafkaJsonConsumer} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
+import { MLKafkaJsonConsumer } from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
+import { ISecureCertificateStorage } from "../domain/isecure_storage";
+import { LocalCertificateStorage } from "../implementation/local_certificate_storage";
 // kafka logger
 const kafkaProducerOptions = {
     kafkaBrokerList: KAFKA_URL
@@ -101,6 +105,7 @@ export class Service {
     static expressServer: Server;
     static tokenHelper: TokenHelper;
     static certificateManager: CertificateManager;
+    static secureStorage: ISecureCertificateStorage;
 
     static async start(
         logger?: ILogger,
@@ -121,18 +126,28 @@ export class Service {
         }
         globalLogger = this.logger = logger.createChild("Service");
 
+        if (!this.secureStorage) {
+            this.secureStorage = new LocalCertificateStorage(
+                PUBLIC_CERT_STORAGE_PATH,
+                PRIVATE_CERT_PEM_FILE_PATH,
+                PUBLIC_CERT_PEM_FILE_PATH,
+                this.logger
+            );
+            await this.secureStorage.init();
+        }
+
         if (!fs.existsSync(PRIVATE_CERT_PEM_FILE_PATH) || !fs.existsSync(PUBLIC_CERT_PEM_FILE_PATH)) {
             if (PRODUCTION_MODE) {
                 throw new Error("Production mode: both CA Private and Public keys are required.");
             }
             this.logger.info("CA Private and Public Keys  not found. Generating new ones...");
-            CertificateManager.generateCAKeyPair(PRIVATE_CERT_PEM_FILE_PATH, PUBLIC_CERT_PEM_FILE_PATH);
+            CertificateManager.generateCAKeyPairAndStore(this.secureStorage);
             this.logger.info("CA Private and Public Keys generated.");
         }
 
-        if(!certificateManager){
-
-            this.certificateManager = new CertificateManager(PRIVATE_CERT_PEM_FILE_PATH, PUBLIC_CERT_PEM_FILE_PATH, this.logger);
+        if (!certificateManager) {
+            this.certificateManager = new CertificateManager(this.secureStorage);
+            this.certificateManager.init();
         }
 
         // token helper
@@ -141,7 +156,7 @@ export class Service {
             logger,
             AUTH_N_TOKEN_ISSUER_NAME,
             AUTH_N_TOKEN_AUDIENCE,
-            new MLKafkaJsonConsumer({kafkaBrokerList: KAFKA_URL, autoOffsetReset: "earliest", kafkaGroupId: INSTANCE_ID}, logger) // for jwt list - no groupId
+            new MLKafkaJsonConsumer({ kafkaBrokerList: KAFKA_URL, autoOffsetReset: "earliest", kafkaGroupId: INSTANCE_ID }, logger) // for jwt list - no groupId
         );
 
         await this.tokenHelper.init();
@@ -150,7 +165,7 @@ export class Service {
                 this.logger,
                 this.certificateManager,
             );
-        }catch(err){
+        } catch (err) {
             await Service.stop();
         }
 
@@ -158,12 +173,12 @@ export class Service {
         this.setupAndStartExpress();
     }
 
-    static setupAndStartExpress():void {
+    static setupAndStartExpress(): void {
         const app = express();
         app.use(express.json()); // for parsing application/json
-        app.use(express.urlencoded({extended: true})); // for parsing application/x-www-form-urlencoded
+        app.use(express.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
 
-        app.use( (req: express.Request, res: express.Response, next: express.NextFunction) => {
+        app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
             this.logger.debug(`Received request to: ${req.protocol}://${req.headers.host}${req.originalUrl}`);
             next();
         });
@@ -183,7 +198,7 @@ export class Service {
         });
 
         let portNum = SVC_DEFAULT_HTTP_PORT;
-        if(process.env["SVC_HTTP_PORT"] && !isNaN(parseInt(process.env["SVC_HTTP_PORT"]))) {
+        if (process.env["SVC_HTTP_PORT"] && !isNaN(parseInt(process.env["SVC_HTTP_PORT"]))) {
             portNum = parseInt(process.env["SVC_HTTP_PORT"]);
         }
 
@@ -197,8 +212,8 @@ export class Service {
 
     }
 
-    static async stop():Promise<void>{
-        if (this.expressServer){
+    static async stop(): Promise<void> {
+        if (this.expressServer) {
             const closeExpress = util.promisify(this.expressServer.close);
             await closeExpress();
         }

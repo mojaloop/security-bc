@@ -32,13 +32,13 @@
 
 "use strict";
 
-import {pki} from "node-forge";
+import { pki } from "node-forge";
 
 import {
     AuthenticatedHttpRequester,
     KeyMgmtHttpClient,
 } from "@mojaloop/security-bc-client-lib";
-import {ConsoleLogger} from "@mojaloop/logging-bc-public-types-lib";
+import { ConsoleLogger } from "@mojaloop/logging-bc-public-types-lib";
 
 const AUTH_N_SVC_BASEURL = "http://localhost:3202";
 
@@ -50,7 +50,7 @@ const APP_CLIENT_SECRET = "superServiceSecret";
 const logger = new ConsoleLogger();
 
 // DFSP_A_CSR_PEM is taken from packages/client-lib/src/crypto/tests.ts
-const DFSP_A_CSR_PEM=`-----BEGIN CERTIFICATE REQUEST-----
+const DFSP_A_CSR_PEM = `-----BEGIN CERTIFICATE REQUEST-----
 MIICVjCCAT4CAQAwETEPMA0GA1UEAwwGREZTUF9BMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
 CgKCAQEAtIEtfUIr3PTU7xLoKzEejPqkcDM0PE8RtFWDney6j075D8Uq+UFjw+llw6XjCUh4rKTc
 KgANwhJgt4NeIX6mj8fWYDSrQWGNE4cWzc9mn872p0hyuxsuyde2bx6zILPV6kDCBWVkAdcXoPEC
@@ -68,7 +68,7 @@ describe('key-management-client-lib tests', () => {
     let authRequester: AuthenticatedHttpRequester;
     let keyMgmtHttpClient: KeyMgmtHttpClient;
     beforeAll(() => {
-        authRequester = new AuthenticatedHttpRequester(logger, AUTH_N_SVC_BASEURL+ "/token");
+        authRequester = new AuthenticatedHttpRequester(logger, AUTH_N_SVC_BASEURL + "/token");
         authRequester.setAppCredentials(APP_CLIENT_ID, APP_CLIENT_SECRET);
         keyMgmtHttpClient = new KeyMgmtHttpClient('http://localhost:3204', authRequester);
         authRequester.initialised
@@ -89,7 +89,7 @@ describe('key-management-client-lib tests', () => {
     test("Sign CSR", async () => {
         expect(DFSP_A_CSR_PEM).toContain('-----BEGIN CERTIFICATE REQUEST-----');
 
-        const signedCertStr = await keyMgmtHttpClient.uploadCSR(DFSP_A_CSR_PEM);
+        const signedCertStr = await keyMgmtHttpClient.uploadCSR('dfsp_a', DFSP_A_CSR_PEM);
         expect(signedCertStr).toBeDefined();
         expect(signedCertStr).toContain('-----BEGIN CERTIFICATE-----');
 
@@ -107,7 +107,7 @@ describe('key-management-client-lib tests', () => {
 
         // Verify the signature with the API
         const verificationResult = await keyMgmtHttpClient.verifyCert(signedCertStr);
-        expect(verificationResult).toEqual({verified: true});
+        expect(verificationResult).toEqual({ verified: true });
     });
 
 });

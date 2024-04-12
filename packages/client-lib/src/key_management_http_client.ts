@@ -27,8 +27,8 @@
 
 "use strict";
 
-import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {IAuthenticatedHttpRequester} from "@mojaloop/security-bc-public-types-lib";
+// import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
+import { IAuthenticatedHttpRequester } from "@mojaloop/security-bc-public-types-lib";
 
 export class KeyMgmtHttpClient {
     // Properties received through the constructor.
@@ -47,13 +47,14 @@ export class KeyMgmtHttpClient {
         this._authRequester = authRequester;
     }
 
-    public async uploadCSR(csr: string): Promise<string> {
+    public async uploadCSR(client_id: string, csr: string): Promise<string> {
         const requestInfo = new Request(`${this._baseUrlHttpService}/certs/upload-csr`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
+                client_id,
                 csr,
             }),
 

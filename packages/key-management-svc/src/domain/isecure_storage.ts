@@ -22,9 +22,6 @@
  * Gates Foundation
  - Name Surname <name.surname@gatesfoundation.com>
 
- * Crosslake
- - Pedro Sousa Barreto <pedrob@crosslaketech.com>
-
  * ThitsaWorks
  - Si Thu Myo <sithu.myo@thitsaworks.com>
 
@@ -33,29 +30,25 @@
 
 "use strict";
 
-import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
-import { CertificateManager } from "./certificate_manager";
+export enum SECURE_CERTIFICATE_STORAGE_TYPE {
+    LOCAL = "LOCAL",
+    MONGODB = "MONGODB",
+    VAULT = "VAULT",
+    REDIS = "REDIS",
+}
 
-export class KeyManagementAggregate {
-    private _logger: ILogger;
-    private _certificateManager: CertificateManager;
-    constructor(
-        logger: ILogger,
-        certManager: CertificateManager
-    ) {
-        this._logger = logger.createChild(this.constructor.name);
-        this._certificateManager = certManager;
-    }
+export interface ISecureCertificateStorage {
+    init(): Promise<void>;
 
-    async signCSR(client_id: string, csr: string): Promise<string> {
-        return this._certificateManager.signCSR(client_id, csr.toString());
-    }
+    getPublicCert(client_id: string): Promise<string>;
 
-    async getHubCAPubCert(): Promise<string> {
-        return this._certificateManager.getHubCAPubCert();
-    }
+    storePublicCert(client_id: string, cert: string): Promise<void>;
 
-    async verifyCert(certPem: string): Promise<boolean> {
-        return this._certificateManager.verifyCert(certPem);
-    }
+    storeCAHubPrivateKey(key: string): Promise<void>;
+    getCAHubPrivateKey(): Promise<string>;
+
+    storeCAHubPublicKey(key: string): Promise<void>;
+    getCAHubPublicKey(): Promise<string>;
+
+    destroy(): Promise<void>;
 }

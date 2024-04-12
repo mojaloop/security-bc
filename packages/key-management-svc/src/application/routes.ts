@@ -30,16 +30,16 @@
 
 "use strict";
 import express from "express";
-import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
-import {KeyManagementAggregate} from "../domain/aggregate";
+import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
+import { KeyManagementAggregate } from "../domain/aggregate";
 import multer from "multer";
-import {CallSecurityContext, ITokenHelper} from "@mojaloop/security-bc-public-types-lib";
+import { CallSecurityContext, ITokenHelper } from "@mojaloop/security-bc-public-types-lib";
 
- declare module "express-serve-static-core" {
-     export interface Request {
-         securityContext: null | CallSecurityContext;
-     }
- }
+declare module "express-serve-static-core" {
+    export interface Request {
+        securityContext: null | CallSecurityContext;
+    }
+}
 
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -66,6 +66,7 @@ export class KeyManagementRoutes {
 
     async uploadCSR(req: express.Request, res: express.Response) {
         let csrPem = "";
+        let client_id = "";
         if (req.file && req.file.buffer) {
             // Check if the CSR was uploaded as a file
             csrPem = req.file.buffer.toString();
@@ -77,8 +78,15 @@ export class KeyManagementRoutes {
             return res.status(400).send("No CSR provided. Please upload a CSR file.");
         }
 
+        if (req.body.client_id && typeof req.body.client_id === "string") {
+            client_id = req.body.client_id;
+        } else {
+            this._logger.error("No client_id provided.");
+            return res.status(400).send("No client_id provided. Please provide a client_id.");
+        }
+
         try {
-            const signedCertPem = await this._keyMgmtAgg.signCSR(csrPem);
+            const signedCertPem = await this._keyMgmtAgg.signCSR(client_id, csrPem);
             return res.type("application/x-pem-file").send(signedCertPem);
         } catch (error) {
             this._logger.error("Failed to sign CSR.", (error as Error).message);
@@ -103,37 +111,37 @@ export class KeyManagementRoutes {
         try {
             const cert = req.body.cert;
             const verified = await this._keyMgmtAgg.verifyCert(cert);
-            return res.status(200).json({verified});
+            return res.status(200).json({ verified });
         } catch (error) {
             this._logger.error("Failed to verify certificate.", (error as Error).message);
-            return res.status(200).json({verified: false});
+            return res.status(200).json({ verified: false });
         }
     }
 
-     private async _authenticationMiddleware(
-         req: express.Request,
-         res: express.Response,
-         next: express.NextFunction
-     ) {
-         const authorizationHeader = req.headers["authorization"];
+    private async _authenticationMiddleware(
+        req: express.Request,
+        res: express.Response,
+        next: express.NextFunction
+    ) {
+        const authorizationHeader = req.headers["authorization"];
 
-         if (!authorizationHeader) return res.sendStatus(401);
+        if (!authorizationHeader) return res.sendStatus(401);
 
-         const bearer = authorizationHeader.trim().split(" ");
-         if (bearer.length != 2) {
-             return res.sendStatus(401);
-         }
+        const bearer = authorizationHeader.trim().split(" ");
+        if (bearer.length != 2) {
+            return res.sendStatus(401);
+        }
 
-         const bearerToken = bearer[1];
-         const callSecCtx:  CallSecurityContext | null = await this._tokenHelper.getCallSecurityContextFromAccessToken(bearerToken);
+        const bearerToken = bearer[1];
+        const callSecCtx: CallSecurityContext | null = await this._tokenHelper.getCallSecurityContextFromAccessToken(bearerToken);
 
-         if(!callSecCtx){
-             return res.sendStatus(401);
-         }
+        if (!callSecCtx) {
+            return res.sendStatus(401);
+        }
 
-         req.securityContext = callSecCtx;
-         return next();
-     }
+        req.securityContext = callSecCtx;
+        return next();
+    }
 
     get Router(): express.Router {
         return this._router;

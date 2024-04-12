@@ -21,7 +21,7 @@
     ],
     "scripts": {
         "start": "npm run service",
-        "start:dev": "npm run build && PRIVATE_CERT_PEM_FILE_PATH=dist/private.pem PUBLIC_CERT_PEM_FILE_PATH=dist/public.pem npm start",
+        "start:dev": "npm run build && PUBLIC_CERT_STORAGE_PATH=dist/certs PRIVATE_CERT_PEM_FILE_PATH=dist/private.pem PUBLIC_CERT_PEM_FILE_PATH=dist/public.pem npm start",
         "service": "node dist/application/index.js",
         "build": "tsc",
         "watch": "tsc -w",
