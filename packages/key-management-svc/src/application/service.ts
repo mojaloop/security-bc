@@ -49,6 +49,11 @@ import { KeyManagementRoutes } from "./routes";
 import { CertificateManager } from "../domain//certificate_manager";
 
 
+import { MLKafkaJsonConsumer } from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
+import { ISecureCertificateStorage, SECURE_CERTIFICATE_STORAGE_TYPE } from "../domain/isecure_storage";
+import { LocalCertificateStorage } from "../implementation/local_certificate_storage";
+import { MongoCertificateStorage } from "../implementation/mongo_certificate_storage";
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJSON = require("../../package.json");
 
@@ -80,7 +85,10 @@ const INSTANCE_NAME = `${BC_NAME}_${APP_NAME}`;
 const INSTANCE_ID = `${INSTANCE_NAME}__${crypto.randomUUID()}`;
 
 // ---- Certificate Storage Environment Variables ----
-const SECURE_STORAGE_TYPE = process.env["SECURE_STORAGE_TYPE"] || "local";
+const SECURE_STORAGE_TYPE =
+    process.env["SECURE_STORAGE_TYPE"] as SECURE_CERTIFICATE_STORAGE_TYPE || SECURE_CERTIFICATE_STORAGE_TYPE.LOCAL;
+const CA_ENCRYPTION_SECRET_KEY = process.env["CA_ENCRYPTION_SECRET_KEY"] || "test_secret_key";
+// const CA_ENCRYPTION_ENABLED = process.env["CA_ENCRYPTION_ENABLED"] === "true" || false;
 
 // local storage env
 const PRIVATE_CERT_PEM_FILE_PATH = process.env["PRIVATE_CERT_PEM_FILE_PATH"] || "/app/data/private.pem";
@@ -89,11 +97,6 @@ const PUBLIC_CERT_STORAGE_PATH = process.env["PUBLIC_CERT_STORAGE_PATH"] || "/ap
 
 // mongo storage env
 const MONGO_URL = process.env["MONGO_URL"] || "mongodb://root:mongoDbPas42@localhost:27017/";
-
-import { MLKafkaJsonConsumer } from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
-import { ISecureCertificateStorage, SECURE_CERTIFICATE_STORAGE_TYPE } from "../domain/isecure_storage";
-import { LocalCertificateStorage } from "../implementation/local_certificate_storage";
-import { MongoCertificateStorage } from "../implementation/mongo_certificate_storage";
 // kafka logger
 const kafkaProducerOptions = {
     kafkaBrokerList: KAFKA_URL
@@ -153,7 +156,8 @@ export class Service {
                     throw new Error(`Unknown secure storage type: ${SECURE_STORAGE_TYPE}`);
             }
 
-            await this.secureStorage.init();
+            // await this.secureStorage.init(CA_ENCRYPTION_SECRET_KEY, CA_ENCRYPTION_ENABLED);
+            await this.secureStorage.init(CA_ENCRYPTION_SECRET_KEY, false);
             await CertificateManager._checkKeyOrGenerateCAKeyPair(this.secureStorage);
         }
 

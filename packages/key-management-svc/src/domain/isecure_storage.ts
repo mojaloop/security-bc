@@ -39,7 +39,10 @@ export enum SECURE_CERTIFICATE_STORAGE_TYPE {
 }
 
 export interface ISecureCertificateStorage {
-    init(): Promise<void>;
+    init(secret_key: string, is_ca_encrypted: boolean,): Promise<void>;
+
+    _encrypt(data: string): string;
+    _decrypt(data: string): string;
 
     getPublicCert(client_id: string): Promise<string>;
 

@@ -30,6 +30,7 @@
 
 "use strict";
 
+import { createCipheriv, randomBytes, createDecipheriv, scryptSync } from 'crypto';
 import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
 import { ISecureCertificateStorage } from "../domain/isecure_storage";
 import { promises as fs } from "fs";
@@ -45,6 +46,9 @@ export class LocalCertificateStorage implements ISecureCertificateStorage {
     private _caHubPrivateFilePath: string;
     private _caHubPublicFilePath: string;
 
+    private _scryptKey: Buffer;
+    private _isCAEncrypted: boolean;
+
     constructor(localCertStoragePath: string, caPrivateKeyPath: string, caPublicKeyPath: string, logger: ILogger) {
         this._localCertStoragePath = path.join(__dirname, "../../", localCertStoragePath)
         this._caHubPrivateFilePath = path.join(__dirname, "../../", caPrivateKeyPath)
@@ -56,7 +60,11 @@ export class LocalCertificateStorage implements ISecureCertificateStorage {
         this._logger.debug(`LocalCertificateStorage: caPublicKeyPath: ${this._caHubPublicFilePath}`);
     }
 
-    public async init(): Promise<void> {
+    public async init(CAEncryptionKey: string, isCAEncrypted: boolean = false): Promise<void> {
+        this._scryptKey = scryptSync(CAEncryptionKey, 'salt', 32);
+        this._isCAEncrypted = isCAEncrypted;
+        this._logger.debug(`LocalCertificateStorage: scryptkey: ${this._scryptKey.toString('hex')}`);
+
         try {
             fs.mkdir(this._localCertStoragePath, { recursive: true });
         } catch (error) {
@@ -102,7 +110,8 @@ export class LocalCertificateStorage implements ISecureCertificateStorage {
 
     public async storeCAHubPrivateKey(key: string): Promise<void> {
         try {
-            await fs.writeFile(this._caHubPrivateFilePath, key);
+            const encryptedKey = this._encrypt(key);
+            await fs.writeFile(this._caHubPrivateFilePath, encryptedKey);
         } catch (error) {
             throw new Error(`Error writing private cert file: ${this._caHubPrivateFilePath}`);
         }
@@ -110,7 +119,8 @@ export class LocalCertificateStorage implements ISecureCertificateStorage {
 
     public async getCAHubPrivateKey(): Promise<string> {
         try {
-            return await fs.readFile(this._caHubPrivateFilePath, "utf8");
+            const encryptedKey = await fs.readFile(this._caHubPrivateFilePath, "utf8");
+            return this._decrypt(encryptedKey);
         } catch (error) {
             throw new Error(`Error reading private cert file: ${this._caHubPrivateFilePath}`);
         }
@@ -136,6 +146,35 @@ export class LocalCertificateStorage implements ISecureCertificateStorage {
     private _sanitizeClientId(client_id: string): string {
         // Only allow alphanumeric characters, hyphen, and underscore
         return client_id.replace(/[^a-zA-Z0-9-_ ]/g, '').trim();
+    }
+
+    _encrypt(text: string): string {
+        if (!this._isCAEncrypted) {
+            // don't encrypt.. return as is
+            return text;
+        }
+        const iv = randomBytes(16); // IV should be random for each encryption
+        const cipher = createCipheriv('aes-256-gcm', this._scryptKey, iv);
+        let encrypted = cipher.update(text, 'utf8', 'hex');
+        encrypted += cipher.final('hex');
+        const tag = cipher.getAuthTag();
+        return `${iv.toString('hex')}:${tag.toString('hex')}:${encrypted}`;
+    }
+
+    _decrypt(encrypted: string): string {
+        if (!this._isCAEncrypted) {
+            // data is not encrypted.. return as is
+            return encrypted;
+        }
+        const parts = encrypted.split(':');
+        const iv = Buffer.from(parts[0], 'hex');
+        const tag = Buffer.from(parts[1], 'hex');
+        const text = parts[2];
+        const decipher = createDecipheriv('aes-256-gcm', this._scryptKey, iv);
+        decipher.setAuthTag(tag);
+        let decrypted = decipher.update(text, 'hex', 'utf8');
+        decrypted += decipher.final('utf8');
+        return decrypted;
     }
 
     public async destroy(): Promise<void> {
