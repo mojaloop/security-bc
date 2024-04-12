@@ -21,7 +21,7 @@ The Key Management Service supports multiple secure storage options for certific
 
 ### Environment Variables
 
-- `SECURE_STORAGE_TYPE`: Specifies the type of secure storage (`local`, `mongodb`, `redis`, `vault`). Default is `vault`.
+- `SECURE_STORAGE_TYPE`: Specifies the type of secure storage (`local`, `mongodb`, `redis`, `vault`). Default is `local`.
 - `CA_ENCRYPTION_SECRET_KEY`: Secret key used for encrypting certificates. Default is `test_secret_key`.
 - `PRIVATE_CERT_PEM_FILE_PATH`: Path to private certificate file for local storage. Only needed For `local` storage type.
 - `PUBLIC_CERT_PEM_FILE_PATH`: Path to public certificate file for local storage. Only needed For `local` storage type.

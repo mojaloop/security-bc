@@ -88,7 +88,7 @@ const INSTANCE_ID = `${INSTANCE_NAME}__${crypto.randomUUID()}`;
 
 // ---- Certificate Storage Environment Variables ----
 const SECURE_STORAGE_TYPE =
-    process.env["SECURE_STORAGE_TYPE"] as SECURE_CERTIFICATE_STORAGE_TYPE || SECURE_CERTIFICATE_STORAGE_TYPE.VAULT;
+    process.env["SECURE_STORAGE_TYPE"] as SECURE_CERTIFICATE_STORAGE_TYPE || SECURE_CERTIFICATE_STORAGE_TYPE.LOCAL;
 const CA_ENCRYPTION_SECRET_KEY = process.env["CA_ENCRYPTION_SECRET_KEY"] || "test_secret_key";
 // const CA_ENCRYPTION_ENABLED = process.env["CA_ENCRYPTION_ENABLED"] === "true" || false;
 
