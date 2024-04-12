@@ -53,6 +53,7 @@ import { MLKafkaJsonConsumer } from "@mojaloop/platform-shared-lib-nodejs-kafka-
 import { ISecureCertificateStorage, SECURE_CERTIFICATE_STORAGE_TYPE } from "../domain/isecure_storage";
 import { LocalCertificateStorage } from "../implementation/local_certificate_storage";
 import { MongoCertificateStorage } from "../implementation/mongo_certificate_storage";
+import { RedisCertificateStorage } from "../implementation/redis_certificate_storage";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJSON = require("../../package.json");
@@ -94,9 +95,13 @@ const CA_ENCRYPTION_SECRET_KEY = process.env["CA_ENCRYPTION_SECRET_KEY"] || "tes
 const PRIVATE_CERT_PEM_FILE_PATH = process.env["PRIVATE_CERT_PEM_FILE_PATH"] || "/app/data/private.pem";
 const PUBLIC_CERT_PEM_FILE_PATH = process.env["PUBLIC_CERT_PEM_FILE_PATH"] || "/app/data/public.pem";
 const PUBLIC_CERT_STORAGE_PATH = process.env["PUBLIC_CERT_STORAGE_PATH"] || "/app/data/certs";
-
 // mongo storage env
 const MONGO_URL = process.env["MONGO_URL"] || "mongodb://root:mongoDbPas42@localhost:27017/";
+// redis storage env
+const REDIS_URL = process.env["REDIS_URL"] || "redis://localhost:6379";
+
+
+
 // kafka logger
 const kafkaProducerOptions = {
     kafkaBrokerList: KAFKA_URL
@@ -149,7 +154,9 @@ export class Service {
                     this.logger.info("Using MongoDB storage for certificates.");
                     break;
                 case SECURE_CERTIFICATE_STORAGE_TYPE.REDIS:
-                    throw new Error("Redis storage not implemented yet.");
+                    this.secureStorage = new RedisCertificateStorage(REDIS_URL, this.logger);
+                    this.logger.info("Using Redis storage for certificates.");
+                    break
                 case SECURE_CERTIFICATE_STORAGE_TYPE.VAULT:
                     throw new Error("Vault storage not implemented yet.");
                 default:
