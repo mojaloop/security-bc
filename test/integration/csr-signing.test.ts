@@ -71,7 +71,6 @@ describe('key-management-client-lib tests', () => {
         authRequester = new AuthenticatedHttpRequester(logger, AUTH_N_SVC_BASEURL + "/token");
         authRequester.setAppCredentials(APP_CLIENT_ID, APP_CLIENT_SECRET);
         keyMgmtHttpClient = new KeyMgmtHttpClient('http://localhost:3204', authRequester);
-        authRequester.initialised
 
     })
     test("Obtain Hub CA Public Cert", async () => {

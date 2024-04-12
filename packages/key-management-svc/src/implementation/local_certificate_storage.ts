@@ -135,7 +135,7 @@ export class LocalCertificateStorage implements ISecureCertificateStorage {
 
     private _sanitizeClientId(client_id: string): string {
         // Only allow alphanumeric characters, hyphen, and underscore
-        return client_id.replace(/[^a-zA-Z0-9-_]/g, '');
+        return client_id.replace(/[^a-zA-Z0-9-_ ]/g, '').trim();
     }
 
     public async destroy(): Promise<void> {
