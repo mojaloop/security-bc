@@ -4,6 +4,7 @@ import forge, { pki } from "node-forge";
 
 import { CertificatesHelper } from "@mojaloop/security-bc-client-lib";
 import { ISecureCertificateStorage } from "./isecure_storage";
+import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
 
 export class CertificateManager {
     private _caPubKeyPem: string;
@@ -12,9 +13,11 @@ export class CertificateManager {
     private _caPrivateKey: forge.pki.PrivateKey;
     private _ca_store: pki.CAStore = pki.createCaStore();
     private _secureStorage: ISecureCertificateStorage;
+    private _logger: ILogger;
 
-    constructor(secureStorage: ISecureCertificateStorage) {
+    constructor(secureStorage: ISecureCertificateStorage, logger: ILogger) {
         this._secureStorage = secureStorage;
+        this._logger = logger.createChild(this.constructor.name);
     }
 
     async init() {
@@ -78,20 +81,25 @@ export class CertificateManager {
         return pki.verifyCertificateChain(this._ca_store, [cert]);
     }
 
-    static generateCAKeyPairAndStore(secureStorage: ISecureCertificateStorage): string {
-        const certHelper = new CertificatesHelper();
-        // Generate a keypair
-        const keys = forge.pki.rsa.generateKeyPair(2048);
-        const signingKeyPem = forge.pki.privateKeyToPem(keys.privateKey);
-        const certPem = certHelper.createX590CertificateAuthorityCert(
+    static async _checkKeyOrGenerateCAKeyPair(secureStorage: ISecureCertificateStorage): Promise<void> {
+        try {
+            await secureStorage.getCAHubPrivateKey();
+            await secureStorage.getCAHubPublicKey();
+        } catch (error) {
+            // If the CA private key and public key are not found in the secure storage, generate a new keypair
+            const certHelper = new CertificatesHelper();
+            // Generate a keypair
+            const keys = forge.pki.rsa.generateKeyPair(2048);
+            const signingKeyPem = forge.pki.privateKeyToPem(keys.privateKey);
+            const certPem = certHelper.createX590CertificateAuthorityCert(
 
-            signingKeyPem,
-            // commonName, country, state, locality, orgName, orgUnit,
-            "vNextHub CA", "US", "Virginia", "Blacksburg", "Mojaloop", "vNextHub CA",
-            10);
+                signingKeyPem,
+                // commonName, country, state, locality, orgName, orgUnit,
+                "vNextHub CA", "US", "Virginia", "Blacksburg", "Mojaloop", "vNextHub CA",
+                10);
 
-        secureStorage.storeCAHubPrivateKey(signingKeyPem);
-        secureStorage.storeCAHubPublicKey(certPem);
-        return certPem;
+            await secureStorage.storeCAHubPrivateKey(signingKeyPem);
+            await secureStorage.storeCAHubPublicKey(certPem);
+        }
     }
 }

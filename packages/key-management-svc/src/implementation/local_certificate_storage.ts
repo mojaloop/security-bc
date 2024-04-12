@@ -49,7 +49,7 @@ export class LocalCertificateStorage implements ISecureCertificateStorage {
         this._localCertStoragePath = path.join(__dirname, "../../", localCertStoragePath)
         this._caHubPrivateFilePath = path.join(__dirname, "../../", caPrivateKeyPath)
         this._caHubPublicFilePath = path.join(__dirname, "../../", caPublicKeyPath)
-        this._logger = logger;
+        this._logger = logger.createChild(this.constructor.name);
 
         this._logger.debug(`LocalCertificateStorage: localCertStoragePath: ${this._localCertStoragePath}`);
         this._logger.debug(`LocalCertificateStorage: caPrivateKeyPath: ${this._caHubPrivateFilePath}`);

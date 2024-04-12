@@ -62,17 +62,8 @@ const LOG_LEVEL: LogLevel = process.env["LOG_LEVEL"] as LogLevel || LogLevel.DEB
 const SVC_DEFAULT_HTTP_PORT = 3204;
 
 const KAFKA_URL = process.env["KAFKA_URL"] || "localhost:9092";
-// const MONGO_URL = process.env["MONGO_URL"] || "mongodb://root:mongoDbPas42@localhost:27017/";
 //const KAFKA_AUDITS_TOPIC = process.env["KAFKA_AUDITS_TOPIC"] || "audits";
 const KAFKA_LOGS_TOPIC = process.env["KAFKA_LOGS_TOPIC"] || "logs";
-
-// Private Key Will be used to sign CSR from participants
-const PRIVATE_CERT_PEM_FILE_PATH = process.env["PRIVATE_CERT_PEM_FILE_PATH"] || "/app/data/private.pem";
-
-// Public Cert Will be used to verify CSR from participants
-const PUBLIC_CERT_PEM_FILE_PATH = process.env["PUBLIC_CERT_PEM_FILE_PATH"] || "/app/data/public.pem";
-
-const PUBLIC_CERT_STORAGE_PATH = process.env["PUBLIC_CERT_STORAGE_PATH"] || "/app/data/certs";
 
 const AUTH_N_TOKEN_LIFE_SECS = process.env["AUTH_N_TOKEN_LIFE_SECS"] ? parseInt(process.env["AUTH_N_TOKEN_LIFE_SECS"]) : 3600;
 // const AUTH_N_DEFAULT_AUDIENCE = process.env["AUTH_N_DEFAULT_AUDIENCE"] || "mojaloop.vnext.dev.default_audience";
@@ -88,9 +79,21 @@ const AUTH_N_SVC_JWKS_URL = process.env["AUTH_N_SVC_JWKS_URL"] || `${AUTH_N_SVC_
 const INSTANCE_NAME = `${BC_NAME}_${APP_NAME}`;
 const INSTANCE_ID = `${INSTANCE_NAME}__${crypto.randomUUID()}`;
 
+// ---- Certificate Storage Environment Variables ----
+const SECURE_STORAGE_TYPE = process.env["SECURE_STORAGE_TYPE"] || "local";
+
+// local storage env
+const PRIVATE_CERT_PEM_FILE_PATH = process.env["PRIVATE_CERT_PEM_FILE_PATH"] || "/app/data/private.pem";
+const PUBLIC_CERT_PEM_FILE_PATH = process.env["PUBLIC_CERT_PEM_FILE_PATH"] || "/app/data/public.pem";
+const PUBLIC_CERT_STORAGE_PATH = process.env["PUBLIC_CERT_STORAGE_PATH"] || "/app/data/certs";
+
+// mongo storage env
+const MONGO_URL = process.env["MONGO_URL"] || "mongodb://root:mongoDbPas42@localhost:27017/";
+
 import { MLKafkaJsonConsumer } from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
-import { ISecureCertificateStorage } from "../domain/isecure_storage";
+import { ISecureCertificateStorage, SECURE_CERTIFICATE_STORAGE_TYPE } from "../domain/isecure_storage";
 import { LocalCertificateStorage } from "../implementation/local_certificate_storage";
+import { MongoCertificateStorage } from "../implementation/mongo_certificate_storage";
 // kafka logger
 const kafkaProducerOptions = {
     kafkaBrokerList: KAFKA_URL
@@ -127,26 +130,35 @@ export class Service {
         globalLogger = this.logger = logger.createChild("Service");
 
         if (!this.secureStorage) {
-            this.secureStorage = new LocalCertificateStorage(
-                PUBLIC_CERT_STORAGE_PATH,
-                PRIVATE_CERT_PEM_FILE_PATH,
-                PUBLIC_CERT_PEM_FILE_PATH,
-                this.logger
-            );
-            await this.secureStorage.init();
-        }
-
-        if (!fs.existsSync(PRIVATE_CERT_PEM_FILE_PATH) || !fs.existsSync(PUBLIC_CERT_PEM_FILE_PATH)) {
-            if (PRODUCTION_MODE) {
-                throw new Error("Production mode: both CA Private and Public keys are required.");
+            switch (SECURE_STORAGE_TYPE.toLowerCase()) {
+                case SECURE_CERTIFICATE_STORAGE_TYPE.LOCAL:
+                    this.secureStorage = new LocalCertificateStorage(
+                        PUBLIC_CERT_STORAGE_PATH,
+                        PRIVATE_CERT_PEM_FILE_PATH,
+                        PUBLIC_CERT_PEM_FILE_PATH,
+                        this.logger
+                    );
+                    this.logger.info("Using local directory storage for certificates.");
+                    break;
+                case SECURE_CERTIFICATE_STORAGE_TYPE.MONGO:
+                case SECURE_CERTIFICATE_STORAGE_TYPE.MONGODB:
+                    this.secureStorage = new MongoCertificateStorage(MONGO_URL, this.logger);
+                    this.logger.info("Using MongoDB storage for certificates.");
+                    break;
+                case SECURE_CERTIFICATE_STORAGE_TYPE.REDIS:
+                    throw new Error("Redis storage not implemented yet.");
+                case SECURE_CERTIFICATE_STORAGE_TYPE.VAULT:
+                    throw new Error("Vault storage not implemented yet.");
+                default:
+                    throw new Error(`Unknown secure storage type: ${SECURE_STORAGE_TYPE}`);
             }
-            this.logger.info("CA Private and Public Keys  not found. Generating new ones...");
-            CertificateManager.generateCAKeyPairAndStore(this.secureStorage);
-            this.logger.info("CA Private and Public Keys generated.");
+
+            await this.secureStorage.init();
+            await CertificateManager._checkKeyOrGenerateCAKeyPair(this.secureStorage);
         }
 
         if (!certificateManager) {
-            this.certificateManager = new CertificateManager(this.secureStorage);
+            this.certificateManager = new CertificateManager(this.secureStorage, this.logger);
             this.certificateManager.init();
         }
 
@@ -218,6 +230,8 @@ export class Service {
             await closeExpress();
         }
         if (this.logger && this.logger instanceof KafkaLogger) await this.logger.destroy();
+
+        if (this.secureStorage) await this.secureStorage.destroy();
 
     }
 
