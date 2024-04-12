@@ -296,7 +296,8 @@ export const defaultDevRoles:PlatformRole[] = [
 		isApplicationRole: true,
         isPerParticipantRole: false,
 		privileges: [
-			"VIEW_PARTICIPANT"
+			"VIEW_PARTICIPANT",
+            "VIEW_ALL_ORACLE_ASSOCIATIONS"
 		]
 	}, {
 		id: "settlements-bc-command-handler-svc",
