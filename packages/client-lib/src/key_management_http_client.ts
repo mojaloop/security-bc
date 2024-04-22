@@ -31,9 +31,7 @@
 import { IAuthenticatedHttpRequester } from "@mojaloop/security-bc-public-types-lib";
 
 export class KeyMgmtHttpClient {
-    // Properties received through the constructor.
     // private readonly _logger: ILogger;
-    // Other properties.
     private readonly _baseUrlHttpService: string;
     private readonly _authRequester: IAuthenticatedHttpRequester;
 
@@ -59,8 +57,7 @@ export class KeyMgmtHttpClient {
             }),
 
         });
-        // const response = await this._authRequester.fetch(requestInfo);
-        const response = await fetch(requestInfo); // This is a temporary fix to avoid unable to send csr to the server.
+        const response = await this._authRequester.fetch(requestInfo);
         if (!response.ok) {
             throw new Error(`Failed to upload CSR: ${await response.text()}`);
         }
@@ -74,8 +71,7 @@ export class KeyMgmtHttpClient {
                 "Content-Type": "application/json",
             },
         });
-        // const response = await this._authRequester.fetch(requestInfo);
-        const response = await fetch(requestInfo); // Temporary fix
+        const response = await this._authRequester.fetch(requestInfo);
         if (!response.ok) {
             throw new Error(`Failed to get Hub CA Public Cert: ${await response.text()}`);
         }
@@ -92,8 +88,7 @@ export class KeyMgmtHttpClient {
                 cert,
             }),
         });
-        // const response = await this._authRequester.fetch(requestInfo);
-        const response = await fetch(requestInfo); // Temporary fix
+        const response = await this._authRequester.fetch(requestInfo);
         return await response.json();
     }
 
