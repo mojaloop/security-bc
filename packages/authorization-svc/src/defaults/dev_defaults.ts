@@ -30,9 +30,9 @@
 
 "use strict";
 
-import {PlatformRole} from "@mojaloop/security-bc-public-types-lib";
+import { PlatformRole } from "@mojaloop/security-bc-public-types-lib";
 
-export const defaultDevRoles:PlatformRole[] = [
+export const defaultDevRoles: PlatformRole[] = [
     {
         id: "basic-application",
         description: "Role for applications that can boostrap own privileges, fetch own priv/role associations, bootstrap and read own platform configurations",
@@ -44,6 +44,10 @@ export const defaultDevRoles:PlatformRole[] = [
         privileges: [
             "SECURITY_BOOTSTRAP_PRIVILEGES",
             "SECURITY_FETCH_APP_ROLE_PRIVILEGES_ASSOCIATIONS",
+            "SECURITY_VIEW_PUB_CERTIFICATE",
+            "SECURITY_VIEW_HUB_PUB_CERTIFICATE",
+            "SECURITY_SIGN_CSR",
+            "SECURITY_VERIFY_CERTIFICATE",
             "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
             "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
             "PLATFORM_CONFIGURATION_VIEW_BOUNDED_CONTEXT",

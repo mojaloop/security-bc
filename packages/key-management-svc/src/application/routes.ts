@@ -33,7 +33,8 @@ import express from "express";
 import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
 import { KeyManagementAggregate } from "../domain/aggregate";
 import multer from "multer";
-import { CallSecurityContext, ITokenHelper } from "@mojaloop/security-bc-public-types-lib";
+import { CallSecurityContext, ForbiddenError, IAuthorizationClient, ITokenHelper } from "@mojaloop/security-bc-public-types-lib";
+import { CertKeyManagementPrivileges } from "../domain/privileges";
 
 declare module "express-serve-static-core" {
     export interface Request {
@@ -46,16 +47,18 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 export class KeyManagementRoutes {
     private _logger: ILogger;
+    private _authorizationClient: IAuthorizationClient;
     private _tokenHelper: ITokenHelper;
     private _router = express.Router();
     private _keyMgmtAgg: KeyManagementAggregate;
 
-    constructor(keyMgmtAgg: KeyManagementAggregate, tokenHelper: ITokenHelper, logger: ILogger) {
+    constructor(keyMgmtAgg: KeyManagementAggregate, tokenHelper: ITokenHelper, authorizationClient: IAuthorizationClient, logger: ILogger) {
         this._logger = logger.createChild(this.constructor.name);
         this._keyMgmtAgg = keyMgmtAgg;
         this._tokenHelper = tokenHelper;
+        this._authorizationClient = authorizationClient;
 
-        // this._router.use(this._authenticationMiddleware.bind(this));
+        this._router.use(this._authenticationMiddleware.bind(this));
         // bind routes
         this._router.post("/certs/upload-csr", upload.single("csr"), this.uploadCSR.bind(this));
 
@@ -86,6 +89,7 @@ export class KeyManagementRoutes {
         }
 
         try {
+            this._enforcePrivilege(req.securityContext!, CertKeyManagementPrivileges.SIGN_CSR);
             const signedCertPem = await this._keyMgmtAgg.signCSR(client_id, csrPem);
             return res.type("application/x-pem-file").send(signedCertPem);
         } catch (error) {
@@ -96,6 +100,7 @@ export class KeyManagementRoutes {
 
     async getHubCAPubCert(req: express.Request, res: express.Response) {
         try {
+            this._enforcePrivilege(req.securityContext!, CertKeyManagementPrivileges.VIEW_HUB_PUB_CERTIFICATE);
             const hubCAPubCert = await this._keyMgmtAgg.getHubCAPubCert();
             return res.type("application/x-pem-file").send(hubCAPubCert);
         } catch (error) {
@@ -109,6 +114,7 @@ export class KeyManagementRoutes {
             return res.status(400).send("No certificate provided.");
         }
         try {
+            this._enforcePrivilege(req.securityContext!, CertKeyManagementPrivileges.VERIFY_CERTIFICATE);
             const cert = req.body.cert;
             const verified = await this._keyMgmtAgg.verifyCert(cert);
             return res.status(200).json({ verified });
@@ -143,6 +149,16 @@ export class KeyManagementRoutes {
         return next();
     }
 
+    private _enforcePrivilege(secCtx: CallSecurityContext, privilegeId: string): void {
+        for (const roleId of secCtx.platformRoleIds) {
+            if (this._authorizationClient.roleHasPrivilege(roleId, privilegeId)) {
+                return;
+            }
+        }
+        const error = new ForbiddenError(`Required privilege "${privilegeId}" not held by caller`);
+        this._logger.isWarnEnabled() && this._logger.warn(error.message);
+        throw error;
+    }
     get Router(): express.Router {
         return this._router;
     }

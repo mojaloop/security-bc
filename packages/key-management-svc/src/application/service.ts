@@ -41,7 +41,7 @@ import { KeyManagementAggregate } from "../domain/aggregate";
 import { LogLevel } from "@mojaloop/logging-bc-public-types-lib/dist/index";
 import { KafkaLogger } from "@mojaloop/logging-bc-client-lib/dist/index";
 
-import { TokenHelper } from "@mojaloop/security-bc-client-lib";
+import { AuthenticatedHttpRequester, TokenHelper, AuthorizationClient } from "@mojaloop/security-bc-client-lib";
 
 import process from "process";
 import util from "util";
@@ -55,6 +55,8 @@ import { LocalCertificateStorage } from "../implementation/local_certificate_sto
 import { MongoCertificateStorage } from "../implementation/mongo_certificate_storage";
 import { RedisCertificateStorage } from "../implementation/redis_certificate_storage";
 import { VaultCertificateStorage } from "../implementation/vault_certificate_storage";
+import { CertKeyMangementPriviledgesDefinition } from "../domain/privileges";
+import { IAuthorizationClient } from "@mojaloop/security-bc-public-types-lib";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJSON = require("../../package.json");
@@ -83,8 +85,13 @@ const AUTH_N_TOKEN_ISSUER_NAME = process.env["AUTH_N_TOKEN_ISSUER_NAME"] || "moj
 const AUTH_N_TOKEN_AUDIENCE = process.env["AUTH_N_TOKEN_AUDIENCE"] || "mojaloop.vnext.dev.default_audience";
 const AUTH_N_SVC_JWKS_URL = process.env["AUTH_N_SVC_JWKS_URL"] || `${AUTH_N_SVC_BASEURL}/.well-known/jwks.json`;
 
+const AUTH_Z_SVC_BASEURL = process.env["AUTH_Z_SVC_BASEURL"] || "http://localhost:3202";
+
 const INSTANCE_NAME = `${BC_NAME}_${APP_NAME}`;
 const INSTANCE_ID = `${INSTANCE_NAME}__${crypto.randomUUID()}`;
+
+const SVC_CLIENT_ID = process.env["SVC_CLIENT_ID"] || "security-bc-key-management-svc";
+const SVC_CLIENT_SECRET = process.env["SVC_CLIENT_SECRET"] || "superServiceSecret";
 
 // ---- Certificate Storage Environment Variables ----
 const SECURE_STORAGE_TYPE =
@@ -118,12 +125,14 @@ export class Service {
     static keyManagementAgg: KeyManagementAggregate;
     static expressServer: Server;
     static tokenHelper: TokenHelper;
+    static authorizationClient: IAuthorizationClient;
     static certificateManager: CertificateManager;
     static secureStorage: ISecureCertificateStorage;
 
     static async start(
         logger?: ILogger,
-        certificateManager?: CertificateManager
+        certificateManager?: CertificateManager,
+        authorizationClient?: IAuthorizationClient,
     ): Promise<void> {
         console.log(`Service starting with PID: ${process.pid}`);
 
@@ -192,6 +201,36 @@ export class Service {
         );
 
         await this.tokenHelper.init();
+
+        // authorization client
+        if (!authorizationClient) {
+            // create the instance of IAuthenticatedHttpRequester
+            const authRequester = new AuthenticatedHttpRequester(logger, AUTH_N_SVC_TOKEN_URL);
+            authRequester.setAppCredentials(SVC_CLIENT_ID, SVC_CLIENT_SECRET);
+
+            const messageConsumer = new MLKafkaJsonConsumer(
+                {
+                    kafkaBrokerList: KAFKA_URL,
+                    kafkaGroupId: `${BC_NAME}_${APP_NAME}_authz_client`
+                }, logger.createChild("authorizationClientConsumer")
+            );
+
+            // setup privileges - bootstrap app privs and get priv/role associations
+            authorizationClient = new AuthorizationClient(
+                BC_NAME, APP_NAME, APP_VERSION,
+                AUTH_Z_SVC_BASEURL, logger.createChild("AuthorizationClient"),
+                authRequester,
+                messageConsumer
+            );
+
+            authorizationClient.addPrivilegesArray(CertKeyMangementPriviledgesDefinition);
+            await (authorizationClient as AuthorizationClient).bootstrap(true);
+            await (authorizationClient as AuthorizationClient).fetch();
+            // init message consumer to automatically update on role changed events
+            await (authorizationClient as AuthorizationClient).init();
+        }
+
+        this.authorizationClient = authorizationClient;
         try {
             this.keyManagementAgg = new KeyManagementAggregate(
                 this.logger,
@@ -218,6 +257,7 @@ export class Service {
         const globalConfigsRoutes = new KeyManagementRoutes(
             this.keyManagementAgg,
             this.tokenHelper,
+            this.authorizationClient,
             this.logger,
         );
         app.use(globalConfigsRoutes.Router);

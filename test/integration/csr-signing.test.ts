@@ -44,7 +44,7 @@ const AUTH_N_SVC_BASEURL = "http://localhost:3201";
 
 const AUTH_Z_SVC_BASE_URL = "http://localhost:3202";
 
-const APP_CLIENT_ID = "participants-bc-participants-svc";
+const APP_CLIENT_ID = "security-bc-key-management-svc";
 const APP_CLIENT_SECRET = "superServiceSecret";
 
 const logger = new ConsoleLogger();
