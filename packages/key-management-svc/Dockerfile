@@ -31,6 +31,7 @@ COPY tsconfig.json ./
 
 # copy required supporting packages/packages (especially private ones not published to npm)
 COPY packages/public-types-lib ./packages/public-types-lib
+COPY packages/client-lib ./packages/client-lib
 
 # copy service code
 COPY packages/key-management-svc ./packages/key-management-svc
@@ -50,6 +51,6 @@ RUN apk add librdkafka
 COPY --from=builder /app .
 
 # kafka handler, no http server yet
-EXPOSE 3201
+EXPOSE 3204
 
 CMD [ "npm", "run", "start:key-management-svc" ]
