@@ -35,7 +35,7 @@
 
 import forge from "node-forge";
 import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
-import { ApprovalRequestState, CallSecurityContext, ForbiddenError, IAuthorizationClient, ICSRRequest, IPublicCertificate, MakerCheckerViolationError } from "@mojaloop/security-bc-public-types-lib";
+import { ApprovalRequestState, CallSecurityContext, ForbiddenError, IAuthorizationClient, ICSRRequest, IDecodedCSRInfo, IPublicCertificate, MakerCheckerViolationError } from "@mojaloop/security-bc-public-types-lib";
 import { CertificateManager } from "./certificate_manager";
 import { ISecureCertificateStorage } from "./isecure_storage";
 import { CertKeyManagementPrivileges } from "./privileges";
@@ -66,8 +66,10 @@ export class KeyManagementAggregate {
     async uploadCSR(securityContext: CallSecurityContext, participantId: string, csr: string): Promise<string> {
         this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.UPLOAD_CSR)
         this._validateCSR(csr);
+        const decodedCsrInfo = this._decodeInfoFromCSR(csr);
         const csrRequest: ICSRRequest = {
             csrPEM: csr,
+            decodedCsrInfo,
             participantId: participantId,
             createdBy: securityContext.username!,
             createdDate: Date.now(),
@@ -105,6 +107,30 @@ export class KeyManagementAggregate {
         this._certificateManager.signAndStorePublicCertFromCSR(csrId, csrRequest);
     }
 
+    async rejectCSR(securityContext: CallSecurityContext, csrId: string): Promise<void> {
+        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.REJECT_CSR);
+
+        const csrRequest = await this._secureStorage.fetchCSRWhereCSRId(csrId);
+        if (!csrRequest) {
+            throw new Error("CSR not found");
+        }
+
+        if (csrRequest.requestState !== ApprovalRequestState.CREATED) {
+            throw new Error("CSR is not in CREATED state");
+        }
+
+        if (csrRequest.createdBy === securityContext.username) {
+            throw new MakerCheckerViolationError(
+                "Maker check violation - Same user cannot reject participant CSR."
+            );
+        }
+
+        csrRequest.requestState = ApprovalRequestState.REJECTED;
+        csrRequest.rejectedBy = securityContext.username!;
+        csrRequest.rejectedDate = Date.now();
+        await this._secureStorage.updateCSR(csrId, csrRequest);
+    }
+
     async getHubCAPubCert(securityContext: CallSecurityContext): Promise<IPublicCertificate> {
         this._enforcePrivilege(securityContext!, CertKeyManagementPrivileges.VIEW_HUB_PUB_CERTIFICATE);
 
@@ -121,6 +147,36 @@ export class KeyManagementAggregate {
         this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.VERIFY_CERTIFICATE);
 
         return this._certificateManager.verifyCert(certPem);
+    }
+
+    private _decodeInfoFromCSR(csrPEM: string): IDecodedCSRInfo {
+        const csr = forge.pki.certificationRequestFromPem(csrPEM);
+
+        // Extract the subject information
+        const subject = csr.subject.attributes.map(attr => `${attr.name}=${attr.value}`).join(', ');
+
+        // Extract the signature information
+        const signatureAlgorithm = csr.signatureOid!;  // OID representing the algorithm
+        const signatureLength = csr.signature.byteLength;  // Byte length of the signature
+
+        // Extract extensions, if available
+        const extensions: Record<string, any> = {};
+        if (csr.attributes) {
+            for (const attr of csr.attributes) {
+                if (attr.name === "extensionRequest" && Array.isArray(attr.value)) {
+                    for (const ext of attr.value) {
+                        extensions[ext.name] = ext.value;
+                    }
+                }
+            }
+        }
+
+        return {
+            subject,
+            signatureAlgorithm,
+            signatureLength,
+            extensions,
+        };
     }
 
     private _enforcePrivilege(secCtx: CallSecurityContext, privilegeId: string): void {

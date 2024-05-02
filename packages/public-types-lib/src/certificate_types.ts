@@ -35,8 +35,16 @@ export enum ApprovalRequestState {
     REJECTED = "REJECTED"
 }
 
+export interface IDecodedCSRInfo {
+    subject: string;
+    signatureAlgorithm?: string | null;
+    signatureLength: number;
+    extensions: Record<string, any>;
+}
+
 export declare interface ICSRRequest {
     csrPEM: string;
+    decodedCsrInfo?: IDecodedCSRInfo;
     participantId: string;
     createdBy: string;
     createdDate: number;
