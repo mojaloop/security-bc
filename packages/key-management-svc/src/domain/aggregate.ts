@@ -33,29 +33,120 @@
 
 "use strict";
 
+import forge from "node-forge";
 import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
+import { ApprovalRequestState, CallSecurityContext, ForbiddenError, IAuthorizationClient, ICSRRequest, IPublicCertificate, MakerCheckerViolationError } from "@mojaloop/security-bc-public-types-lib";
 import { CertificateManager } from "./certificate_manager";
+import { ISecureCertificateStorage } from "./isecure_storage";
+import { CertKeyManagementPrivileges } from "./privileges";
 
 export class KeyManagementAggregate {
     private _logger: ILogger;
     private _certificateManager: CertificateManager;
+    private _secureStorage: ISecureCertificateStorage;
+    private _authorizationClient: IAuthorizationClient;
+
     constructor(
         logger: ILogger,
-        certManager: CertificateManager
+        certManager: CertificateManager,
+        secureStorage: ISecureCertificateStorage,
+        authorizationClient: IAuthorizationClient
     ) {
         this._logger = logger.createChild(this.constructor.name);
         this._certificateManager = certManager;
+        this._secureStorage = secureStorage;
+        this._authorizationClient = authorizationClient;
     }
 
-    async signCSR(client_id: string, csr: string): Promise<string> {
-        return this._certificateManager.signCSR(client_id, csr.toString());
+    async getPendingCSRApprovals(securityContext: CallSecurityContext): Promise<ICSRRequest[]> {
+        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.APPROVE_CSR);
+        return this._secureStorage.fetchCSRsWhereRequestState(ApprovalRequestState.CREATED)
     }
 
-    async getHubCAPubCert(): Promise<string> {
-        return this._certificateManager.getHubCAPubCert();
+    async uploadCSR(securityContext: CallSecurityContext, participantId: string, csr: string): Promise<string> {
+        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.UPLOAD_CSR)
+        this._validateCSR(csr);
+        const csrRequest: ICSRRequest = {
+            csrPEM: csr,
+            participantId: participantId,
+            createdBy: securityContext.username!,
+            createdDate: Date.now(),
+            requestState: ApprovalRequestState.CREATED,
+            approvedBy: null,
+            approvedDate: null,
+            rejectedBy: null,
+            rejectedDate: null,
+        };
+        return await this._secureStorage.storeCSR(csrRequest);
     }
 
-    async verifyCert(certPem: string): Promise<boolean> {
+    async approveCSRAndGeneratePublicCertificate(securityContext: CallSecurityContext, csrId: string): Promise<void> {
+        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.APPROVE_CSR);
+
+        const csrRequest = await this._secureStorage.fetchCSRWhereCSRId(csrId);
+        if (!csrRequest) {
+            throw new Error("CSR not found");
+        }
+
+        if (csrRequest.requestState !== ApprovalRequestState.CREATED) {
+            throw new Error("CSR is not in CREATED state");
+        }
+
+        if (csrRequest.createdBy === securityContext.username) {
+            throw new MakerCheckerViolationError(
+                "Maker check violation - Same user cannot approve and sign participant public certificate."
+            );
+        }
+
+        csrRequest.requestState = ApprovalRequestState.APPROVED;
+        csrRequest.approvedBy = securityContext.username!;
+        csrRequest.approvedDate = Date.now();
+        await this._secureStorage.updateCSR(csrId, csrRequest);
+        this._certificateManager.signAndStorePublicCertFromCSR(csrId, csrRequest);
+    }
+
+    async getHubCAPubCert(securityContext: CallSecurityContext): Promise<IPublicCertificate> {
+        this._enforcePrivilege(securityContext!, CertKeyManagementPrivileges.VIEW_HUB_PUB_CERTIFICATE);
+
+        return this._secureStorage.getCAHubPublicCert();
+    }
+
+    async getParticipantPubCert(securityContext: CallSecurityContext, participantId: string): Promise<string> {
+        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.VIEW_PUB_CERTIFICATE);
+
+        return this._secureStorage.getPublicCert(participantId);
+    }
+
+    async verifyCert(securityContext: CallSecurityContext, certPem: string): Promise<boolean> {
+        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.VERIFY_CERTIFICATE);
+
         return this._certificateManager.verifyCert(certPem);
+    }
+
+    private _enforcePrivilege(secCtx: CallSecurityContext, privilegeId: string): void {
+        for (const roleId of secCtx.platformRoleIds) {
+            if (this._authorizationClient.roleHasPrivilege(roleId, privilegeId)) {
+                return;
+            }
+        }
+        const error = new ForbiddenError(`Required privilege "${privilegeId}" not held by caller`);
+        this._logger.isWarnEnabled() && this._logger.warn(error.message);
+        throw error;
+    }
+
+    private _validateCSR(csrPEM: string): void {
+        try {
+            // Convert the PEM-formatted CSR to an ASN.1 object
+            const csr = forge.pki.certificationRequestFromPem(csrPEM);
+
+            // Check if the CSR is valid and has been signed correctly
+            const valid = csr.verify();
+            if (!valid) {
+                throw new Error("CSR verification failed: CSR is not valid");
+            }
+        } catch (error) {
+            console.error("CSR validation error:", error);
+            throw new Error("CSR verification failed: CSR is not valid");
+        }
     }
 }

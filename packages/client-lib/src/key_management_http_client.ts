@@ -28,7 +28,7 @@
 "use strict";
 
 // import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
-import { IAuthenticatedHttpRequester } from "@mojaloop/security-bc-public-types-lib";
+import { IAuthenticatedHttpRequester, ICSRRequest, IPublicCertificate } from "@mojaloop/security-bc-public-types-lib";
 
 export class KeyMgmtHttpClient {
     // private readonly _logger: ILogger;
@@ -45,14 +45,14 @@ export class KeyMgmtHttpClient {
         this._authRequester = authRequester;
     }
 
-    public async uploadCSR(client_id: string, csr: string): Promise<string> {
-        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/upload-csr`, {
+    public async uploadCSR(participantId: string, csr: string): Promise<{ id: string }> {
+        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                client_id,
+                participantId,
                 csr,
             }),
 
@@ -61,11 +61,39 @@ export class KeyMgmtHttpClient {
         if (!response.ok) {
             throw new Error(`Failed to upload CSR: ${await response.text()}`);
         }
-        return await response.text();
+        return await response.json();
     }
 
-    public async getHubCAPubCert(): Promise<string> {
-        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/hub-pub-cert`, {
+    public async approveCSR(id: string): Promise<void> {
+        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs/${id}/approve`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+        const response = await this._authRequester.fetch(requestInfo);
+        if (!response.ok) {
+            throw new Error(`Failed to approve CSR: ${await response.text()}`);
+        }
+    }
+
+    public async getPendingCSRApprovals(): Promise<ICSRRequest[]> {
+        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs/pendingApprovals`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+        const response = await this._authRequester.fetch(requestInfo);
+        if (!response.ok) {
+            throw new Error(`Failed to get pending CSR approvals: ${await response.text()}`);
+        }
+        return await response.json();
+    }
+
+
+    public async getHubCAPubCert(): Promise<IPublicCertificate> {
+        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/pubCerts/hubCA`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -75,7 +103,21 @@ export class KeyMgmtHttpClient {
         if (!response.ok) {
             throw new Error(`Failed to get Hub CA Public Cert: ${await response.text()}`);
         }
-        return await response.text();
+        return await response.json();
+    }
+
+    public async getPaticipantPubCert(participantId: string): Promise<IPublicCertificate> {
+        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/pubCerts/${participantId}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+        const response = await this._authRequester.fetch(requestInfo);
+        if (!response.ok) {
+            throw new Error(`Failed to get Participant Public Cert: ${await response.text()}`);
+        }
+        return await response.json();
     }
 
     public async verifyCert(cert: string): Promise<boolean> {

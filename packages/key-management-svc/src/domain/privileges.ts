@@ -33,7 +33,10 @@
 export enum CertKeyManagementPrivileges {
     VIEW_PUB_CERTIFICATE = "SECURITY_VIEW_PUB_CERTIFICATE",
     VIEW_HUB_PUB_CERTIFICATE = "SECURITY_VIEW_HUB_PUB_CERTIFICATE",
-    SIGN_CSR = "SECURITY_SIGN_CSR",
+    VIEW_CSR_APPROVALS = "SECURITY_VIEW_CSR_APPROVALS",
+    UPLOAD_CSR = "SECURITY_UPLOAD_CSR",
+    APPROVE_CSR = "SECURITY_APPROVE_CSR",
+    REJECT_CSR = "SECURITY_REJECT_CSR",
     VERIFY_CERTIFICATE = "SECURITY_VERIFY_CERTIFICATE",
 }
 
@@ -47,9 +50,21 @@ export const CertKeyMangementPriviledgesDefinition = [
         labelName: "View Hub Public Certificate",
         description: "Allows fetching of the public certificate of the Hub"
     }, {
-        privId: CertKeyManagementPrivileges.SIGN_CSR,
-        labelName: "Sign CSR",
-        description: "Allows signing of Certificate Signing Request (CSR) of participants"
+        privId: CertKeyManagementPrivileges.VIEW_CSR_APPROVALS,
+        labelName: "View CSR Approvals",
+        description: "Allows fetching of Certificate Signing Requests for approval"
+    }, {
+        privId: CertKeyManagementPrivileges.UPLOAD_CSR,
+        labelName: "Upload CSR",
+        description: "Allows uploading of Certificate Signing Requests"
+    }, {
+        privId: CertKeyManagementPrivileges.APPROVE_CSR,
+        labelName: "Approve CSR",
+        description: "Allows approval of Certificate Signing Requests"
+    }, {
+        privId: CertKeyManagementPrivileges.REJECT_CSR,
+        labelName: "Reject CSR",
+        description: "Allows rejection of Certificate Signing Requests"
     }, {
         privId: CertKeyManagementPrivileges.VERIFY_CERTIFICATE,
         labelName: "Verify Certificate",

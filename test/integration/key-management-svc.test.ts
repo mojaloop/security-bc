@@ -39,6 +39,7 @@ import {
     KeyMgmtHttpClient,
 } from "@mojaloop/security-bc-client-lib";
 import { ConsoleLogger } from "@mojaloop/logging-bc-public-types-lib";
+import { ICSRRequest } from "@mojaloop/security-bc-public-types-lib";
 
 const AUTH_N_SVC_BASEURL = "http://localhost:3201";
 
@@ -46,6 +47,12 @@ const AUTH_Z_SVC_BASE_URL = "http://localhost:3202";
 
 const APP_CLIENT_ID = "security-bc-key-management-svc";
 const APP_CLIENT_SECRET = "superServiceSecret";
+
+const MAKER_ADMIN_USERNAME = "admin";
+const MAKER_ADMIN_PASSWORD = "superMegaPass";
+
+const CHECKER_USER_USERNAME = "user";
+const CHECKER_USER_PASSWORD = "superPass";
 
 const logger = new ConsoleLogger();
 
@@ -65,48 +72,85 @@ Lcj8spjtXWxsYHiiPGKQw+NW/jOmhfInQxD1/ue30/0=
 -----END CERTIFICATE REQUEST-----`;
 
 describe('key-management-client-lib tests', () => {
-    let authRequester: AuthenticatedHttpRequester;
-    let keyMgmtHttpClient: KeyMgmtHttpClient;
+    let appAuthRequester: AuthenticatedHttpRequester;
+    let appKeyMgmtHttpClient: KeyMgmtHttpClient;
+
+    let makerAuthRequester: AuthenticatedHttpRequester;
+    let makerKeyMgmtHttpClient: KeyMgmtHttpClient;
+
+    let checkerAuthRequester: AuthenticatedHttpRequester;
+    let checkerKeyMgmtHttpClient: KeyMgmtHttpClient;
+
     beforeAll(() => {
-        authRequester = new AuthenticatedHttpRequester(logger, AUTH_N_SVC_BASEURL + "/token");
-        authRequester.setAppCredentials(APP_CLIENT_ID, APP_CLIENT_SECRET);
-        keyMgmtHttpClient = new KeyMgmtHttpClient('http://localhost:3204', authRequester);
+        appAuthRequester = new AuthenticatedHttpRequester(logger, AUTH_N_SVC_BASEURL + "/token");
+        appAuthRequester.setAppCredentials(APP_CLIENT_ID, APP_CLIENT_SECRET);
+        appKeyMgmtHttpClient = new KeyMgmtHttpClient('http://localhost:3204', appAuthRequester);
 
+        makerAuthRequester = new AuthenticatedHttpRequester(logger, AUTH_N_SVC_BASEURL + "/token");
+        makerAuthRequester.setUserCredentials(APP_CLIENT_ID, MAKER_ADMIN_USERNAME, MAKER_ADMIN_PASSWORD);
+        makerKeyMgmtHttpClient = new KeyMgmtHttpClient('http://localhost:3204', makerAuthRequester);
+
+        checkerAuthRequester = new AuthenticatedHttpRequester(logger, AUTH_N_SVC_BASEURL + "/token");
+        checkerAuthRequester.setUserCredentials(APP_CLIENT_ID, CHECKER_USER_USERNAME, CHECKER_USER_PASSWORD);
+        checkerKeyMgmtHttpClient = new KeyMgmtHttpClient('http://localhost:3204', checkerAuthRequester);
     })
-    test("Obtain Hub CA Public Cert", async () => {
-        const hubCAPubCert = await keyMgmtHttpClient.getHubCAPubCert();
-        expect(hubCAPubCert).toBeDefined();
-        expect(hubCAPubCert).toContain('-----BEGIN CERTIFICATE-----');
 
-        const cert = pki.certificateFromPem(hubCAPubCert);
+    test("Obtain Hub CA Public Cert", async () => {
+        const hubCAPubCert = await appKeyMgmtHttpClient.getHubCAPubCert();
+        expect(hubCAPubCert).toBeDefined();
+        expect(hubCAPubCert.pubCertificatePem).toContain('-----BEGIN CERTIFICATE-----');
+
+        const cert = pki.certificateFromPem(hubCAPubCert.pubCertificatePem);
         expect(cert).toBeDefined();
         expect(cert.subject.getField('CN').value).toBe('vNextHub CA');
         expect(cert.issuer.getField('CN').value).toBe('vNextHub CA');
         expect(cert.issuer.getField('O').value).toBe('Mojaloop');
     })
 
-    test("Sign CSR", async () => {
+    test("Upload CSR", async () => {
         expect(DFSP_A_CSR_PEM).toContain('-----BEGIN CERTIFICATE REQUEST-----');
 
-        const signedCertStr = await keyMgmtHttpClient.uploadCSR('dfsp_a', DFSP_A_CSR_PEM);
-        expect(signedCertStr).toBeDefined();
-        expect(signedCertStr).toContain('-----BEGIN CERTIFICATE-----');
-
-        const cert = pki.certificateFromPem(signedCertStr);
-        expect(cert).toBeDefined();
-        expect(cert.subject.getField('CN').value).toBe('DFSP_A'); // The CN is the same as the CSR
-        expect(cert.issuer.getField('CN').value).toBe('vNextHub CA'); // The issuer is the Hub CA
-        expect(cert.issuer.getField('O').value).toBe('Mojaloop'); // The issuer is the Hub CA
-
-        // Verify the signature with the CA public
-        const hubCAPubCert = await keyMgmtHttpClient.getHubCAPubCert();
-        const caCert = pki.certificateFromPem(hubCAPubCert);
-        const verified = caCert.verify(cert);
-        expect(verified).toBe(true);
-
-        // Verify the signature with the API
-        const verificationResult = await keyMgmtHttpClient.verifyCert(signedCertStr);
-        expect(verificationResult).toEqual({ verified: true });
+        const csrId = await makerKeyMgmtHttpClient.uploadCSR('dfsp_a_upload_test', DFSP_A_CSR_PEM);
+        expect(csrId).toBeDefined();
+        expect(csrId.id).toBeDefined();
     });
+
+    test("Get Pending CSR Approvals", async () => {
+        //
+        const pendingApprovalParticipantId = 'dfsp_a_pending_approval_test';
+        await makerKeyMgmtHttpClient.uploadCSR(pendingApprovalParticipantId, DFSP_A_CSR_PEM);
+
+        const pendingApprovals = await checkerKeyMgmtHttpClient.getPendingCSRApprovals();
+        expect(pendingApprovals).toBeDefined();
+        expect(pendingApprovals.length).toBeGreaterThanOrEqual(0);
+
+        // one of them should include the pendingApprovalParticipantId
+        const found = pendingApprovals.find((item: ICSRRequest) => item.participantId === pendingApprovalParticipantId);
+        expect(found).toBeDefined();
+    })
+
+    test("Approve CSR", async () => {
+        const csrId = await makerKeyMgmtHttpClient.uploadCSR('dfsp_a_approval_test', DFSP_A_CSR_PEM);
+        expect(csrId).toBeDefined();
+        expect(csrId.id).toBeDefined();
+
+        await checkerKeyMgmtHttpClient.approveCSR(csrId.id);
+    })
+
+
+    test("Get Public Cert", async () => {
+        const participantId = 'dfsp_a_get_cert_test';
+        const csrId = await makerKeyMgmtHttpClient.uploadCSR(participantId, DFSP_A_CSR_PEM);
+        await checkerKeyMgmtHttpClient.approveCSR(csrId.id);
+
+        const publicCert = await appKeyMgmtHttpClient.getPaticipantPubCert(participantId);
+        expect(publicCert).toBeDefined();
+        expect(publicCert.pubCertificatePem).toContain('-----BEGIN CERTIFICATE-----');
+
+        const cert = pki.certificateFromPem(publicCert.pubCertificatePem);
+        expect(cert).toBeDefined();
+        expect(cert.issuer.getField('CN').value).toBe('vNextHub CA');
+        expect(cert.issuer.getField('O').value).toBe('Mojaloop');
+    })
 
 });

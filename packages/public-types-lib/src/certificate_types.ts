@@ -22,16 +22,49 @@
  * Gates Foundation
  - Name Surname <name.surname@gatesfoundation.com>
 
- * Crosslake
- - Pedro Sousa Barreto <pedrob@crosslaketech.com>
+ * ThitsaWorks
+ - Si Thu Myo <sithu.myo@thitsaworks.com>
 
  --------------
  ******/
-"use strict";
 
-export * from "./errors";
-export * from "./authorization";
-export * from "./authentication";
-export * from "./certificate_types";
-export * from "./generic_types";
-export * from "./crypto";
+"use strict";
+export enum ApprovalRequestState {
+    CREATED = "CREATED",
+    APPROVED = "APPROVED",
+    REJECTED = "REJECTED"
+}
+
+export declare interface ICSRRequest {
+    csrPEM: string;
+    participantId: string;
+    createdBy: string;
+    createdDate: number;
+    requestState: ApprovalRequestState;
+    approvedBy: string | null;
+    approvedDate: number | null;
+    rejectedBy: string | null;
+    rejectedDate: number | null;
+
+}
+
+export declare interface IPublicCertificate {
+    csrRequestId?: string | null;
+    participantId: string;
+    pubCertificatePem: string;
+    decodedCertInfo?: IDecodedCertificateInfo;
+    createdDate: number;
+    createdBy: string;
+    approvedBy: string | null;
+    approvedDate: number | null;
+}
+
+export interface IDecodedCertificateInfo {
+    subject: string;
+    issuer: string;
+    validFrom: string;
+    validTo: string;
+    serialNumber: string;
+    signatureAlgorithm: string;
+    extensions: Record<string, any>;
+}

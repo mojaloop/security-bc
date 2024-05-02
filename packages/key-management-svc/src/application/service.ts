@@ -212,6 +212,8 @@ export class Service {
             this.keyManagementAgg = new KeyManagementAggregate(
                 this.logger,
                 this.certificateManager,
+                this.secureStorage,
+                this.authorizationClient
             );
         } catch (err) {
             await Service.stop();

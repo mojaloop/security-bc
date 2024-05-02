@@ -60,16 +60,30 @@ export class KeyManagementRoutes {
 
         this._router.use(this._authenticationMiddleware.bind(this));
         // bind routes
-        this._router.post("/certs/uploadCSR", upload.single("csr"), this.uploadCSR.bind(this));
+        this._router.get("/certs/csrs/pendingApprovals", this.getPendingCSRApprovals.bind(this));
+        this._router.post("/certs/csrs", upload.single("csr"), this.uploadCSR.bind(this));
+        this._router.put("/certs/csrs/:id/approve", this.approveCSR.bind(this));
 
-        this._router.get("/certs/hubCAPubCert", this.getHubCAPubCert.bind(this));
+        this._router.get("/certs/pubCerts/hubCA", this.getHubCAPubCert.bind(this)); 1
+        this._router.get("/certs/pubCerts/:participantId", this.getParticipantPubCert.bind(this));
+
 
         this._router.post("/certs/verify", this.verifyCert.bind(this));
     }
 
+    async getPendingCSRApprovals(req: express.Request, res: express.Response) {
+        try {
+            const pendingApprovals = await this._keyMgmtAgg.getPendingCSRApprovals(req.securityContext!);
+            return res.status(200).json(pendingApprovals);
+        } catch (error) {
+            this._logger.error("Failed to get pending CSR approvals.", (error as Error).message);
+            return res.status(500).send("Failed to get pending CSR approvals.");
+        }
+    }
+
     async uploadCSR(req: express.Request, res: express.Response) {
         let csrPem = "";
-        let client_id = "";
+        let participantId = "";
         if (req.file && req.file.buffer) {
             // Check if the CSR was uploaded as a file
             csrPem = req.file.buffer.toString();
@@ -81,31 +95,59 @@ export class KeyManagementRoutes {
             return res.status(400).send("No CSR provided. Please upload a CSR file.");
         }
 
-        if (req.body.client_id && typeof req.body.client_id === "string") {
-            client_id = req.body.client_id;
+        if (req.body.participantId && typeof req.body.participantId === "string") {
+            participantId = req.body.participantId;
         } else {
-            this._logger.error("No client_id provided.");
-            return res.status(400).send("No client_id provided. Please provide a client_id.");
+            this._logger.error("No participantId provided.");
+            return res.status(400).send("No participantId provided. Please provide a participantId.");
         }
 
         try {
-            this._enforcePrivilege(req.securityContext!, CertKeyManagementPrivileges.SIGN_CSR);
-            const signedCertPem = await this._keyMgmtAgg.signCSR(client_id, csrPem);
-            return res.type("application/x-pem-file").send(signedCertPem);
+            const csrId = await this._keyMgmtAgg.uploadCSR(req.securityContext!, participantId, csrPem);
+            return res.status(200).json({ id: csrId });
         } catch (error) {
-            this._logger.error("Failed to sign CSR.", (error as Error).message);
-            return res.status(500).send("Failed to sign CSR.");
+            this._logger.error("Failed to store CSR.", (error as Error).message);
+            return res.status(500).send("Failed to store CSR.");
+        }
+    }
+
+    async approveCSR(req: express.Request, res: express.Response) {
+        const csrId = req.params.id;
+        if (!csrId) {
+            return res.status(400).send("No CSR ID provided.");
+        }
+
+        try {
+            await this._keyMgmtAgg.approveCSRAndGeneratePublicCertificate(req.securityContext!, csrId);
+            return res.status(200).send("CSR approved and public certificate generated.");
+        } catch (error) {
+            this._logger.error("Failed to approve CSR and generate public certificate.", (error as Error).message);
+            return res.status(500).send("Failed to approve CSR and generate public certificate.");
         }
     }
 
     async getHubCAPubCert(req: express.Request, res: express.Response) {
         try {
-            this._enforcePrivilege(req.securityContext!, CertKeyManagementPrivileges.VIEW_HUB_PUB_CERTIFICATE);
-            const hubCAPubCert = await this._keyMgmtAgg.getHubCAPubCert();
-            return res.type("application/x-pem-file").send(hubCAPubCert);
+            const hubCAPubCert = await this._keyMgmtAgg.getHubCAPubCert(req.securityContext!);
+            return res.send(hubCAPubCert);
         } catch (error) {
             this._logger.error("Failed to get Hub CA Public Certificate.", (error as Error).message);
             return res.status(500).send("Failed to get Hub CA Public Certificate.");
+        }
+    }
+
+    async getParticipantPubCert(req: express.Request, res: express.Response) {
+        const participantId = req.params.participantId;
+        if (!participantId) {
+            return res.status(400).send("No participantId provided.");
+        }
+
+        try {
+            const participantPubCert = await this._keyMgmtAgg.getParticipantPubCert(req.securityContext!, participantId);
+            return res.type("application/x-pem-file").send(participantPubCert);
+        } catch (error) {
+            this._logger.error("Failed to get participant public certificate.", (error as Error).message);
+            return res.status(500).send("Failed to get participant public certificate.");
         }
     }
 
@@ -114,9 +156,8 @@ export class KeyManagementRoutes {
             return res.status(400).send("No certificate provided.");
         }
         try {
-            this._enforcePrivilege(req.securityContext!, CertKeyManagementPrivileges.VERIFY_CERTIFICATE);
             const cert = req.body.cert;
-            const verified = await this._keyMgmtAgg.verifyCert(cert);
+            const verified = await this._keyMgmtAgg.verifyCert(req.securityContext!, cert);
             return res.status(200).json({ verified });
         } catch (error) {
             this._logger.error("Failed to verify certificate.", (error as Error).message);
@@ -149,16 +190,6 @@ export class KeyManagementRoutes {
         return next();
     }
 
-    private _enforcePrivilege(secCtx: CallSecurityContext, privilegeId: string): void {
-        for (const roleId of secCtx.platformRoleIds) {
-            if (this._authorizationClient.roleHasPrivilege(roleId, privilegeId)) {
-                return;
-            }
-        }
-        const error = new ForbiddenError(`Required privilege "${privilegeId}" not held by caller`);
-        this._logger.isWarnEnabled() && this._logger.warn(error.message);
-        throw error;
-    }
     get Router(): express.Router {
         return this._router;
     }

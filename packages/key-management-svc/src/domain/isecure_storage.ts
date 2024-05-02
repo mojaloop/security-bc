@@ -30,6 +30,8 @@
 
 "use strict";
 
+import { ApprovalRequestState, ICSRRequest, IPublicCertificate } from "@mojaloop/security-bc-public-types-lib";
+
 export enum SECURE_CERTIFICATE_STORAGE_TYPE {
     // add more storage types here
     MONGO = "mongo",
@@ -39,18 +41,28 @@ export enum SECURE_CERTIFICATE_STORAGE_TYPE {
 export interface ISecureCertificateStorage {
     init(secret_key: string, is_ca_encrypted: boolean,): Promise<void>;
 
+    getCAHubID(): string;
+
     _encrypt(data: string): string;
     _decrypt(data: string): string;
 
-    getPublicCert(client_id: string): Promise<string>;
+    fetchAllCSRs(): Promise<ICSRRequest[]>;
+    fetchCSRWhereCSRId(csrId: string): Promise<ICSRRequest | null>;
+    fetchCSRsWhereParticipantId(participantId: string): Promise<ICSRRequest[]>;
+    fetchCSRsWhereRequestState(request_state: ApprovalRequestState): Promise<ICSRRequest[]>;
 
-    storePublicCert(client_id: string, cert: string): Promise<void>;
+    storeCSR(csr: ICSRRequest): Promise<string>;
+    updateCSR(csrId: string, csr: ICSRRequest): Promise<void>;
+
+    getPublicCert(participantId: string): Promise<string>;
+    storePublicCert(participantId: string, cert: IPublicCertificate): Promise<void>;
 
     storeCAHubPrivateKey(key: string): Promise<void>;
     getCAHubPrivateKey(): Promise<string>;
 
-    storeCAHubPublicKey(key: string): Promise<void>;
-    getCAHubPublicKey(): Promise<string>;
+    storeCAHubPublicCert(cert: IPublicCertificate): Promise<void>;
+
+    getCAHubPublicCert(): Promise<IPublicCertificate>;
 
     destroy(): Promise<void>;
 }

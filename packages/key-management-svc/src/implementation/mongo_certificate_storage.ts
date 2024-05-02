@@ -29,15 +29,24 @@
  ******/
 
 import { createCipheriv, randomBytes, createDecipheriv, scryptSync } from "crypto";
-import { MongoClient, Collection } from "mongodb";
+import { MongoClient, Collection, ObjectId } from "mongodb";
 import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
 import { ISecureCertificateStorage } from "../domain/isecure_storage";
+import { ApprovalRequestState, ICSRRequest, IPublicCertificate } from "@mojaloop/security-bc-public-types-lib";
 
 export class MongoCertificateStorage implements ISecureCertificateStorage {
     private _mongoClient: MongoClient;
-    private _collectionName: string = "certificates";
+    private readonly _databaseName: string = "security";
+
+    private _csrCollectionName: string = "certificates_signing_requests";
+    private _publicCertCollectionName: string = "certificates_public";
+    private _hubPrivateKeyCollectionName: string = "hub_private_key";
+
     private _hubID: string = "hub";
-    private _collection: Collection;
+    private _csrCollection: Collection;
+    private _publicCertCollection: Collection;
+    private _hubPrivateKeyCollection: Collection;
+
     private _logger: ILogger;
 
     private _scryptKey: Buffer;
@@ -53,45 +62,92 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
         this._isCAEncrypted = isCAEncrypted;
 
         await this._mongoClient.connect();
-        this._collection = this._mongoClient.db().collection(this._collectionName);
+        this._csrCollection = this._mongoClient.db(this._databaseName).collection(this._csrCollectionName);
+        this._publicCertCollection = this._mongoClient.db(this._databaseName).collection(this._publicCertCollectionName);
+        this._hubPrivateKeyCollection = this._mongoClient.db(this._databaseName).collection(this._hubPrivateKeyCollectionName);
         this._logger.debug("MongoDB connection established.");
     }
 
-    public async getPublicCert(client_id: string): Promise<string> {
-        const cert = await this._collection
-            .findOne({ client_id: client_id }, { projection: { _id: 0, client_id: 0 } });
+    public getCAHubID(): string {
+        return this._hubID;
+    }
+
+    public async storeCSR(csr: ICSRRequest): Promise<string> {
+        try {
+            const result = await this._csrCollection.insertOne(csr);
+            return result.insertedId.toString();
+        } catch (error) {
+            throw new Error(`Failed to store CSR for participantId: ${csr.participantId}: ${error}`);
+        }
+    }
+
+    public async updateCSR(csrId: string, csr: ICSRRequest): Promise<void> {
+        const csrObjectId = new ObjectId(csrId);
+        await this._csrCollection.updateOne({ _id: csrObjectId }, { $set: csr });
+    }
+
+    public async fetchAllCSRs(): Promise<ICSRRequest[]> {
+        return await this._csrCollection.find()
+            .project({ _id: 0 })
+            .toArray() as ICSRRequest[];
+    }
+
+    public async fetchCSRWhereCSRId(csrId: string): Promise<ICSRRequest | null> {
+        const csrObjectId = new ObjectId(csrId);
+        return await this._csrCollection.findOne({ _id: csrObjectId }) as ICSRRequest | null;
+    }
+
+    public async fetchCSRsWhereParticipantId(participantId: string): Promise<ICSRRequest[]> {
+        return await this._csrCollection.find({ participantId: participantId })
+            .project({ _id: 0 })
+            .toArray() as ICSRRequest[];
+    }
+
+    public async fetchCSRsWhereRequestState(request_state: ApprovalRequestState): Promise<ICSRRequest[]> {
+        return await this._csrCollection.find({ requestState: request_state })
+            .project({ _id: 0 })
+            .toArray() as ICSRRequest[];
+    }
+
+    public async getPublicCert(participantId: string): Promise<string> {
+        const cert = await this._publicCertCollection
+            .findOne({ participantId: participantId }, { projection: { _id: 0, participantId: 0 } });
 
         if (!cert) {
-            throw new Error(`Certificate not found for client_id: ${client_id}`);
+            throw new Error(`Certificate not found for participantId: ${participantId}`);
         }
         return cert.cert;
     }
 
-    public async storePublicCert(client_id: string, cert: string): Promise<void> {
-        if (client_id === this._hubID) {
-            this._logger.error(`Attempted to overwrite CA certificate with public cert: ${client_id}`);
+    public async storePublicCert(participantId: string, cert: IPublicCertificate): Promise<void> {
+        if (participantId === this._hubID) {
+            this._logger.error(`Attempted to overwrite CA certificate with public cert: ${participantId}`);
             throw new Error("Operation not allowed: Cannot overwrite CA certificate with public certificate.");
         }
 
         try {
-            const result = await this._collection.updateOne(
-                { client_id: client_id },
-                { $set: { cert } },
+            const result = await this._publicCertCollection.updateOne(
+                { participantId: participantId },
+                {
+                    $set: {
+                        cert,
+                    }
+                },
                 { upsert: true }
             );
             if (result.modifiedCount === 0 && result.upsertedCount === 0) {
-                throw new Error(`Failed to store certificate for client_id: ${client_id}`);
+                throw new Error(`Failed to store certificate for participantId: ${participantId}`);
             }
         } catch (error) {
-            throw new Error(`Failed to store certificate for client_id: ${client_id}`);
+            throw new Error(`Failed to store certificate for participantId: ${participantId}`);
         }
     }
 
     public async storeCAHubPrivateKey(privateKey: string): Promise<void> {
         const encryptedKey = this._encrypt(privateKey);
         try {
-            const result = await this._collection.updateOne(
-                { client_id: this._hubID },
+            const result = await this._hubPrivateKeyCollection.updateOne(
+                { participantId: this._hubID },
                 {
                     $set: {
                         privateKey: encryptedKey,
@@ -110,8 +166,8 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
 
 
     public async getCAHubPrivateKey(): Promise<string> {
-        const privateKey = await this._collection
-            .findOne({ client_id: this._hubID }, { projection: { _id: 0, client_id: 0 } });
+        const privateKey = await this._hubPrivateKeyCollection
+            .findOne({ participantId: this._hubID }, { projection: { _id: 0, participantId: 0 } });
 
         if (!privateKey) {
             throw new Error("Private key not found for hub");
@@ -121,32 +177,32 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
     }
 
 
-    public async storeCAHubPublicKey(key: string): Promise<void> {
+    public async storeCAHubPublicCert(cert: IPublicCertificate): Promise<void> {
         try {
-            const result = await this._collection.updateOne(
-                { client_id: this._hubID },
+            const result = await this._publicCertCollection.updateOne(
+                { participantId: this._hubID },
                 {
                     $set: {
-                        publicKey: key,
+                        cert,
                     }
                 },
                 { upsert: true });
             if (result.modifiedCount === 0 && result.upsertedCount === 0) {
-                throw new Error("Failed to store public key for hub");
+                throw new Error("Failed to store public cert for hub");
             }
         } catch (error) {
-            throw new Error("Failed to store public key for hub");
+            throw new Error("Failed to store public cert for hub");
         }
     }
 
-    public async getCAHubPublicKey(): Promise<string> {
-        const publicKey = await this._collection
-            .findOne({ client_id: this._hubID }, { projection: { _id: 0, client_id: 0 } });
+    public async getCAHubPublicCert(): Promise<IPublicCertificate> {
+        const publicCert = await this._publicCertCollection
+            .findOne({ participantId: this._hubID }, { projection: { _id: 0, participantId: 0 } });
 
-        if (!publicKey) {
+        if (!publicCert) {
             throw new Error("Public key not found for hub");
         }
-        return publicKey.publicKey;
+        return publicCert.cert;
     }
 
     _encrypt(text: string): string {

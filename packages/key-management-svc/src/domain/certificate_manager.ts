@@ -5,6 +5,7 @@ import forge, { pki } from "node-forge";
 import { CertificatesHelper } from "@mojaloop/security-bc-client-lib";
 import { ISecureCertificateStorage } from "./isecure_storage";
 import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
+import { ICSRRequest, IDecodedCertificateInfo, IPublicCertificate } from "@mojaloop/security-bc-public-types-lib";
 
 export class CertificateManager {
     private _caPubKeyPem: string;
@@ -21,7 +22,8 @@ export class CertificateManager {
     }
 
     async init() {
-        this._caPubKeyPem = await this._secureStorage.getCAHubPublicKey();
+        const caHubPubCert = await this._secureStorage.getCAHubPublicCert();
+        this._caPubKeyPem = caHubPubCert.pubCertificatePem;
         this._caPrivateKeyPem = await this._secureStorage.getCAHubPrivateKey();
 
         this._caPubCert = forge.pki.certificateFromPem(this._caPubKeyPem);
@@ -30,7 +32,13 @@ export class CertificateManager {
         this._ca_store.addCertificate(pki.certificateFromPem(this._caPubKeyPem));
     }
 
-    signCSR(client_id: string, csrPem: string): string {
+    signAndStorePublicCertFromCSR(csrRequestId: string, csrRequest: ICSRRequest): string {
+        if (csrRequest.requestState !== "APPROVED") {
+            throw new Error("CSR request is not in the approved state.");
+        }
+
+        const csrPem = csrRequest.csrPEM;
+        const participantId = csrRequest.participantId;
         const participantCSR = forge.pki.certificationRequestFromPem(csrPem);
 
         if (participantCSR.publicKey === null) {
@@ -50,7 +58,8 @@ export class CertificateManager {
         newParticipantCert.setSubject(participantCSR.subject.attributes); // use the same subject as the CSR
         newParticipantCert.setIssuer(this._caPubCert.subject.attributes); // use the CA subject as the issuer
         newParticipantCert.publicKey = participantCSR.publicKey;
-        newParticipantCert.setExtensions([
+
+        const extensions = [
             {
                 name: "basicConstraints",
                 cA: false
@@ -62,12 +71,35 @@ export class CertificateManager {
                 nonRepudiation: true,
                 keyEncipherment: true,
                 dataEncipherment: true,
-            }]);
+            },
+        ]
+        newParticipantCert.setExtensions(extensions);
 
         newParticipantCert.sign(this._caPrivateKey, forge.md.sha256.create());
         const clientCertPem = forge.pki.certificateToPem(newParticipantCert);
 
-        this._secureStorage.storePublicCert(client_id, clientCertPem);
+        const decodedCertInfo: IDecodedCertificateInfo = {
+            subject: newParticipantCert.subject.getField("CN").value,
+            issuer: newParticipantCert.issuer.getField("CN").value,
+            validFrom: newParticipantCert.validity.notBefore.toISOString(),
+            validTo: newParticipantCert.validity.notAfter.toISOString(),
+            serialNumber: newParticipantCert.serialNumber,
+            signatureAlgorithm: newParticipantCert.signature.algorithm,
+            extensions
+        }
+
+        const pubCert: IPublicCertificate = {
+            csrRequestId,
+            participantId: participantId,
+            pubCertificatePem: clientCertPem,
+            decodedCertInfo,
+            createdDate: Date.now(),
+            createdBy: csrRequest.createdBy,
+            approvedBy: csrRequest.approvedBy,
+            approvedDate: csrRequest.approvedDate,
+        }
+        this._secureStorage.storePublicCert(participantId, pubCert);
+
 
         return clientCertPem;
     }
@@ -84,7 +116,6 @@ export class CertificateManager {
     static async _checkKeyOrGenerateCAKeyPair(secureStorage: ISecureCertificateStorage, logger: ILogger): Promise<void> {
         try {
             await secureStorage.getCAHubPrivateKey();
-            await secureStorage.getCAHubPublicKey();
         } catch (error) {
             // If the CA private key and public key are not found in the secure storage, generate a new keypair
             const certHelper = new CertificatesHelper();
@@ -99,7 +130,29 @@ export class CertificateManager {
                 10);
 
             await secureStorage.storeCAHubPrivateKey(signingKeyPem);
-            await secureStorage.storeCAHubPublicKey(certPem);
+
+            const cert = forge.pki.certificateFromPem(certPem);
+            const decodedCertInfo: IDecodedCertificateInfo = {
+                subject: cert.subject.getField("CN").value,
+                issuer: cert.issuer.getField("CN").value,
+                validFrom: cert.validity.notBefore.toISOString(),
+                validTo: cert.validity.notAfter.toISOString(),
+                serialNumber: cert.serialNumber,
+                signatureAlgorithm: cert.signature.algorithm,
+                extensions: cert.extensions
+            }
+
+            const pubCert: IPublicCertificate = {
+                participantId: secureStorage.getCAHubID(),
+                pubCertificatePem: certPem,
+                createdDate: Date.now(),
+                decodedCertInfo,
+                createdBy: "system",
+                approvedBy: "system",
+                approvedDate: Date.now(),
+
+            }
+            await secureStorage.storeCAHubPublicCert(pubCert);
             logger.createChild("CertificateManager._checkKeyOrGenerateCAKeyPair").info("Generated new CA keypair and stored in secure storage.");
         }
     }
