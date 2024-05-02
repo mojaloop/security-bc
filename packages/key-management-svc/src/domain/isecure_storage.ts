@@ -31,11 +31,9 @@
 "use strict";
 
 export enum SECURE_CERTIFICATE_STORAGE_TYPE {
-    LOCAL = "local",
+    // add more storage types here
     MONGO = "mongo",
     MONGODB = "mongodb",
-    REDIS = "redis",
-    VAULT = "vault",
 }
 
 export interface ISecureCertificateStorage {

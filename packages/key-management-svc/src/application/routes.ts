@@ -60,9 +60,9 @@ export class KeyManagementRoutes {
 
         this._router.use(this._authenticationMiddleware.bind(this));
         // bind routes
-        this._router.post("/certs/upload-csr", upload.single("csr"), this.uploadCSR.bind(this));
+        this._router.post("/certs/uploadCSR", upload.single("csr"), this.uploadCSR.bind(this));
 
-        this._router.get("/certs/hub-pub-cert", this.getHubCAPubCert.bind(this)); // for verifying the hub's signature
+        this._router.get("/certs/hubCAPubCert", this.getHubCAPubCert.bind(this));
 
         this._router.post("/certs/verify", this.verifyCert.bind(this));
     }

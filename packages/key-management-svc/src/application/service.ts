@@ -51,10 +51,7 @@ import { CertificateManager } from "../domain//certificate_manager";
 
 import { MLKafkaJsonConsumer } from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
 import { ISecureCertificateStorage, SECURE_CERTIFICATE_STORAGE_TYPE } from "../domain/isecure_storage";
-import { LocalCertificateStorage } from "../implementation/local_certificate_storage";
 import { MongoCertificateStorage } from "../implementation/mongo_certificate_storage";
-import { RedisCertificateStorage } from "../implementation/redis_certificate_storage";
-import { VaultCertificateStorage } from "../implementation/vault_certificate_storage";
 import { CertKeyMangementPriviledgesDefinition } from "../domain/privileges";
 import { IAuthorizationClient } from "@mojaloop/security-bc-public-types-lib";
 
@@ -95,7 +92,7 @@ const SVC_CLIENT_SECRET = process.env["SVC_CLIENT_SECRET"] || "superServiceSecre
 
 // ---- Certificate Storage Environment Variables ----
 const SECURE_STORAGE_TYPE =
-    process.env["SECURE_STORAGE_TYPE"] as SECURE_CERTIFICATE_STORAGE_TYPE || SECURE_CERTIFICATE_STORAGE_TYPE.LOCAL;
+    process.env["SECURE_STORAGE_TYPE"] as SECURE_CERTIFICATE_STORAGE_TYPE || SECURE_CERTIFICATE_STORAGE_TYPE.MONGO;
 const CA_ENCRYPTION_SECRET_KEY = process.env["CA_ENCRYPTION_SECRET_KEY"] || "test_secret_key";
 // const CA_ENCRYPTION_ENABLED = process.env["CA_ENCRYPTION_ENABLED"] === "true" || false;
 
@@ -150,32 +147,12 @@ export class Service {
         globalLogger = this.logger = logger.createChild("Service");
 
         if (!this.secureStorage) {
+            // add more secure storage if needed
             switch (SECURE_STORAGE_TYPE.toLowerCase()) {
-                case SECURE_CERTIFICATE_STORAGE_TYPE.LOCAL:
-                    this.secureStorage = new LocalCertificateStorage(
-                        PUBLIC_CERT_STORAGE_PATH,
-                        PRIVATE_CERT_PEM_FILE_PATH,
-                        PUBLIC_CERT_PEM_FILE_PATH,
-                        this.logger
-                    );
-                    this.logger.info("Using local directory storage for certificates.");
-                    break;
                 case SECURE_CERTIFICATE_STORAGE_TYPE.MONGO:
                 case SECURE_CERTIFICATE_STORAGE_TYPE.MONGODB:
                     this.secureStorage = new MongoCertificateStorage(MONGO_URL, this.logger);
                     this.logger.info("Using MongoDB storage for certificates.");
-                    break;
-                case SECURE_CERTIFICATE_STORAGE_TYPE.REDIS:
-                    this.secureStorage = new RedisCertificateStorage(REDIS_URL, this.logger);
-                    this.logger.info("Using Redis storage for certificates.");
-                    break;
-                case SECURE_CERTIFICATE_STORAGE_TYPE.VAULT:
-                    this.secureStorage = new VaultCertificateStorage({
-                        apiVersion: "v1",
-                        endpoint: VAULT_URL,
-                        token: VAULT_TOKEN,
-                    } as Vault.Option, this.logger);
-                    this.logger.info("Using Vault storage for certificates.");
                     break;
                 default:
                     throw new Error(`Unknown secure storage type: ${SECURE_STORAGE_TYPE}`);
