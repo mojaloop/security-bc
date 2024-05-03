@@ -58,8 +58,13 @@ export class KeyManagementAggregate {
         this._authorizationClient = authorizationClient;
     }
 
+    async getCSRFromId(securityContext: CallSecurityContext, csrId: string): Promise<ICSRRequest | null> {
+        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.VIEW_CSR_APPROVALS);
+        return this._secureStorage.fetchCSRWhereCSRId(csrId);
+    }
+
     async getPendingCSRApprovals(securityContext: CallSecurityContext): Promise<ICSRRequest[]> {
-        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.APPROVE_CSR);
+        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.VIEW_CSR_APPROVALS);
         return this._secureStorage.fetchCSRsWhereRequestState(ApprovalRequestState.CREATED)
     }
 

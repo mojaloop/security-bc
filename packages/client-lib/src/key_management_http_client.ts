@@ -77,6 +77,19 @@ export class KeyMgmtHttpClient {
         }
     }
 
+    public async rejectCSR(id: string): Promise<void> {
+        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs/${id}/reject`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+        const response = await this._authRequester.fetch(requestInfo);
+        if (!response.ok) {
+            throw new Error(`Failed to reject CSR: ${await response.text()}`);
+        }
+    }
+
     public async getPendingCSRApprovals(): Promise<ICSRRequest[]> {
         const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs/pendingApprovals`, {
             method: "GET",
@@ -87,6 +100,20 @@ export class KeyMgmtHttpClient {
         const response = await this._authRequester.fetch(requestInfo);
         if (!response.ok) {
             throw new Error(`Failed to get pending CSR approvals: ${await response.text()}`);
+        }
+        return await response.json();
+    }
+
+    public async getCSRFromId(id: string): Promise<ICSRRequest> {
+        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs/${id}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+        const response = await this._authRequester.fetch(requestInfo);
+        if (!response.ok) {
+            throw new Error(`Failed to get CSR from ID: ${await response.text()}`);
         }
         return await response.json();
     }

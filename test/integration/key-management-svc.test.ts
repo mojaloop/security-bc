@@ -39,7 +39,7 @@ import {
     KeyMgmtHttpClient,
 } from "@mojaloop/security-bc-client-lib";
 import { ConsoleLogger } from "@mojaloop/logging-bc-public-types-lib";
-import { ICSRRequest } from "@mojaloop/security-bc-public-types-lib";
+import { ApprovalRequestState, ICSRRequest } from "@mojaloop/security-bc-public-types-lib";
 
 const AUTH_N_SVC_BASEURL = "http://localhost:3201";
 
@@ -127,6 +127,11 @@ describe('key-management-client-lib tests', () => {
         // one of them should include the pendingApprovalParticipantId
         const found = pendingApprovals.find((item: ICSRRequest) => item.participantId === pendingApprovalParticipantId);
         expect(found).toBeDefined();
+
+        // every item should have requestState as 'CREATED'
+        pendingApprovals.forEach((item: ICSRRequest) => {
+            expect(item.requestState).toBe(ApprovalRequestState.CREATED);
+        })
     })
 
     test("Approve CSR", async () => {
@@ -135,6 +140,24 @@ describe('key-management-client-lib tests', () => {
         expect(csrId.id).toBeDefined();
 
         await checkerKeyMgmtHttpClient.approveCSR(csrId.id);
+
+        // check if the CSR is approved
+        const csr = await checkerKeyMgmtHttpClient.getCSRFromId(csrId.id);
+        expect(csr).toBeDefined();
+        expect(csr.requestState).toBe(ApprovalRequestState.APPROVED);
+    })
+
+    test("Reject CSR", async () => {
+        const csrId = await makerKeyMgmtHttpClient.uploadCSR('dfsp_a_reject_test', DFSP_A_CSR_PEM);
+        expect(csrId).toBeDefined();
+        expect(csrId.id).toBeDefined();
+
+        await checkerKeyMgmtHttpClient.rejectCSR(csrId.id);
+
+        // check if the CSR is rejected
+        const csr = await checkerKeyMgmtHttpClient.getCSRFromId(csrId.id);
+        expect(csr).toBeDefined();
+        expect(csr.requestState).toBe(ApprovalRequestState.REJECTED);
     })
 
 
@@ -149,6 +172,7 @@ describe('key-management-client-lib tests', () => {
 
         const cert = pki.certificateFromPem(publicCert.pubCertificatePem);
         expect(cert).toBeDefined();
+        expect(cert.subject.getField('CN').value).toBe('DFSP_A');
         expect(cert.issuer.getField('CN').value).toBe('vNextHub CA');
         expect(cert.issuer.getField('O').value).toBe('Mojaloop');
     })

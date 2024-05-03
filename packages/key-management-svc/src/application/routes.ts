@@ -61,14 +61,32 @@ export class KeyManagementRoutes {
         this._router.use(this._authenticationMiddleware.bind(this));
         // bind routes
         this._router.get("/certs/csrs/pendingApprovals", this.getPendingCSRApprovals.bind(this));
+        this._router.get("/certs/csrs/:id", this.getCSRFromId.bind(this));
         this._router.post("/certs/csrs", upload.single("csr"), this.uploadCSR.bind(this));
         this._router.put("/certs/csrs/:id/approve", this.approveCSR.bind(this));
+        this._router.put("/certs/csrs/:id/reject", this.rejectCSR.bind(this));
+
 
         this._router.get("/certs/pubCerts/hubCA", this.getHubCAPubCert.bind(this)); 1
         this._router.get("/certs/pubCerts/:participantId", this.getParticipantPubCert.bind(this));
 
 
         this._router.post("/certs/verify", this.verifyCert.bind(this));
+    }
+
+    async getCSRFromId(req: express.Request, res: express.Response) {
+        const csrId = req.params.id;
+        if (!csrId) {
+            return res.status(400).send("No CSR ID provided.");
+        }
+
+        try {
+            const csr = await this._keyMgmtAgg.getCSRFromId(req.securityContext!, csrId);
+            return res.send(csr);
+        } catch (error) {
+            this._logger.error("Failed to get CSR.", (error as Error).message);
+            return res.status(500).send("Failed to get CSR.");
+        }
     }
 
     async getPendingCSRApprovals(req: express.Request, res: express.Response) {
@@ -123,6 +141,21 @@ export class KeyManagementRoutes {
         } catch (error) {
             this._logger.error("Failed to approve CSR and generate public certificate.", (error as Error).message);
             return res.status(500).send("Failed to approve CSR and generate public certificate.");
+        }
+    }
+
+    async rejectCSR(req: express.Request, res: express.Response) {
+        const csrId = req.params.id;
+        if (!csrId) {
+            return res.status(400).send("No CSR ID provided.");
+        }
+
+        try {
+            await this._keyMgmtAgg.rejectCSR(req.securityContext!, csrId);
+            return res.status(200).send("CSR rejected.");
+        } catch (error) {
+            this._logger.error("Failed to reject CSR.", (error as Error).message);
+            return res.status(500).send("Failed to reject CSR.");
         }
     }
 
