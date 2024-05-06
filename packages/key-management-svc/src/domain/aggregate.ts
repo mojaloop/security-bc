@@ -65,11 +65,11 @@ export class KeyManagementAggregate {
 
     async getPendingCSRApprovals(securityContext: CallSecurityContext): Promise<ICSRRequest[]> {
         this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.VIEW_CSR_APPROVALS);
-        return this._secureStorage.fetchCSRsWhereRequestState(ApprovalRequestState.CREATED)
+        return this._secureStorage.fetchCSRsWhereRequestState(ApprovalRequestState.CREATED);
     }
 
     async uploadCSR(securityContext: CallSecurityContext, participantId: string, csr: string): Promise<string> {
-        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.UPLOAD_CSR)
+        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.UPLOAD_CSR);
         this._validateCSR(csr);
         const decodedCsrInfo = this._decodeInfoFromCSR(csr);
         const csrRequest: ICSRRequest = {
@@ -158,7 +158,7 @@ export class KeyManagementAggregate {
         const csr = forge.pki.certificationRequestFromPem(csrPEM);
 
         // Extract the subject information
-        const subject = csr.subject.attributes.map(attr => `${attr.name}=${attr.value}`).join(', ');
+        const subject = csr.subject.attributes.map(attr => `${attr.name}=${attr.value}`).join(", ");
 
         // Extract the signature information
         const signatureAlgorithm = csr.signatureOid!;  // OID representing the algorithm

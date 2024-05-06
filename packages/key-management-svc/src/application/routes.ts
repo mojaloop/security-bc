@@ -67,7 +67,7 @@ export class KeyManagementRoutes {
         this._router.put("/certs/csrs/:id/reject", this.rejectCSR.bind(this));
 
 
-        this._router.get("/certs/pubCerts/hubCA", this.getHubCAPubCert.bind(this)); 1
+        this._router.get("/certs/pubCerts/hubCA", this.getHubCAPubCert.bind(this));
         this._router.get("/certs/pubCerts/:participantId", this.getParticipantPubCert.bind(this));
 
 

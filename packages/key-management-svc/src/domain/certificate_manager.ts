@@ -72,7 +72,7 @@ export class CertificateManager {
                 keyEncipherment: true,
                 dataEncipherment: true,
             },
-        ]
+        ];
         newParticipantCert.setExtensions(extensions);
 
         newParticipantCert.sign(this._caPrivateKey, forge.md.sha256.create());
@@ -86,7 +86,7 @@ export class CertificateManager {
             serialNumber: newParticipantCert.serialNumber,
             signatureAlgorithm: newParticipantCert.signature.algorithm,
             extensions
-        }
+        };
 
         const pubCert: IPublicCertificate = {
             csrRequestId,
@@ -97,7 +97,7 @@ export class CertificateManager {
             createdBy: csrRequest.createdBy,
             approvedBy: csrRequest.approvedBy,
             approvedDate: csrRequest.approvedDate,
-        }
+        };
         this._secureStorage.storePublicCert(participantId, pubCert);
 
 
@@ -140,7 +140,7 @@ export class CertificateManager {
                 serialNumber: cert.serialNumber,
                 signatureAlgorithm: cert.signature.algorithm,
                 extensions: cert.extensions
-            }
+            };
 
             const pubCert: IPublicCertificate = {
                 participantId: secureStorage.getCAHubID(),
@@ -151,7 +151,7 @@ export class CertificateManager {
                 approvedBy: "system",
                 approvedDate: Date.now(),
 
-            }
+            };
             await secureStorage.storeCAHubPublicCert(pubCert);
             logger.createChild("CertificateManager._checkKeyOrGenerateCAKeyPair").info("Generated new CA keypair and stored in secure storage.");
         }
