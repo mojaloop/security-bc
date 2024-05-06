@@ -119,6 +119,12 @@ export const defaultDevRoles: PlatformRole[] = [
 			"ACCOUNT_LOOKUP_CREATE_ORACLE",
 			"ACCOUNT_LOOKUP_REMOVE_ORACLE",
 			"ACCOUNT_LOOKUP_VIEW_ALL_ORACLE_ASSOCIATIONS",
+            "SECURITY_VIEW_PUB_CERTIFICATE",
+            "SECURITY_VIEW_HUB_PUB_CERTIFICATE",
+            "SECURITY_VIEW_CSR_APPROVALS",
+            "SECURITY_UPLOAD_CSR",
+            "SECURITY_APPROVE_CSR",
+            "SECURITY_REJECT_CSR",
 		]
 	}, {
 		id: "admin",
@@ -127,12 +133,6 @@ export const defaultDevRoles: PlatformRole[] = [
 		isExternal: false,
 		externalId: undefined,
 		isApplicationRole: false,
-            "SECURITY_VIEW_PUB_CERTIFICATE",
-            "SECURITY_VIEW_HUB_PUB_CERTIFICATE",
-            "SECURITY_VIEW_CSR_APPROVALS",
-            "SECURITY_UPLOAD_CSR",
-            "SECURITY_APPROVE_CSR",
-            "SECURITY_REJECT_CSR",
         isPerParticipantRole: false,
 		privileges: [
 			"VIEW_PARTICIPANT",
@@ -216,6 +216,12 @@ export const defaultDevRoles: PlatformRole[] = [
             "SECURITY_BUILTIN_IAM_ENABLE_APP",
             "SECURITY_BUILTIN_IAM_DISABLE_APP",
             "SECURITY_BUILTIN_IAM_MANAGE_APP_ROLES",
+            "SECURITY_VIEW_PUB_CERTIFICATE",
+            "SECURITY_VIEW_HUB_PUB_CERTIFICATE",
+            "SECURITY_VIEW_CSR_APPROVALS",
+            "SECURITY_UPLOAD_CSR",
+            "SECURITY_APPROVE_CSR",
+            "SECURITY_REJECT_CSR",
 		]
 	}, {
 		id: "participants-bc-participants-svc",
@@ -224,12 +230,6 @@ export const defaultDevRoles: PlatformRole[] = [
 		isExternal: false,
 		externalId: undefined,
 		isApplicationRole: true,
-            "SECURITY_VIEW_PUB_CERTIFICATE",
-            "SECURITY_VIEW_HUB_PUB_CERTIFICATE",
-            "SECURITY_VIEW_CSR_APPROVALS",
-            "SECURITY_UPLOAD_CSR",
-            "SECURITY_APPROVE_CSR",
-            "SECURITY_REJECT_CSR",
         isPerParticipantRole: false,
 		privileges: [
 			"COA_CREATE_ACCOUNT",
