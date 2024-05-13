@@ -152,7 +152,7 @@ export class CertificateManager {
                 approvedDate: Date.now(),
 
             };
-            await secureStorage.storeCAHubPublicCert(pubCert);
+            await secureStorage.storeCAHubRootCert(pubCert);
             logger.createChild("CertificateManager._checkKeyOrGenerateCAKeyPair").info("Generated new CA keypair and stored in secure storage.");
         }
     }

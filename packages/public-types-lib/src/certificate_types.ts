@@ -29,6 +29,14 @@
  ******/
 
 "use strict";
+
+export class UploadCSRFailedError extends Error {}
+export class ApproveCSRFailedError extends Error {}
+export class RejectCSRFailedError extends Error {}
+export class GetCSRFailedError extends Error {}
+export class GetPublicCertificateFailedError extends Error {}
+export class VerifyPublicCertificateFailedError extends Error {}
+
 export enum ApprovalRequestState {
     CREATED = "CREATED",
     APPROVED = "APPROVED",
@@ -76,3 +84,4 @@ export interface IDecodedCertificateInfo {
     signatureAlgorithm: string;
     extensions: Record<string, any>;
 }
+

@@ -28,7 +28,7 @@
 "use strict";
 
 // import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
-import { IAuthenticatedHttpRequester, ICSRRequest, IPublicCertificate } from "@mojaloop/security-bc-public-types-lib";
+import { ApproveCSRFailedError, GetCSRFailedError, GetPublicCertificateFailedError, IAuthenticatedHttpRequester, ICSRRequest, IPublicCertificate, PublicCertificateNotFoundError, RejectCSRFailedError, UploadCSRFailedError} from "@mojaloop/security-bc-public-types-lib";
 
 export class KeyMgmtHttpClient {
     // private readonly _logger: ILogger;
@@ -59,7 +59,7 @@ export class KeyMgmtHttpClient {
         });
         const response = await this._authRequester.fetch(requestInfo);
         if (!response.ok) {
-            throw new Error(`Failed to upload CSR: ${await response.text()}`);
+            throw new UploadCSRFailedError(`Failed to upload CSR: ${await response.text()}`);
         }
         return await response.json();
     }
@@ -73,7 +73,7 @@ export class KeyMgmtHttpClient {
         });
         const response = await this._authRequester.fetch(requestInfo);
         if (!response.ok) {
-            throw new Error(`Failed to approve CSR: ${await response.text()}`);
+            throw new ApproveCSRFailedError(`Failed to approve CSR: ${await response.text()}`);
         }
     }
 
@@ -86,7 +86,7 @@ export class KeyMgmtHttpClient {
         });
         const response = await this._authRequester.fetch(requestInfo);
         if (!response.ok) {
-            throw new Error(`Failed to reject CSR: ${await response.text()}`);
+            throw new RejectCSRFailedError(`Failed to reject CSR: ${await response.text()}`);
         }
     }
 
@@ -99,7 +99,7 @@ export class KeyMgmtHttpClient {
         });
         const response = await this._authRequester.fetch(requestInfo);
         if (!response.ok) {
-            throw new Error(`Failed to get pending CSR approvals: ${await response.text()}`);
+            throw new GetCSRFailedError(`Failed to get pending CSR approvals: ${await response.text()}`);
         }
         return await response.json();
     }
@@ -113,7 +113,7 @@ export class KeyMgmtHttpClient {
         });
         const response = await this._authRequester.fetch(requestInfo);
         if (!response.ok) {
-            throw new Error(`Failed to get CSR from ID: ${await response.text()}`);
+            throw new GetCSRFailedError(`Failed to get CSR from ID: ${await response.text()}`);
         }
         return await response.json();
     }
@@ -128,7 +128,7 @@ export class KeyMgmtHttpClient {
         });
         const response = await this._authRequester.fetch(requestInfo);
         if (!response.ok) {
-            throw new Error(`Failed to get Hub CA Public Cert: ${await response.text()}`);
+            throw new GetPublicCertificateFailedError(`Failed to get Hub CA Public Cert: ${await response.text()}`);
         }
         return await response.json();
     }
@@ -142,7 +142,7 @@ export class KeyMgmtHttpClient {
         });
         const response = await this._authRequester.fetch(requestInfo);
         if (!response.ok) {
-            throw new Error(`Failed to get Participant Public Cert: ${await response.text()}`);
+            throw new GetPublicCertificateFailedError(`Failed to get Participant Public Cert: ${await response.text()}`);
         }
         return await response.json();
     }

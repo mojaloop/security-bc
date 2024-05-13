@@ -177,7 +177,7 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
     }
 
 
-    public async storeCAHubPublicCert(cert: IPublicCertificate): Promise<void> {
+    public async storeCAHubRootCert(cert: IPublicCertificate): Promise<void> {
         try {
             const result = await this._publicCertCollection.updateOne(
                 { participantId: this._hubID },

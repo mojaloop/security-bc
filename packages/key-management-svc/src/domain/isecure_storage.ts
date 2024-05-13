@@ -60,7 +60,7 @@ export interface ISecureCertificateStorage {
     storeCAHubPrivateKey(key: string): Promise<void>;
     getCAHubPrivateKey(): Promise<string>;
 
-    storeCAHubPublicCert(cert: IPublicCertificate): Promise<void>;
+    storeCAHubRootCert(cert: IPublicCertificate): Promise<void>;
 
     getCAHubPublicCert(): Promise<IPublicCertificate>;
 

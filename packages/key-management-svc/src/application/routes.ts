@@ -67,7 +67,7 @@ export class KeyManagementRoutes {
         this._router.put("/certs/csrs/:id/reject", this.rejectCSR.bind(this));
 
 
-        this._router.get("/certs/pubCerts/hubCA", this.getHubCAPubCert.bind(this));
+        this._router.get("/certs/pubCerts/hubCA", this.getHubCARootCert.bind(this));
         this._router.get("/certs/pubCerts/:participantId", this.getParticipantPubCert.bind(this));
 
 
@@ -159,7 +159,7 @@ export class KeyManagementRoutes {
         }
     }
 
-    async getHubCAPubCert(req: express.Request, res: express.Response) {
+    async getHubCARootCert(req: express.Request, res: express.Response) {
         try {
             const hubCAPubCert = await this._keyMgmtAgg.getHubCAPubCert(req.securityContext!);
             return res.send(hubCAPubCert);
