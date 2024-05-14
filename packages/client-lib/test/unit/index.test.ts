@@ -40,6 +40,9 @@ import { URL } from "url";
 import {LoginHelper, TokenHelper} from "../../dist/";
 import {ConsoleLogger, ILogger} from "@mojaloop/logging-bc-public-types-lib";
 
+import forge from "node-forge";
+import { CertificatesHelper } from "../../src";
+
 const LOGIN_SVC_BASE_URL = "http://localhost:3201";
 const TOKEN_URL = `${LOGIN_SVC_BASE_URL}/token`;
 const JWKS_URL = `${LOGIN_SVC_BASE_URL}/.well-known/jwks.json`;
@@ -244,6 +247,42 @@ describe('authentication-client-lib tests', () => {
         await tokenHelper.destroy();
     });
 
-
-
 })
+
+describe("CertificatesHelper Tests", () => {
+    const certificatesHelper = new CertificatesHelper();
+
+    test("createCSR should generate a valid CSR with given public and private keys", async () => {
+        // Generate a new key pair for the test
+        const keys = forge.pki.rsa.generateKeyPair(2048);
+        const privateKeyPem = forge.pki.privateKeyToPem(keys.privateKey);
+        const publicKeyPem = forge.pki.publicKeyToPem(keys.publicKey);
+
+        // Call the createCSR function
+        const csrPem = certificatesHelper.createCSR(
+            privateKeyPem, publicKeyPem,
+            "example.com", "US", "California", "San Francisco", "Example Org", "IT",
+        );
+
+        // Verify the CSR
+        const csr = forge.pki.certificationRequestFromPem(csrPem);
+        const valid = csr.verify();
+
+        expect(valid).toBe(true);
+         // Extract relevant properties for comparison
+        const actualAttributes = csr.subject.attributes.map(attr => ({
+            name: attr.name,
+            value: attr.value
+        }));
+
+        expect(actualAttributes).toEqual(expect.arrayContaining([
+            { name: 'commonName', value: 'example.com' },
+            { name: 'countryName', value: 'US' },
+            { name: 'stateOrProvinceName', value: 'California' },
+            { name: 'localityName', value: 'San Francisco' },
+            { name: 'organizationName', value: 'Example Org' },
+            { name: 'organizationalUnitName', value: 'IT' }
+        ]));
+    });
+});
+
