@@ -51,6 +51,7 @@ export interface IDecodedCSRInfo {
 }
 
 export declare interface ICSRRequest {
+    id?: string;
     csrPEM: string;
     decodedCsrInfo?: IDecodedCSRInfo;
     participantId: string;
@@ -61,7 +62,7 @@ export declare interface ICSRRequest {
     approvedDate: number | null;
     rejectedBy: string | null;
     rejectedDate: number | null;
-
+    used: boolean;
 }
 
 export declare interface IPublicCertificate {

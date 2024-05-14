@@ -83,6 +83,7 @@ export class KeyManagementAggregate {
             approvedDate: null,
             rejectedBy: null,
             rejectedDate: null,
+            used: false,
         };
         return await this._secureStorage.storeCSR(csrRequest);
     }
@@ -105,11 +106,16 @@ export class KeyManagementAggregate {
             );
         }
 
+        if (csrRequest.used) {
+            throw new Error("CSR is already used to generate public certificate");
+        }
+
         csrRequest.requestState = ApprovalRequestState.APPROVED;
         csrRequest.approvedBy = securityContext.username!;
         csrRequest.approvedDate = Date.now();
+        csrRequest.used = true;
         await this._secureStorage.updateCSR(csrId, csrRequest);
-        this._certificateManager.signAndStorePublicCertFromCSR(csrId, csrRequest);
+        await this._certificateManager.signAndStorePublicCertFromCSR(csrId, csrRequest);
     }
 
     async rejectCSR(securityContext: CallSecurityContext, csrId: string): Promise<void> {

@@ -33,7 +33,7 @@ export class CertificateManager {
         this._ca_store.addCertificate(pki.certificateFromPem(this._caPubKeyPem));
     }
 
-    signAndStorePublicCertFromCSR(csrRequestId: string, csrRequest: ICSRRequest): string {
+    async signAndStorePublicCertFromCSR(csrRequestId: string, csrRequest: ICSRRequest): Promise<string> {
         if (csrRequest.requestState !== "APPROVED") {
             throw new Error("CSR request is not in the approved state.");
         }
@@ -99,8 +99,7 @@ export class CertificateManager {
             approvedBy: csrRequest.approvedBy,
             approvedDate: csrRequest.approvedDate,
         };
-        this._secureStorage.storePublicCert(participantId, pubCert);
-
+        await this._secureStorage.storePublicCert(participantId, pubCert);
 
         return clientCertPem;
     }

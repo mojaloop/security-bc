@@ -87,9 +87,9 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
     }
 
     public async fetchAllCSRs(): Promise<ICSRRequest[]> {
-        return await this._csrCollection.find()
-            .project({ _id: 0 })
-            .toArray() as ICSRRequest[];
+        const csrs = await this._csrCollection.find()
+            .toArray();
+        return csrs.map(this._mapDocumentToCSRRequest);
     }
 
     public async fetchCSRWhereCSRId(csrId: string): Promise<ICSRRequest | null> {
@@ -98,15 +98,16 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
     }
 
     public async fetchCSRsWhereParticipantId(participantId: string): Promise<ICSRRequest[]> {
-        return await this._csrCollection.find({ participantId: participantId })
-            .project({ _id: 0 })
-            .toArray() as ICSRRequest[];
+        const csrs = await this._csrCollection.find({ participantId: participantId })
+            .toArray();
+        return csrs.map(this._mapDocumentToCSRRequest);
     }
 
     public async fetchCSRsWhereRequestState(request_state: ApprovalRequestState): Promise<ICSRRequest[]> {
-        return await this._csrCollection.find({ requestState: request_state })
-            .project({ _id: 0 })
-            .toArray() as ICSRRequest[];
+        const csrs = await this._csrCollection.find({ requestState: request_state })
+            .toArray();
+
+        return csrs.map(this._mapDocumentToCSRRequest);
     }
 
     public async getPublicCert(participantId: string): Promise<string> {
@@ -253,6 +254,23 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
         let decrypted = decipher.update(text, "hex", "utf8");
         decrypted += decipher.final("utf8");
         return decrypted;
+    }
+
+    _mapDocumentToCSRRequest(csr: any): ICSRRequest {
+        return {
+            id: csr._id.toString(),
+            csrPEM: csr.csrPEM,
+            decodedCsrInfo: csr.decodedCsrInfo,
+            participantId: csr.participantId,
+            createdBy: csr.createdBy,
+            createdDate: csr.createdDate,
+            requestState: csr.requestState,
+            approvedBy: csr.approvedBy,
+            approvedDate: csr.approvedDate,
+            rejectedBy: csr.rejectedBy,
+            rejectedDate: csr.rejectedDate,
+            used: csr.used
+        };
     }
 
     public async destroy(): Promise<void> {
