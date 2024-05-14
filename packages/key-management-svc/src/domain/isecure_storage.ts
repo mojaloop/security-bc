@@ -64,5 +64,9 @@ export interface ISecureCertificateStorage {
 
     getCAHubPublicCert(): Promise<IPublicCertificate>;
 
+
+    revokePublicCert(participantId: string, reason: string): Promise<void>;
+    getRevokedPublicCerts(participantId: string): Promise<IPublicCertificate[]>;
+
     destroy(): Promise<void>;
 }

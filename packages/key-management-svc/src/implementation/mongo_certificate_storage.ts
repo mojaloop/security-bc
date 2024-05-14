@@ -111,7 +111,7 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
 
     public async getPublicCert(participantId: string): Promise<string> {
         const cert = await this._publicCertCollection
-            .findOne({ participantId: participantId }, { projection: { _id: 0, participantId: 0 } });
+            .findOne({ participantId: participantId, isRevoked: { $ne: true } }, { projection: { _id: 0, participantId: 0 } });
 
         if (!cert) {
             throw new Error(`Certificate not found for participantId: ${participantId}`);
@@ -197,12 +197,35 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
 
     public async getCAHubPublicCert(): Promise<IPublicCertificate> {
         const publicCert = await this._publicCertCollection
-            .findOne({ participantId: this._hubID }, { projection: { _id: 0, participantId: 0 } });
+            .findOne({ participantId: this._hubID, isRevoked: { $ne: true } }, { projection: { _id: 0, participantId: 0 } });
 
         if (!publicCert) {
             throw new Error("Public key not found for hub");
         }
         return publicCert.cert;
+    }
+
+    public async revokePublicCert(participantId: string, reason: string): Promise<void> {
+        const updateResult = await this._publicCertCollection.updateOne(
+            { participantId: participantId },
+            {
+                $set: {
+                    isRevoked: true,
+                    revocationReason: reason,
+                    revocationDate: new Date()
+                }
+            }
+        );
+
+        if (updateResult.modifiedCount === 0) {
+            throw new Error(`Failed to revoke certificate for participantId: ${participantId}`);
+        }
+    }
+
+    public async getRevokedPublicCerts(): Promise<IPublicCertificate[]> {
+        return await this._publicCertCollection.find({ isRevoked: true })
+            .project({ _id: 0 })
+            .toArray() as IPublicCertificate[];
     }
 
     _encrypt(text: string): string {

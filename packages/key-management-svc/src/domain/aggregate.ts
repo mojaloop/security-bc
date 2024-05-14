@@ -154,6 +154,12 @@ export class KeyManagementAggregate {
         return this._certificateManager.verifyCert(certPem);
     }
 
+    async revokeParticipantPubCert(securityContext: CallSecurityContext, participantId: string, reason: string): Promise<void> {
+        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.REVOKE_CERTIFICATE);
+
+        return this._secureStorage.revokePublicCert(participantId, reason);
+    }
+
     private _decodeInfoFromCSR(csrPEM: string): IDecodedCSRInfo {
         const csr = forge.pki.certificationRequestFromPem(csrPEM);
 

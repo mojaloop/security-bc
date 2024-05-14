@@ -70,6 +70,7 @@ export class KeyManagementRoutes {
         this._router.get("/certs/pubCerts/hubCA", this.getHubCARootCert.bind(this));
         this._router.get("/certs/pubCerts/:participantId", this.getParticipantPubCert.bind(this));
 
+        this._router.put("/certs/pubCerts/:participantId/revoke", this.revokeParticipantPubCert.bind(this));
 
         this._router.post("/certs/verify", this.verifyCert.bind(this));
     }
@@ -181,6 +182,27 @@ export class KeyManagementRoutes {
         } catch (error) {
             this._logger.error("Failed to get participant public certificate.", (error as Error).message);
             return res.status(500).send("Failed to get participant public certificate.");
+        }
+    }
+
+    async revokeParticipantPubCert(req: express.Request, res: express.Response) {
+        const participantId = req.params.participantId;
+        const reason = req.body.reason;
+
+        if (!participantId) {
+            return res.status(400).send("No participantId provided.");
+        }
+
+        if (!reason) {
+            return res.status(400).send("No reason provided.");
+        }
+
+        try {
+            await this._keyMgmtAgg.revokeParticipantPubCert(req.securityContext!, participantId, reason);
+            return res.status(200).send("Participant public certificate revoked.");
+        } catch (error) {
+            this._logger.error("Failed to revoke participant public certificate.", (error as Error).message);
+            return res.status(500).send("Failed to revoke participant public certificate.");
         }
     }
 

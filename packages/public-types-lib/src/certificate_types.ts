@@ -69,6 +69,11 @@ export declare interface IPublicCertificate {
     participantId: string;
     pubCertificatePem: string;
     decodedCertInfo?: IDecodedCertificateInfo;
+
+    isRevoked?: boolean;
+    revocationReason?: string;
+    revocationDate?: Date;
+
     createdDate: number;
     createdBy: string;
     approvedBy: string | null;

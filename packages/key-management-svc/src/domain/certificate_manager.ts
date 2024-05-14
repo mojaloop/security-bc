@@ -1,5 +1,6 @@
 "use strict";
 
+import crypto from "crypto";
 import forge, { pki } from "node-forge";
 
 import { CertificatesHelper } from "@mojaloop/security-bc-client-lib";
@@ -50,7 +51,7 @@ export class CertificateManager {
         }
 
         const newParticipantCert = forge.pki.createCertificate();
-        newParticipantCert.serialNumber = crypto.randomUUID().replace(/-/g, "");
+        newParticipantCert.serialNumber = this._generateSerialNumber();
         newParticipantCert.validity.notBefore = new Date();
         newParticipantCert.validity.notAfter = new Date();
         newParticipantCert.validity.notAfter.setFullYear(newParticipantCert.validity.notBefore.getFullYear() + 1); // 1 year validity, TODO: make this configurable
@@ -155,5 +156,12 @@ export class CertificateManager {
             await secureStorage.storeCAHubRootCert(pubCert);
             logger.createChild("CertificateManager._checkKeyOrGenerateCAKeyPair").info("Generated new CA keypair and stored in secure storage.");
         }
+    }
+
+    _generateSerialNumber(): string {
+        // Combine current timestamp with a random component
+        const timestamp = Date.now();
+        const randomComponent = crypto.randomBytes(8).toString('hex'); // 16 characters
+        return `${timestamp.toString(16)}${randomComponent}`;
     }
 }

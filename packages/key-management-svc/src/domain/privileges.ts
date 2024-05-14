@@ -37,6 +37,8 @@ export enum CertKeyManagementPrivileges {
     UPLOAD_CSR = "SECURITY_UPLOAD_CSR",
     APPROVE_CSR = "SECURITY_APPROVE_CSR",
     REJECT_CSR = "SECURITY_REJECT_CSR",
+    REVOKE_CERTIFICATE = "SECURITY_REVOKE_CERTIFICATE",
+    VIEW_REVOKED_CERTIFICATES = "SECURITY_VIEW_REVOKED_CERTIFICATES",
     VERIFY_CERTIFICATE = "SECURITY_VERIFY_CERTIFICATE",
 }
 
@@ -65,6 +67,10 @@ export const CertKeyMangementPriviledgesDefinition = [
         privId: CertKeyManagementPrivileges.REJECT_CSR,
         labelName: "Reject CSR",
         description: "Allows rejection of Certificate Signing Requests"
+    }, {
+        privId: CertKeyManagementPrivileges.REVOKE_CERTIFICATE,
+        labelName: "Revoke Certificate",
+        description: "Allows revocation of certificates of participants"
     }, {
         privId: CertKeyManagementPrivileges.VERIFY_CERTIFICATE,
         labelName: "Verify Certificate",

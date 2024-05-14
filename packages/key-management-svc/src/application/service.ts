@@ -233,6 +233,11 @@ export class Service {
             next();
         });
 
+        // Add health route - before others (to avoid authZ middleware)
+        app.get("/health", (req: express.Request, res: express.Response) => {
+            return res.send({ status: "OK" });
+        });
+
         const globalConfigsRoutes = new KeyManagementRoutes(
             this.keyManagementAgg,
             this.tokenHelper,

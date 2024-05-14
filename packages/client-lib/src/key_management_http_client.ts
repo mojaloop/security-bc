@@ -28,7 +28,7 @@
 "use strict";
 
 // import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
-import { ApproveCSRFailedError, GetCSRFailedError, GetPublicCertificateFailedError, IAuthenticatedHttpRequester, ICSRRequest, IPublicCertificate, PublicCertificateNotFoundError, RejectCSRFailedError, UploadCSRFailedError} from "@mojaloop/security-bc-public-types-lib";
+import { ApproveCSRFailedError, GetCSRFailedError, GetPublicCertificateFailedError, IAuthenticatedHttpRequester, ICSRRequest, IPublicCertificate, RejectCSRFailedError, UploadCSRFailedError} from "@mojaloop/security-bc-public-types-lib";
 
 export class KeyMgmtHttpClient {
     // private readonly _logger: ILogger;
