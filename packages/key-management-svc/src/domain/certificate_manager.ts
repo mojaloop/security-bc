@@ -120,7 +120,7 @@ export class CertificateManager {
             // If the CA private key and public key are not found in the secure storage, generate a new keypair
             const certHelper = new CertificatesHelper();
             // Generate a keypair
-            const keys = forge.pki.rsa.generateKeyPair(2048);
+            const keys = forge.pki.rsa.generateKeyPair(4096);
             const signingKeyPem = forge.pki.privateKeyToPem(keys.privateKey);
             const certPem = certHelper.createX590CertificateAuthorityCert(
 
