@@ -160,7 +160,7 @@ export class CertificateManager {
     _generateSerialNumber(): string {
         // Combine current timestamp with a random component
         const timestamp = Date.now();
-        const randomComponent = crypto.randomBytes(8).toString('hex'); // 16 characters
+        const randomComponent = crypto.randomBytes(8).toString("hex");
         return `${timestamp.toString(16)}${randomComponent}`;
     }
 }
