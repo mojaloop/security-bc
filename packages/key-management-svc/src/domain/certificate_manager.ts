@@ -54,7 +54,7 @@ export class CertificateManager {
         newParticipantCert.serialNumber = this._generateSerialNumber();
         newParticipantCert.validity.notBefore = new Date();
         newParticipantCert.validity.notAfter = new Date();
-        newParticipantCert.validity.notAfter.setFullYear(newParticipantCert.validity.notBefore.getFullYear() + 1); // 1 year validity, TODO: make this configurable
+        newParticipantCert.validity.notAfter.setFullYear(newParticipantCert.validity.notBefore.getFullYear() + 2); // 2 year validity
 
         newParticipantCert.setSubject(participantCSR.subject.attributes); // use the same subject as the CSR
         newParticipantCert.setIssuer(this._caPubCert.subject.attributes); // use the CA subject as the issuer
