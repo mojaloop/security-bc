@@ -189,15 +189,15 @@ export class CertificatesHelper {
 
         const csr = pki.createCertificationRequest();
 
-        csr.publicKey = publicKey
+        csr.publicKey = publicKey;
         csr.setSubject([
-            { name: 'commonName', value: commonName },
-            { name: 'countryName', value: country },
-            { shortName: 'ST', value: state },
-            { name: 'localityName', value: locality },
-            { name: 'organizationName', value: orgName },
-            { shortName: 'OU', value: orgUnit }
-        ])
+            { name: "commonName", value: commonName },
+            { name: "countryName", value: country },
+            { shortName: "ST", value: state },
+            { name: "localityName", value: locality },
+            { name: "organizationName", value: orgName },
+            { shortName: "OU", value: orgUnit }
+        ]);
 
         csr.sign(privateKey, forge.md.sha256.create());
 
