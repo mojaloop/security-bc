@@ -51,14 +51,12 @@ export type Privilege = {
 
 export type PrivilegeWithOwnerAppInfo = Privilege & {
     boundedContextName: string;     // bounded context it belongs to
-    applicationName: string;        // application it belongs to
-    applicationVersion: string;     // semver
+    privilegeSetVersion: string;     // semver
 }
 
-export type AppPrivileges = {
+export type BoundedContextPrivileges = {
 	boundedContextName: string;
-	applicationName: string;
-	applicationVersion: string;     // semver
+	privilegeSetVersion: string;     // semver from the BC privilege set, usually set by the domain code of the BC
 	privileges: Privilege[];
 }
 

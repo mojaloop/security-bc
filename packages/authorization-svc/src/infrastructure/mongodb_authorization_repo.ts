@@ -36,7 +36,7 @@ import {IAuthorizationRepository} from "../domain/interfaces";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Collection, MongoClient, WithId} from "mongodb";
 import {
-    AppPrivileges,
+    BoundedContextPrivileges,
     PlatformRole,
     Privilege,
     PrivilegeWithOwnerAppInfo
@@ -108,13 +108,12 @@ export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
     async fetchAllPrivileges(): Promise<PrivilegeWithOwnerAppInfo[]> {
         const found = await this._privilegesCollection.find({})
             .project({_id: 0})
-            .toArray() as AppPrivileges[];
+            .toArray() as BoundedContextPrivileges[];
 
         const resp:PrivilegeWithOwnerAppInfo[] = found.flatMap(appPriv => appPriv.privileges.map(priv => {
             return {
                 boundedContextName: appPriv.boundedContextName,
-                applicationName: appPriv.applicationName,
-                applicationVersion: appPriv.applicationVersion,
+                privilegeSetVersion: appPriv.privilegeSetVersion,
                 id: priv.id,
                 labelName: priv.labelName,
                 description: priv.description
@@ -130,10 +129,10 @@ export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
                 "$elemMatch":{ "id": privilegeId}
             }};
 
-        const found: AppPrivileges | null = await this._privilegesCollection.findOne(
+        const found: BoundedContextPrivileges | null = await this._privilegesCollection.findOne(
             filter,
             {projection: {_id: 0}}
-        ) as AppPrivileges | null;
+        ) as BoundedContextPrivileges | null;
         if(!found) return null;
 
         const appPriv:Privilege | undefined = found.privileges.find(
@@ -146,27 +145,27 @@ export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
             labelName: appPriv.labelName,
             description: appPriv.description,
             boundedContextName: found.boundedContextName,
-            applicationName: found.applicationName,
-            applicationVersion: found.applicationVersion
+            privilegeSetVersion: found.privilegeSetVersion
         };
     }
 
 
-    /* AppPrivileges (privs grouped by app/bc scope) */
+    /* BoundedContextPrivileges (privs grouped by app/bc scope) */
 
-    async fetchAppPrivileges(boundedContextName: string, applicationName: string): Promise<AppPrivileges | null> {
+    async fetchAppPrivileges(boundedContextName: string): Promise<BoundedContextPrivileges | null> {
         const found = await this._privilegesCollection.findOne(
-            {boundedContextName: boundedContextName, applicationName: applicationName},
+            {boundedContextName: boundedContextName},
             {projection: {_id: 0}}
         );
 
-        return found as AppPrivileges | null;
+        return found as BoundedContextPrivileges | null;
     }
 
-    async storeAppPrivileges(priv: AppPrivileges): Promise<void> {
+    async storeAppPrivileges(priv: BoundedContextPrivileges): Promise<void> {
         try {
+            debugger
             const updateResult = await this._privilegesCollection.replaceOne(
-                {boundedContextName: priv.boundedContextName, applicationName: priv.applicationName},
+                {boundedContextName: priv.boundedContextName},
                 priv,
                 {upsert: true}
             );

@@ -44,7 +44,7 @@ import {
 import {PrivilegesByRole} from "../domain/types";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
-    AppPrivileges,
+    BoundedContextPrivileges,
     CallSecurityContext, ForbiddenError, ITokenHelper, MakerCheckerViolationError,
     PlatformRole,
     PrivilegeWithOwnerAppInfo, UnauthorizedError
@@ -145,7 +145,7 @@ export class ExpressRoutes {
     }
 
     private async postBootstrap(req: express.Request, res: express.Response){
-        const data: AppPrivileges = req.body as AppPrivileges;
+        const data: BoundedContextPrivileges = req.body as BoundedContextPrivileges;
         this._logger.debug(data);
 
         await this._authorizationAggregate.processAppBootstrap(req.securityContext!, data).then(()=>{
@@ -156,17 +156,17 @@ export class ExpressRoutes {
             if (error instanceof InvalidAppPrivilegesError) {
                 return res.status(400).json({
                     status: "error",
-                    msg: "Received invalid AppPrivileges"
+                    msg: "Received invalid BoundedContextPrivileges"
                 });
             } else if (error instanceof CannotCreateDuplicateAppPrivilegesError) {
                 return res.status(409).json({
                     status: "error",
-                    msg: "Received duplicate AppPrivileges"
+                    msg: "Received duplicate BoundedContextPrivileges"
                 });
             } else if (error instanceof CannotOverrideAppPrivilegesError) {
                 return res.status(400).json({
                     status: "error",
-                    msg: "Received AppPrivileges with lower version than latest"
+                    msg: "Received BoundedContextPrivileges with lower version than latest"
                 });
             } else if (error instanceof CouldNotStoreAppPrivilegesError) {
                 return res.status(500).json({
@@ -184,19 +184,17 @@ export class ExpressRoutes {
 
     private async getAppRoles(req: express.Request, res: express.Response){
         const bcName = req.query["bcName"] ?? null;
-        const appName = req.query["appName"] ?? null;
 
-        if(!bcName || !appName){
+        if(!bcName){
             return res.status(400).json({
                 status: "error",
-                msg: "invalid bcName or appName"
+                msg: "invalid bcName"
             });
         }
 
         await this._authorizationAggregate.getAppPrivilegesByRole(
             req.securityContext!,
             bcName.toString(),
-            appName.toString()
         ).then((resp:PrivilegesByRole)=>{
             return res.send(resp);
         }).catch((error: Error)=>{

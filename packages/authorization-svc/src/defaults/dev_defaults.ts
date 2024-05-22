@@ -288,9 +288,9 @@ export const defaultDevRoles:PlatformRole[] = [
 			"VIEW_PARTICIPANT"
 		]
 	}, {
-		id: "quoting-bc-quoting-svc",
-		description: "quoting-bc-quoting-svc roles",
-		labelName: "quoting-bc-quoting-svc roles",
+		id: "quoting-bc-command-handler-svc",
+		description: "quoting-bc-command-handler-svc roles",
+		labelName: "quoting-bc-command-handler-svc roles",
 		isExternal: false,
 		externalId: undefined,
 		isApplicationRole: true,
