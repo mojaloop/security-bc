@@ -51,9 +51,12 @@ import process from "process";
 import {BuiltinIamAdapter} from "../infrastructure/builtin_iam_adapter";
 import util from "util";
 import {IMessageConsumer, IMessageProducer} from "@mojaloop/platform-shared-lib-messaging-types-lib";
-import {MLKafkaJsonConsumer, MLKafkaJsonProducer} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
+import {
+    MLKafkaJsonConsumer, MLKafkaJsonProducer, MLKafkaJsonProducerOptions
+} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
 import {JwtIdRedisRepo} from "../infrastructure/jwtid_redis_repo";
 import {AuthenticationEventHandler} from "./event_handler";
+import {MLKafkaJsonConsumerOptions} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
 
 // get configClient from dedicated file
 // import configClient, {configKeys} from "./config";
@@ -74,6 +77,11 @@ const LOG_LEVEL:LogLevel = process.env["LOG_LEVEL"] as LogLevel || LogLevel.DEBU
 const SVC_DEFAULT_HTTP_PORT = 3201;
 
 const KAFKA_URL = process.env["KAFKA_URL"] || "localhost:9092";
+const KAFKA_AUTH_ENABLED = process.env["KAFKA_AUTH_ENABLED"] && process.env["KAFKA_AUTH_ENABLED"].toUpperCase()==="TRUE" || false;
+const KAFKA_AUTH_PROTOCOL = process.env["KAFKA_AUTH_PROTOCOL"] || "sasl_plaintext";
+const KAFKA_AUTH_MECHANISM = process.env["KAFKA_AUTH_MECHANISM"] || "plain";
+const KAFKA_AUTH_USERNAME = process.env["KAFKA_AUTH_USERNAME"] || "user";
+const KAFKA_AUTH_PASSWORD = process.env["KAFKA_AUTH_PASSWORD"] || "password";
 // const MONGO_URL = process.env["MONGO_URL"] || "mongodb://root:mongoDbPas42@localhost:27017/";
 //const KAFKA_AUDITS_TOPIC = process.env["KAFKA_AUDITS_TOPIC"] || "audits";
 const KAFKA_LOGS_TOPIC = process.env["KAFKA_LOGS_TOPIC"] || "logs";
@@ -95,10 +103,22 @@ const INSTANCE_NAME = `${BC_NAME}_${APP_NAME}`;
 const INSTANCE_ID = `${BC_NAME}_${APP_NAME}__${crypto.randomUUID()}`;
 
 
-// kafka logger
-const kafkaProducerOptions = {
+// kafka common options
+const kafkaProducerCommonOptions:MLKafkaJsonProducerOptions = {
     kafkaBrokerList: KAFKA_URL
 };
+const kafkaConsumerCommonOptions:MLKafkaJsonConsumerOptions ={
+    kafkaBrokerList: KAFKA_URL
+};
+if(KAFKA_AUTH_ENABLED){
+    kafkaProducerCommonOptions.authentication = kafkaConsumerCommonOptions.authentication = {
+        protocol: KAFKA_AUTH_PROTOCOL as "plaintext" | "ssl" | "sasl_plaintext" | "sasl_ssl",
+        mechanism: KAFKA_AUTH_MECHANISM as "PLAIN" | "GSSAPI" | "SCRAM-SHA-256" | "SCRAM-SHA-512",
+        username: KAFKA_AUTH_USERNAME,
+        password: KAFKA_AUTH_PASSWORD
+    };
+}
+
 
 // global
 let globalLogger: ILogger;
@@ -135,7 +155,7 @@ export class Service {
                 BC_NAME,
                 APP_NAME,
                 APP_VERSION,
-                kafkaProducerOptions,
+                kafkaProducerCommonOptions,
                 KAFKA_LOGS_TOPIC,
                 LOG_LEVEL
             );
@@ -184,7 +204,7 @@ export class Service {
         */
 
         if (!messageProducer) {
-            messageProducer = new MLKafkaJsonProducer(kafkaProducerOptions, this.logger.createChild("AggMessageProducer"));
+            messageProducer = new MLKafkaJsonProducer(kafkaProducerCommonOptions, this.logger.createChild("AggMessageProducer"));
             await messageProducer.connect();
         }
         this.messageProducer = messageProducer;
@@ -212,9 +232,10 @@ export class Service {
         // event handler
         if(!messageConsumer){
             messageConsumer = new MLKafkaJsonConsumer({
-                kafkaBrokerList: KAFKA_URL,
-                kafkaGroupId: INSTANCE_ID
-            }, logger.createChild("handlerConsumer"));
+                    ...kafkaConsumerCommonOptions,
+                    kafkaGroupId: INSTANCE_ID
+                }, logger.createChild("handlerConsumer")
+            );
         }
         this.messageConsumer = messageConsumer;
 

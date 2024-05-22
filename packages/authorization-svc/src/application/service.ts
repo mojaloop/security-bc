@@ -45,8 +45,8 @@ import process from "process";
 import {IMessageConsumer, IMessageProducer} from "@mojaloop/platform-shared-lib-messaging-types-lib";
 import {
     MLKafkaJsonConsumer, MLKafkaJsonConsumerOptions,
-    MLKafkaJsonProducer
-} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib/dist/index";
+    MLKafkaJsonProducer, MLKafkaJsonProducerOptions
+} from "@mojaloop/platform-shared-lib-nodejs-kafka-client-lib";
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {ITokenHelper} from "@mojaloop/security-bc-public-types-lib";
 import util from "util";
@@ -69,6 +69,12 @@ const AUTH_N_SVC_JWKS_URL = process.env["AUTH_N_SVC_JWKS_URL"] || `${AUTH_N_SVC_
 
 
 const KAFKA_URL = process.env["KAFKA_URL"] || "localhost:9092";
+const KAFKA_AUTH_ENABLED = process.env["KAFKA_AUTH_ENABLED"] && process.env["KAFKA_AUTH_ENABLED"].toUpperCase()==="TRUE" || false;
+const KAFKA_AUTH_PROTOCOL = process.env["KAFKA_AUTH_PROTOCOL"] || "sasl_plaintext";
+const KAFKA_AUTH_MECHANISM = process.env["KAFKA_AUTH_MECHANISM"] || "plain";
+const KAFKA_AUTH_USERNAME = process.env["KAFKA_AUTH_USERNAME"] || "user";
+const KAFKA_AUTH_PASSWORD = process.env["KAFKA_AUTH_PASSWORD"] || "password";
+
 const MONGO_URL = process.env["MONGO_URL"] || "mongodb://root:mongoDbPas42@localhost:27017/";
 
 //const KAFKA_AUDITS_TOPIC = process.env["KAFKA_AUDITS_TOPIC"] || "audits";
@@ -77,10 +83,21 @@ const KAFKA_LOGS_TOPIC = process.env["KAFKA_LOGS_TOPIC"] || "logs";
 const INSTANCE_NAME = `${BC_NAME}_${APP_NAME}`;
 const INSTANCE_ID = `${INSTANCE_NAME}__${crypto.randomUUID()}`;
 
-// kafka logger
-const kafkaProducerOptions = {
+// kafka common options
+const kafkaProducerCommonOptions:MLKafkaJsonProducerOptions = {
     kafkaBrokerList: KAFKA_URL
 };
+const kafkaConsumerCommonOptions:MLKafkaJsonConsumerOptions ={
+    kafkaBrokerList: KAFKA_URL
+};
+if(KAFKA_AUTH_ENABLED){
+    kafkaProducerCommonOptions.authentication = kafkaConsumerCommonOptions.authentication = {
+        protocol: KAFKA_AUTH_PROTOCOL as "plaintext" | "ssl" | "sasl_plaintext" | "sasl_ssl",
+        mechanism: KAFKA_AUTH_MECHANISM as "PLAIN" | "GSSAPI" | "SCRAM-SHA-256" | "SCRAM-SHA-512",
+        username: KAFKA_AUTH_USERNAME,
+        password: KAFKA_AUTH_PASSWORD
+    };
+}
 
 
 // global
@@ -106,7 +123,7 @@ export class Service {
                     BC_NAME,
                     APP_NAME,
                     APP_VERSION,
-                    kafkaProducerOptions,
+                    kafkaProducerCommonOptions,
                     KAFKA_LOGS_TOPIC,
                     LOG_LEVEL
             );
@@ -123,17 +140,18 @@ export class Service {
         if (!messageProducer) {
             const producerLogger = logger.createChild("producerLogger");
             producerLogger.setLogLevel(LogLevel.INFO);
-            messageProducer = new MLKafkaJsonProducer(kafkaProducerOptions, producerLogger);
+            messageProducer = new MLKafkaJsonProducer(kafkaProducerCommonOptions, producerLogger);
             await messageProducer.connect();
         }
         this.messageProducer = messageProducer;
 
         // message consumer for agg change detection (from other instances)
         if(!messageConsumer){
-            messageConsumer = new MLKafkaJsonConsumer({
-                kafkaBrokerList: KAFKA_URL,
+            const options: MLKafkaJsonConsumerOptions={
+                ...kafkaConsumerCommonOptions,
                 kafkaGroupId: INSTANCE_ID
-            }, logger.createChild("handlerConsumer"));
+            };
+            messageConsumer = new MLKafkaJsonConsumer(options, logger.createChild("handlerConsumer"));
         }
         this.messageConsumer = messageConsumer;
 
@@ -171,7 +189,10 @@ export class Service {
             logger,
             AUTH_N_TOKEN_ISSUER_NAME,
             AUTH_N_TOKEN_AUDIENCE,
-            new MLKafkaJsonConsumer({kafkaBrokerList: KAFKA_URL, autoOffsetReset: "earliest", kafkaGroupId: INSTANCE_ID}, logger) // for jwt list - no groupId
+            new MLKafkaJsonConsumer({
+                ...kafkaConsumerCommonOptions, autoOffsetReset: "earliest", kafkaGroupId: INSTANCE_ID
+                }, logger
+            ) // for jwt list - no groupId
         );
         await this.tokenHelper.init();
 
