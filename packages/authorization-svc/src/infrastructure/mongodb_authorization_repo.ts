@@ -39,7 +39,7 @@ import {
     BoundedContextPrivileges,
     PlatformRole,
     Privilege,
-    PrivilegeWithOwnerAppInfo
+    PrivilegeWithOwnerBcInfo
 } from "@mojaloop/security-bc-public-types-lib";
 
 export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
@@ -105,12 +105,12 @@ export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
 
     /* privilege simple types (flat privs with apps/bc/app_ver) */
 
-    async fetchAllPrivileges(): Promise<PrivilegeWithOwnerAppInfo[]> {
+    async fetchAllPrivileges(): Promise<PrivilegeWithOwnerBcInfo[]> {
         const found = await this._privilegesCollection.find({})
             .project({_id: 0})
             .toArray() as BoundedContextPrivileges[];
 
-        const resp:PrivilegeWithOwnerAppInfo[] = found.flatMap(appPriv => appPriv.privileges.map(priv => {
+        const resp:PrivilegeWithOwnerBcInfo[] = found.flatMap(appPriv => appPriv.privileges.map(priv => {
             return {
                 boundedContextName: appPriv.boundedContextName,
                 privilegeSetVersion: appPriv.privilegeSetVersion,
@@ -124,7 +124,7 @@ export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
     }
 
 
-    async fetchPrivilegeById(privilegeId: string):Promise<PrivilegeWithOwnerAppInfo | null> {
+    async fetchPrivilegeById(privilegeId: string):Promise<PrivilegeWithOwnerBcInfo | null> {
         const filter = {privileges:{
                 "$elemMatch":{ "id": privilegeId}
             }};
@@ -152,7 +152,7 @@ export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
 
     /* BoundedContextPrivileges (privs grouped by app/bc scope) */
 
-    async fetchAppPrivileges(boundedContextName: string): Promise<BoundedContextPrivileges | null> {
+    async fetchBcPrivileges(boundedContextName: string): Promise<BoundedContextPrivileges | null> {
         const found = await this._privilegesCollection.findOne(
             {boundedContextName: boundedContextName},
             {projection: {_id: 0}}
@@ -161,9 +161,8 @@ export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
         return found as BoundedContextPrivileges | null;
     }
 
-    async storeAppPrivileges(priv: BoundedContextPrivileges): Promise<void> {
+    async storeBcPrivileges(priv: BoundedContextPrivileges): Promise<void> {
         try {
-            debugger
             const updateResult = await this._privilegesCollection.replaceOne(
                 {boundedContextName: priv.boundedContextName},
                 priv,
@@ -171,7 +170,7 @@ export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
             );
 
             if ((updateResult.upsertedCount + updateResult.modifiedCount) !== 1) {
-                const err = new Error("Could not storeAppPrivileges - mismatch between requests length and MongoDb response length");
+                const err = new Error("Could not storeBcPrivileges - mismatch between requests length and MongoDb response length");
                 this._logger.error(err);
                 throw err;
             }

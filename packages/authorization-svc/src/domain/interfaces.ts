@@ -33,7 +33,7 @@
 
 import {
     BoundedContextPrivileges,
-    PlatformRole, PrivilegeWithOwnerAppInfo
+    PlatformRole, PrivilegeWithOwnerBcInfo
 } from "@mojaloop/security-bc-public-types-lib";
 
 /*
@@ -54,12 +54,12 @@ export interface IAuthorizationRepository {
     fetchAllPlatformRoles():Promise<PlatformRole[]>;
 
     // BoundedContextPrivileges (privs grouped by app/bc scope)
-    storeAppPrivileges(priv:BoundedContextPrivileges):Promise<void>;
-    fetchAppPrivileges(boundedContextName: string):Promise<BoundedContextPrivileges | null>;
+    storeBcPrivileges(priv:BoundedContextPrivileges):Promise<void>;
+    fetchBcPrivileges(boundedContextName: string):Promise<BoundedContextPrivileges | null>;
 
 
     // privilege simple types (flat privs with apps/bc/app_ver)
-    fetchPrivilegeById(privilegeId: string):Promise<PrivilegeWithOwnerAppInfo | null>;
-    fetchAllPrivileges():Promise<PrivilegeWithOwnerAppInfo[]>;
+    fetchPrivilegeById(privilegeId: string):Promise<PrivilegeWithOwnerBcInfo | null>;
+    fetchAllPrivileges():Promise<PrivilegeWithOwnerBcInfo[]>;
 }
 

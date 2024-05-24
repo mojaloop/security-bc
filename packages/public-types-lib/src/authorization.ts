@@ -49,7 +49,7 @@ export type Privilege = {
 	description: string;            // description to show on a UI
 }
 
-export type PrivilegeWithOwnerAppInfo = Privilege & {
+export type PrivilegeWithOwnerBcInfo = Privilege & {
     boundedContextName: string;     // bounded context it belongs to
     privilegeSetVersion: string;     // semver
 }
