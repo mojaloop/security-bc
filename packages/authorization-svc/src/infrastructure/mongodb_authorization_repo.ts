@@ -161,20 +161,34 @@ export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
         return found as BoundedContextPrivileges | null;
     }
 
-    async storeBcPrivileges(priv: BoundedContextPrivileges): Promise<void> {
+    async storeBcPrivileges(priv: BoundedContextPrivileges, override = true): Promise<void> {
         try {
+            const existingPrivileges = await this._privilegesCollection.findOne({boundedContextName: priv.boundedContextName});
+            
+            let updatedPriv;
+            if (existingPrivileges && !override) {
+                // Attention: done so that we can add the extra privileges without overriding the local privileges
+                // we spread the original object value and override the privileges with the concatenation of both
+                updatedPriv = {
+                    ...existingPrivileges, 
+                    privileges: existingPrivileges.privileges.concat(priv.privileges)
+                };
+            } else {
+                updatedPriv = priv;
+            }
+    
             const updateResult = await this._privilegesCollection.replaceOne(
                 {boundedContextName: priv.boundedContextName},
-                priv,
+                updatedPriv,
                 {upsert: true}
             );
-
+    
             if ((updateResult.upsertedCount + updateResult.modifiedCount) !== 1) {
                 const err = new Error("Could not storeBcPrivileges - mismatch between requests length and MongoDb response length");
                 this._logger.error(err);
                 throw err;
             }
-        } catch (error: unknown) {
+        } catch (error) {
             this._logger.error(error);
             throw error;
         }

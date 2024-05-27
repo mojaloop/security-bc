@@ -54,7 +54,7 @@ export interface IAuthorizationRepository {
     fetchAllPlatformRoles():Promise<PlatformRole[]>;
 
     // BoundedContextPrivileges (privs grouped by app/bc scope)
-    storeBcPrivileges(priv:BoundedContextPrivileges):Promise<void>;
+    storeBcPrivileges(priv:BoundedContextPrivileges, override: boolean):Promise<void>;
     fetchBcPrivileges(boundedContextName: string):Promise<BoundedContextPrivileges | null>;
 
 

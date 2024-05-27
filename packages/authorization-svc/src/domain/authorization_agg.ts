@@ -64,7 +64,7 @@ import {
     PlatformRoleChangedEvt,
     SecurityBCTopics
 } from "@mojaloop/platform-shared-lib-public-messages-lib";
-import {AuthorizationPrivileges, AuthorizationPrivilegesDefinition} from "./privileges";
+import {AuthorizationPrivileges, AuthorizationPrivilegesDefinition, PrivilegesDefinition} from "./privileges";
 
 export class AuthorizationAggregate{
     private _logger:ILogger;
@@ -76,6 +76,7 @@ export class AuthorizationAggregate{
     private _privilegeSetVersion:string;
     private _authzPrivsByRole: PrivilegesByRole;
     private _lastChangedEvtMsgId:string | null = null;
+    private _extraPrivilegesDefinition:PrivilegesDefinition = [];
 
     async init():Promise<void>{
         // bootstrap my own privs
@@ -83,6 +84,12 @@ export class AuthorizationAggregate{
         await this._bootstrapLocalBcPrivileges();
         this._logger.info("Bootstraping own privileges - done");
 
+        if(this._extraPrivilegesDefinition.length>0) {
+            this._logger.info("Bootstraping extra privileges...");
+            await this._bootstrapExtraBcPrivileges();
+            this._logger.info("Bootstraping extra privileges - done");
+        }
+        
         // load role priv/associations to mem
         this._logger.info("Reloading role privilege/associations to memory...");
         await this._reloadFromRepo();
@@ -103,7 +110,8 @@ export class AuthorizationAggregate{
         consumer:IMessageConsumer,
         bcName:string,
         privilegeSetVersion:string,
-        logger:ILogger
+        logger:ILogger,
+        extraPrivilegesDefinition:PrivilegesDefinition
     ) {
         this._logger = logger.createChild(this.constructor.name);
         this._authzRepo = authzRepo;
@@ -111,6 +119,7 @@ export class AuthorizationAggregate{
         this._messageConsumer = consumer;
         this._bcName = bcName;
         this._privilegeSetVersion = privilegeSetVersion;
+        this._extraPrivilegesDefinition = extraPrivilegesDefinition;
     }
 
     private async _bootstrapLocalBcPrivileges(){
@@ -127,6 +136,23 @@ export class AuthorizationAggregate{
         };
 
         await this._localProcessBcBootstrap(bcPrivileges, true);
+    }
+
+    // Attention: we need this in order to bootstrap all required privileges from a single source, since authorization-svc is the owner of the BC
+    private async _bootstrapExtraBcPrivileges(){
+        const extraBcPrivileges:BoundedContextPrivileges = {
+            boundedContextName: this._bcName,
+            privilegeSetVersion: this._privilegeSetVersion,
+            privileges: this._extraPrivilegesDefinition.map(item=>{
+                return {
+                    id: item.privId,
+                    labelName: item.labelName,
+                    description: item.description
+                };
+            })
+        };
+
+        await this._localProcessBcBootstrap(extraBcPrivileges, true, false);
     }
 
     private async _reloadFromRepo():Promise<void>{
@@ -191,7 +217,7 @@ export class AuthorizationAggregate{
         );
     }
 
-    private async _localProcessBcBootstrap(bcPrivs: BoundedContextPrivileges, ignoreDuplicates:boolean  = false):Promise<void> {
+    private async _localProcessBcBootstrap(bcPrivs: BoundedContextPrivileges, ignoreDuplicates:boolean  = false, override = true):Promise<void> {
         if(!this._validateBcPrivileges(bcPrivs)){
             this._logger.warn("Invalid BoundedContextPrivileges received in processBcBootstrap");
             throw new InvalidBcPrivilegesError();
@@ -213,7 +239,7 @@ export class AuthorizationAggregate{
 
         try {
             // TODO: maybe mark older versions as inactive
-            await this._authzRepo.storeBcPrivileges(bcPrivs);
+            await this._authzRepo.storeBcPrivileges(bcPrivs, override);
             this._logger.info(`Created BoundedContextPrivileges set for BC: ${bcPrivs.boundedContextName}, version: ${bcPrivs.privilegeSetVersion}`);
         }catch(err:any){
             this._logger.error(err);

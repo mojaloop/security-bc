@@ -50,6 +50,7 @@ import {
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {ITokenHelper} from "@mojaloop/security-bc-public-types-lib";
 import util from "util";
+import { BuiltinIdentityPrivilegesDefinition } from "../domain/privileges";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJSON = require("../../package.json");
@@ -156,13 +157,16 @@ export class Service {
         this.messageConsumer = messageConsumer;
 
         // instantiate and init the aggregate
+        // Attention: if we need the identity-svc privileged, we need to bootstrap them here 
+        // since the authorization is the owner of the BC, otherwise doing so in identify would overwrite them
         this.authorizationAggregate = new AuthorizationAggregate(
             this.authorizationRepo,
             this.messageProducer,
             this.messageConsumer,
             BC_NAME,
             PRIVILEGE_SET_VERSION,
-            this.logger
+            this.logger,
+            BuiltinIdentityPrivilegesDefinition
         );
 
         // create default roles if non exist - CONSIDER moving this logic to inside the aggregate
