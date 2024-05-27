@@ -57,7 +57,9 @@ export const defaultDevApplications = [
 
     {client_id: "interop-api-bc-fspiop-api-svc", client_secret: "superServiceSecret", platformRoles:["basic-application","interop-api-bc-fspiop-api-svc"]},
 
-    {client_id: "quoting-bc-command-handler-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application","quoting-bc-command-handler-svc"]},
+    {client_id: "quoting-bc-api-svc", client_secret: "superServiceSecret", platformRoles:["basic-application"]},
+    {client_id: "quoting-bc-event-handler-svc", client_secret: "superServiceSecret", platformRoles:["basic-application"]},
+    {client_id: "quoting-bc-command-handler-svc", client_secret: "superServiceSecret", platformRoles:["basic-application","quoting-bc-command-handler-svc"]},
 
     {client_id: "settlements-bc-command-handler-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application","settlements-bc-command-handler-svc"]},
     {client_id: "settlements-bc-event-handler-svc", client_secret: "superServiceSecret", platformRoles: ["basic-application","settlements-bc-event-handler-svc"]},

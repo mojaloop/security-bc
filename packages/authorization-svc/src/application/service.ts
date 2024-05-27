@@ -50,13 +50,14 @@ import {
 import {TokenHelper} from "@mojaloop/security-bc-client-lib";
 import {ITokenHelper} from "@mojaloop/security-bc-public-types-lib";
 import util from "util";
+import { BuiltinIdentityPrivilegesDefinition } from "../domain/privileges";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const packageJSON = require("../../package.json");
 
 const BC_NAME = "security-bc";
 const APP_NAME = "authorization-svc";
-const APP_VERSION = packageJSON.version;
+const PRIVILEGE_SET_VERSION = packageJSON.version;
 const PRODUCTION_MODE = process.env["PRODUCTION_MODE"] || false;
 const LOG_LEVEL:LogLevel = process.env["LOG_LEVEL"] as LogLevel || LogLevel.DEBUG;
 
@@ -122,7 +123,7 @@ export class Service {
             logger = new KafkaLogger(
                     BC_NAME,
                     APP_NAME,
-                    APP_VERSION,
+                    PRIVILEGE_SET_VERSION,
                     kafkaProducerCommonOptions,
                     KAFKA_LOGS_TOPIC,
                     LOG_LEVEL
@@ -156,14 +157,16 @@ export class Service {
         this.messageConsumer = messageConsumer;
 
         // instantiate and init the aggregate
+        // Attention: if we need the identity-svc privileged, we need to bootstrap them here 
+        // since the authorization is the owner of the BC, otherwise doing so in identify would overwrite them
         this.authorizationAggregate = new AuthorizationAggregate(
             this.authorizationRepo,
             this.messageProducer,
             this.messageConsumer,
             BC_NAME,
-            APP_NAME,
-            APP_VERSION,
-            this.logger
+            PRIVILEGE_SET_VERSION,
+            this.logger,
+            BuiltinIdentityPrivilegesDefinition
         );
 
         // create default roles if non exist - CONSIDER moving this logic to inside the aggregate
@@ -222,7 +225,7 @@ export class Service {
 
         this.expressServer = app.listen(portNum, () => {
             console.log(`🚀 Server ready at: http://localhost:${portNum}`);
-            this.logger.info(`Authorization service v: ${APP_VERSION} started`);
+            this.logger.info(`Authorization service v: ${PRIVILEGE_SET_VERSION} started`);
         }).on("error", err => {
             this.logger.fatal(err);
             process.exit(9);

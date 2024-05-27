@@ -33,7 +33,7 @@
 // import axios, { AxiosResponse, AxiosInstance, AxiosError } from "axios";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
-    AppPrivileges, ForbiddenError,
+    BoundedContextPrivileges, ForbiddenError,
     IAuthenticatedHttpRequester,
     IAuthorizationClient,
     Privilege, UnauthorizedError
@@ -56,8 +56,7 @@ export type PrivilegesByRole = {
 
 export class AuthorizationClient implements IAuthorizationClient{
     private readonly _boundedContextName: string;
-    private readonly _applicationName: string;
-    private readonly _applicationVersion: string;
+    private readonly _privilegeSetVersion: string;
     private readonly _authSvcBaseUrl:string;
     private readonly _authRequester: IAuthenticatedHttpRequester;
     private readonly _messageConsumer:IMessageConsumer | null;
@@ -67,24 +66,23 @@ export class AuthorizationClient implements IAuthorizationClient{
     private _privileges:Privilege[] = [];
 
     constructor(
-        boundedContext: string, application: string, version: string,
+        boundedContextName: string, 
+        privilegeSetVersion: string,
         authSvcBaseUrl:string, logger:ILogger,
         authRequester: IAuthenticatedHttpRequester, messageConsumer:IMessageConsumer|null = null
     ) {
         this._logger = logger.createChild(this.constructor.name);
-        this._boundedContextName = boundedContext;
-        this._applicationName = application;
-        this._applicationVersion = version;
+        this._boundedContextName = boundedContextName;
+        this._privilegeSetVersion = privilegeSetVersion;
         this._authSvcBaseUrl = authSvcBaseUrl;
         this._authRequester = authRequester;
         this._messageConsumer = messageConsumer;
     }
 
     async bootstrap(ignoreDuplicateError = true): Promise<boolean>{
-        const appPrivileges:AppPrivileges = {
+        const appPrivileges:BoundedContextPrivileges = {
             boundedContextName: this._boundedContextName,
-            applicationName: this._applicationName,
-            applicationVersion: this._applicationVersion,
+            privilegeSetVersion: this._privilegeSetVersion,
             privileges: this._privileges
         };
 
@@ -116,7 +114,6 @@ export class AuthorizationClient implements IAuthorizationClient{
     async fetch(): Promise<void>{
         const url = new URL("/appRoles",this._authSvcBaseUrl);
         url.searchParams.append("bcName", this._boundedContextName);
-        url.searchParams.append("appName", this._applicationName);
 
         try{
             const resp = await this._authRequester.fetch(url.toString());
