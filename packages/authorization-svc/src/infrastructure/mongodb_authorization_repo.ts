@@ -36,10 +36,10 @@ import {IAuthorizationRepository} from "../domain/interfaces";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {Collection, MongoClient, WithId} from "mongodb";
 import {
-    AppPrivileges,
+    BoundedContextPrivileges,
     PlatformRole,
     Privilege,
-    PrivilegeWithOwnerAppInfo
+    PrivilegeWithOwnerBcInfo
 } from "@mojaloop/security-bc-public-types-lib";
 
 export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
@@ -105,16 +105,15 @@ export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
 
     /* privilege simple types (flat privs with apps/bc/app_ver) */
 
-    async fetchAllPrivileges(): Promise<PrivilegeWithOwnerAppInfo[]> {
+    async fetchAllPrivileges(): Promise<PrivilegeWithOwnerBcInfo[]> {
         const found = await this._privilegesCollection.find({})
             .project({_id: 0})
-            .toArray() as AppPrivileges[];
+            .toArray() as BoundedContextPrivileges[];
 
-        const resp:PrivilegeWithOwnerAppInfo[] = found.flatMap(appPriv => appPriv.privileges.map(priv => {
+        const resp:PrivilegeWithOwnerBcInfo[] = found.flatMap(appPriv => appPriv.privileges.map(priv => {
             return {
                 boundedContextName: appPriv.boundedContextName,
-                applicationName: appPriv.applicationName,
-                applicationVersion: appPriv.applicationVersion,
+                privilegeSetVersion: appPriv.privilegeSetVersion,
                 id: priv.id,
                 labelName: priv.labelName,
                 description: priv.description
@@ -125,15 +124,15 @@ export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
     }
 
 
-    async fetchPrivilegeById(privilegeId: string):Promise<PrivilegeWithOwnerAppInfo | null> {
+    async fetchPrivilegeById(privilegeId: string):Promise<PrivilegeWithOwnerBcInfo | null> {
         const filter = {privileges:{
                 "$elemMatch":{ "id": privilegeId}
             }};
 
-        const found: AppPrivileges | null = await this._privilegesCollection.findOne(
+        const found: BoundedContextPrivileges | null = await this._privilegesCollection.findOne(
             filter,
             {projection: {_id: 0}}
-        ) as AppPrivileges | null;
+        ) as BoundedContextPrivileges | null;
         if(!found) return null;
 
         const appPriv:Privilege | undefined = found.privileges.find(
@@ -146,37 +145,50 @@ export class MongoDbAuthorizationRepo implements IAuthorizationRepository{
             labelName: appPriv.labelName,
             description: appPriv.description,
             boundedContextName: found.boundedContextName,
-            applicationName: found.applicationName,
-            applicationVersion: found.applicationVersion
+            privilegeSetVersion: found.privilegeSetVersion
         };
     }
 
 
-    /* AppPrivileges (privs grouped by app/bc scope) */
+    /* BoundedContextPrivileges (privs grouped by app/bc scope) */
 
-    async fetchAppPrivileges(boundedContextName: string, applicationName: string): Promise<AppPrivileges | null> {
+    async fetchBcPrivileges(boundedContextName: string): Promise<BoundedContextPrivileges | null> {
         const found = await this._privilegesCollection.findOne(
-            {boundedContextName: boundedContextName, applicationName: applicationName},
+            {boundedContextName: boundedContextName},
             {projection: {_id: 0}}
         );
 
-        return found as AppPrivileges | null;
+        return found as BoundedContextPrivileges | null;
     }
 
-    async storeAppPrivileges(priv: AppPrivileges): Promise<void> {
+    async storeBcPrivileges(priv: BoundedContextPrivileges, override = true): Promise<void> {
         try {
+            const existingPrivileges = await this._privilegesCollection.findOne({boundedContextName: priv.boundedContextName});
+            
+            let updatedPriv;
+            if (existingPrivileges && !override) {
+                // Attention: done so that we can add the extra privileges without overriding the local privileges
+                // we spread the original object value and override the privileges with the concatenation of both
+                updatedPriv = {
+                    ...existingPrivileges, 
+                    privileges: existingPrivileges.privileges.concat(priv.privileges)
+                };
+            } else {
+                updatedPriv = priv;
+            }
+    
             const updateResult = await this._privilegesCollection.replaceOne(
-                {boundedContextName: priv.boundedContextName, applicationName: priv.applicationName},
-                priv,
+                {boundedContextName: priv.boundedContextName},
+                updatedPriv,
                 {upsert: true}
             );
-
+    
             if ((updateResult.upsertedCount + updateResult.modifiedCount) !== 1) {
-                const err = new Error("Could not storeAppPrivileges - mismatch between requests length and MongoDb response length");
+                const err = new Error("Could not storeBcPrivileges - mismatch between requests length and MongoDb response length");
                 this._logger.error(err);
                 throw err;
             }
-        } catch (error: unknown) {
+        } catch (error) {
             this._logger.error(error);
             throw error;
         }

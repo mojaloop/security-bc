@@ -30,13 +30,13 @@
 
 "use strict";
 
-export class InvalidAppPrivilegesError extends Error{}
-export class CannotCreateDuplicateAppPrivilegesError extends Error{}
-export class CannotOverrideAppPrivilegesError extends Error{}
-export class CouldNotStoreAppPrivilegesError extends Error{}
+export class InvalidBcPrivilegesError extends Error{}
+export class CannotCreateDuplicateBcPrivilegesError extends Error{}
+export class CannotOverrideBcPrivilegesError extends Error{}
+export class CouldNotStoreBcPrivilegesError extends Error{}
 
 export class InvalidPlatformRoleError extends Error{}
-export class NewRoleWithPrivsUsersOrAppsError extends Error{}
+export class NewRoleWithPrivsUsersOrBcsError extends Error{}
 export class CannotCreateDuplicateRoleError extends Error{}
 export class CannotStorePlatformRoleError extends Error{}
 
@@ -44,4 +44,4 @@ export class PrivilegeNotFoundError extends Error{}
 export class PlatformRoleNotFoundError extends Error{}
 //export class DuplicatePrivilegeInPlatformRoleError extends Error{}
 
-export class ApplicationsPrivilegesNotFoundError extends Error{}
+export class BoundedContextsPrivilegesNotFoundError extends Error{}

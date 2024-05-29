@@ -35,20 +35,22 @@ import * as Crypto from "crypto";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
     Privilege,
-    AppPrivileges,
+    BoundedContextPrivileges,
     PlatformRole,
-    PrivilegeWithOwnerAppInfo, CallSecurityContext, ForbiddenError
+    PrivilegeWithOwnerBcInfo,
+    CallSecurityContext,
+    ForbiddenError
 } from "@mojaloop/security-bc-public-types-lib";
 import {IAuthorizationRepository} from "./interfaces";
 import {
-    ApplicationsPrivilegesNotFoundError,
-    CannotCreateDuplicateAppPrivilegesError,
+    BoundedContextsPrivilegesNotFoundError,
+    CannotCreateDuplicateBcPrivilegesError,
     CannotCreateDuplicateRoleError,
-    CannotOverrideAppPrivilegesError, CannotStorePlatformRoleError,
-    CouldNotStoreAppPrivilegesError,
-    InvalidAppPrivilegesError,
+    CannotOverrideBcPrivilegesError, CannotStorePlatformRoleError,
+    CouldNotStoreBcPrivilegesError,
+    InvalidBcPrivilegesError,
     InvalidPlatformRoleError,
-    NewRoleWithPrivsUsersOrAppsError, PlatformRoleNotFoundError, PrivilegeNotFoundError
+    NewRoleWithPrivsUsersOrBcsError, PlatformRoleNotFoundError, PrivilegeNotFoundError
 } from "./errors";
 import {PrivilegesByRole} from "../domain/types";
 import {
@@ -62,7 +64,7 @@ import {
     PlatformRoleChangedEvt,
     SecurityBCTopics
 } from "@mojaloop/platform-shared-lib-public-messages-lib";
-import {AuthorizationPrivileges, AuthorizationPrivilegesDefinition} from "./privileges";
+import {AuthorizationPrivileges, AuthorizationPrivilegesDefinition, PrivilegesDefinition} from "./privileges";
 
 export class AuthorizationAggregate{
     private _logger:ILogger;
@@ -71,17 +73,23 @@ export class AuthorizationAggregate{
     private _messageProducer:IMessageProducer;
     private _messageConsumer:IMessageConsumer;
     private _bcName:string;
-    private _appName:string;
-    private _appVersion:string;
+    private _privilegeSetVersion:string;
     private _authzPrivsByRole: PrivilegesByRole;
     private _lastChangedEvtMsgId:string | null = null;
+    private _extraPrivilegesDefinition:PrivilegesDefinition = [];
 
     async init():Promise<void>{
         // bootstrap my own privs
         this._logger.info("Bootstraping own privileges...");
-        await this._bootstrapLocalAppPrivileges();
+        await this._bootstrapLocalBcPrivileges();
         this._logger.info("Bootstraping own privileges - done");
 
+        if(this._extraPrivilegesDefinition.length>0) {
+            this._logger.info("Bootstraping extra privileges...");
+            await this._bootstrapExtraBcPrivileges();
+            this._logger.info("Bootstraping extra privileges - done");
+        }
+        
         // load role priv/associations to mem
         this._logger.info("Reloading role privilege/associations to memory...");
         await this._reloadFromRepo();
@@ -101,24 +109,23 @@ export class AuthorizationAggregate{
         producer:IMessageProducer,
         consumer:IMessageConsumer,
         bcName:string,
-        appName:string,
-        appVersion:string,
-        logger:ILogger
+        privilegeSetVersion:string,
+        logger:ILogger,
+        extraPrivilegesDefinition:PrivilegesDefinition
     ) {
         this._logger = logger.createChild(this.constructor.name);
         this._authzRepo = authzRepo;
         this._messageProducer = producer;
         this._messageConsumer = consumer;
         this._bcName = bcName;
-        this._appName = appName;
-        this._appVersion = appVersion;
+        this._privilegeSetVersion = privilegeSetVersion;
+        this._extraPrivilegesDefinition = extraPrivilegesDefinition;
     }
 
-    private async _bootstrapLocalAppPrivileges(){
-        const appPrivileges:AppPrivileges = {
+    private async _bootstrapLocalBcPrivileges(){
+        const bcPrivileges:BoundedContextPrivileges = {
             boundedContextName: this._bcName,
-            applicationName: this._appName,
-            applicationVersion: this._appVersion,
+            privilegeSetVersion: this._privilegeSetVersion,
             privileges: AuthorizationPrivilegesDefinition.map(item=>{
                 return {
                     id: item.privId,
@@ -128,11 +135,28 @@ export class AuthorizationAggregate{
             })
         };
 
-        await this._localProcessAppBootstrap(appPrivileges, true);
+        await this._localProcessBcBootstrap(bcPrivileges, true);
+    }
+
+    // Attention: we need this in order to bootstrap all required privileges from a single source, since authorization-svc is the owner of the BC
+    private async _bootstrapExtraBcPrivileges(){
+        const extraBcPrivileges:BoundedContextPrivileges = {
+            boundedContextName: this._bcName,
+            privilegeSetVersion: this._privilegeSetVersion,
+            privileges: this._extraPrivilegesDefinition.map(item=>{
+                return {
+                    id: item.privId,
+                    labelName: item.labelName,
+                    description: item.description
+                };
+            })
+        };
+
+        await this._localProcessBcBootstrap(extraBcPrivileges, true, false);
     }
 
     private async _reloadFromRepo():Promise<void>{
-        this._authzPrivsByRole = await this._localGetAppPrivilegesByRole(this._bcName, this._appName);
+        this._authzPrivsByRole = await this._localGetBcPrivilegesByRole(this._bcName);
         if(!this._authzPrivsByRole) this._logger.warn("Not able to reloadFromRepo - Possible problem?");
     }
 
@@ -150,21 +174,21 @@ export class AuthorizationAggregate{
         await this._reloadFromRepo();
     }
 
-    private _validateAppPrivileges(appPrivs: AppPrivileges): boolean{
-        if(!appPrivs.applicationName  || !appPrivs.boundedContextName || !appPrivs.applicationVersion) {
+    private _validateBcPrivileges(bcPrivs: BoundedContextPrivileges): boolean{
+        if(!bcPrivs.boundedContextName || !bcPrivs.privilegeSetVersion) {
             return false;
         }
 
-        if(!appPrivs.privileges || !Array.isArray(appPrivs.privileges)){
+        if(!bcPrivs.privileges || !Array.isArray(bcPrivs.privileges)){
             return false;
         }
 
 
-        if(!appPrivs.applicationVersion || typeof(appPrivs.applicationVersion) !== "string"){
+        if(!bcPrivs.privilegeSetVersion || typeof(bcPrivs.privilegeSetVersion) !== "string"){
             return false;
         }
-        const parsed = semver.coerce(appPrivs.applicationVersion);
-        if(!parsed || parsed.raw != appPrivs.applicationVersion) {
+        const parsed = semver.coerce(bcPrivs.privilegeSetVersion);
+        if(!parsed || parsed.raw != bcPrivs.privilegeSetVersion) {
             // the 2nd check assures that formats like "v1.0.1" which are considered valid by semver are rejected, we want strict semver
             return false;
         }
@@ -193,21 +217,21 @@ export class AuthorizationAggregate{
         );
     }
 
-    private async _localProcessAppBootstrap(appPrivs: AppPrivileges, ignoreDuplicates:boolean  = false):Promise<void> {
-        if(!this._validateAppPrivileges(appPrivs)){
-            this._logger.warn("Invalid AppPrivileges received in processAppBootstrap");
-            throw new InvalidAppPrivilegesError();
+    private async _localProcessBcBootstrap(bcPrivs: BoundedContextPrivileges, ignoreDuplicates:boolean  = false, override = true):Promise<void> {
+        if(!this._validateBcPrivileges(bcPrivs)){
+            this._logger.warn("Invalid BoundedContextPrivileges received in processBcBootstrap");
+            throw new InvalidBcPrivilegesError();
         }
 
-        const foundAppPrivs = await this._authzRepo.fetchAppPrivileges(appPrivs.boundedContextName, appPrivs.applicationName);
+        const foundBcPrivs = await this._authzRepo.fetchBcPrivileges(bcPrivs.boundedContextName);
 
-        if(foundAppPrivs) {
-            if (semver.compare(foundAppPrivs.applicationVersion, appPrivs.applicationVersion)==0 && !ignoreDuplicates) {
-                const err = new CannotCreateDuplicateAppPrivilegesError(`Received duplicate AppPrivileges set for BC: ${foundAppPrivs.boundedContextName}, APP: ${foundAppPrivs.applicationName}, version: ${foundAppPrivs.applicationVersion}, IGNORING with error`);
+        if(foundBcPrivs) {
+            if (semver.compare(foundBcPrivs.privilegeSetVersion, bcPrivs.privilegeSetVersion)==0 && !ignoreDuplicates) {
+                const err = new CannotCreateDuplicateBcPrivilegesError(`Received duplicate BoundedContextPrivileges set for BC: ${foundBcPrivs.boundedContextName}, version: ${foundBcPrivs.privilegeSetVersion}, IGNORING with error`);
                 this._logger.warn(err.message);
                 throw err;
-            } else if (semver.compare(foundAppPrivs.applicationVersion, appPrivs.applicationVersion)==1) {
-                const err = new CannotOverrideAppPrivilegesError(`received AppPrivileges with lower version than latest for BC: ${foundAppPrivs.boundedContextName}, APP: ${foundAppPrivs.applicationName}, version: ${foundAppPrivs.applicationVersion}, IGNORING with error`);
+            } else if (semver.compare(foundBcPrivs.privilegeSetVersion, bcPrivs.privilegeSetVersion)==1) {
+                const err = new CannotOverrideBcPrivilegesError(`received BoundedContextPrivileges with lower version than latest for BC: ${foundBcPrivs.boundedContextName}, version: ${foundBcPrivs.privilegeSetVersion}, IGNORING with error`);
                 this._logger.error(err);
                 throw err;
             }
@@ -215,11 +239,11 @@ export class AuthorizationAggregate{
 
         try {
             // TODO: maybe mark older versions as inactive
-            await this._authzRepo.storeAppPrivileges(appPrivs);
-            this._logger.info(`Created AppPrivileges set for BC: ${appPrivs.boundedContextName}, APP: ${appPrivs.applicationName}, version: ${appPrivs.applicationVersion}`);
+            await this._authzRepo.storeBcPrivileges(bcPrivs, override);
+            this._logger.info(`Created BoundedContextPrivileges set for BC: ${bcPrivs.boundedContextName}, version: ${bcPrivs.privilegeSetVersion}`);
         }catch(err:any){
             this._logger.error(err);
-            throw new CouldNotStoreAppPrivilegesError(err?.message);
+            throw new CouldNotStoreBcPrivilegesError(err?.message);
         }
     }
 
@@ -229,12 +253,12 @@ export class AuthorizationAggregate{
         }
     }
 
-    async processAppBootstrap(secCtx: CallSecurityContext, appPrivs: AppPrivileges):Promise<void> {
+    async processBcBootstrap(secCtx: CallSecurityContext, bcPrivs: BoundedContextPrivileges):Promise<void> {
         this._enforcePrivilege(secCtx, AuthorizationPrivileges.BOOTSTRAP_PRIVILEGES);
-        return this._localProcessAppBootstrap(appPrivs);
+        return this._localProcessBcBootstrap(bcPrivs);
     }
 
-    async getAllPrivileges(secCtx: CallSecurityContext):Promise<PrivilegeWithOwnerAppInfo[]> {
+    async getAllPrivileges(secCtx: CallSecurityContext):Promise<PrivilegeWithOwnerBcInfo[]> {
         this._enforcePrivilege(secCtx, AuthorizationPrivileges.VIEW_PRIVILEGE);
         const allPrivs = await this._authzRepo.fetchAllPrivileges();
 
@@ -242,16 +266,15 @@ export class AuthorizationAggregate{
     }
 
     /**
-     * Returns only the roles which include privileges for a certain app (and their relationship)
+     * Returns only the roles which include privileges for a certain bc (and their relationship)
      * WITHOUT enforce privileges, for local agg usage
      * @param bcName BoundedContext name
-     * @param appName Application name
      */
-    private async _localGetAppPrivilegesByRole(bcName:string, appName:string):Promise<PrivilegesByRole>{
+    private async _localGetBcPrivilegesByRole(bcName:string):Promise<PrivilegesByRole>{
         const allPrivs = await this._authzRepo.fetchAllPrivileges();
 
         if(allPrivs.length<=0){
-            throw new ApplicationsPrivilegesNotFoundError();
+            throw new BoundedContextsPrivilegesNotFoundError();
         }
 
         const allRoles = await this._authzRepo.fetchAllPlatformRoles();
@@ -263,7 +286,7 @@ export class AuthorizationAggregate{
 
             role.privileges.forEach(rolePriv => {
                 const privDefinition = allPrivs.find(item => item.id === rolePriv);
-                if(!privDefinition || privDefinition.boundedContextName!=bcName || privDefinition.applicationName!=appName){
+                if(!privDefinition || privDefinition.boundedContextName!=bcName){
                     return;
                 }
 
@@ -281,14 +304,13 @@ export class AuthorizationAggregate{
     }
 
     /**
-     * Returns only the roles which include privileges for a certain app (and their relationship) WITH enforce privileges
+     * Returns only the roles which include privileges for a certain bc (and their relationship) WITH enforce privileges
      * @param secCtx CallSecurityContext
      * @param bcName BoundedContext name
-     * @param appName Application name
      */
-    async getAppPrivilegesByRole(secCtx: CallSecurityContext, bcName:string, appName:string):Promise<PrivilegesByRole>{
+    async getBcPrivilegesByRole(secCtx: CallSecurityContext, bcName:string):Promise<PrivilegesByRole>{
         this._enforcePrivilege(secCtx, AuthorizationPrivileges.FETCH_APP_ROLE_PRIVILEGES_ASSOCIATIONS);
-        return this._localGetAppPrivilegesByRole(bcName, appName);
+        return this._localGetBcPrivilegesByRole(bcName);
     }
 
     async getAllRoles(secCtx: CallSecurityContext):Promise<PlatformRole[]> {
@@ -354,7 +376,7 @@ export class AuthorizationAggregate{
         if(!role.privileges) role.privileges = [];
 
         for (const privId of privilegeIds) {
-            const priv:PrivilegeWithOwnerAppInfo | null = await this._authzRepo.fetchPrivilegeById(privId);
+            const priv:PrivilegeWithOwnerBcInfo | null = await this._authzRepo.fetchPrivilegeById(privId);
             if(!priv) {
                 throw new PrivilegeNotFoundError();
             }

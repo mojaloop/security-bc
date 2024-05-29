@@ -188,7 +188,8 @@ export class Service {
 
             // setup privileges - bootstrap app privs and get priv/role associations
             authorizationClient = new AuthorizationClient(
-                BC_NAME, APP_NAME, APP_VERSION,
+                BC_NAME,
+                APP_VERSION,
                 AUTH_Z_SVC_BASEURL, logger.createChild("AuthorizationClient"),
                 authRequester,
                 messageConsumer
@@ -268,10 +269,11 @@ export class Service {
 
         await this.setupExpress();
 
+        // Attention: we don't bootstrap the privileges here because we don't want to override the ones from authorization-svc 
+        // (we bootstrap identity privileges in the authorization as being extra privileges instead)
         // only now we can bootstrap the privileges, as it requires a login and this service needs to be serving logins
         // the authorizationClient is only required for enforce privilege, without one nothing will be allowed, this is not a security issue
         if(this.authorizationClient && this.authorizationClient instanceof AuthorizationClient) {
-            await (authorizationClient as AuthorizationClient).bootstrap(true);
             await (authorizationClient as AuthorizationClient).fetch();
             // init message consumer to automatically update on role changed events
             await (authorizationClient as AuthorizationClient).init();

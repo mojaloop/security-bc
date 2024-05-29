@@ -32,22 +32,28 @@
 
 import express from "express";
 import {
-    ApplicationsPrivilegesNotFoundError,
-    CannotCreateDuplicateAppPrivilegesError,
+    BoundedContextsPrivilegesNotFoundError,
+    CannotCreateDuplicateBcPrivilegesError,
     CannotCreateDuplicateRoleError,
-    CannotOverrideAppPrivilegesError,
-    CouldNotStoreAppPrivilegesError,
-    InvalidAppPrivilegesError,
+    CannotOverrideBcPrivilegesError,
+    CouldNotStoreBcPrivilegesError,
+    InvalidBcPrivilegesError,
     InvalidPlatformRoleError,
-    NewRoleWithPrivsUsersOrAppsError, PlatformRoleNotFoundError, PrivilegeNotFoundError
+    NewRoleWithPrivsUsersOrBcsError,
+    PlatformRoleNotFoundError,
+    PrivilegeNotFoundError
 } from "../domain/errors";
 import {PrivilegesByRole} from "../domain/types";
 import {ILogger} from "@mojaloop/logging-bc-public-types-lib";
 import {
-    AppPrivileges,
-    CallSecurityContext, ForbiddenError, ITokenHelper, MakerCheckerViolationError,
+    BoundedContextPrivileges,
+    CallSecurityContext,
+    ForbiddenError,
+    ITokenHelper,
+    MakerCheckerViolationError,
     PlatformRole,
-    PrivilegeWithOwnerAppInfo, UnauthorizedError
+    PrivilegeWithOwnerBcInfo,
+    UnauthorizedError
 } from "@mojaloop/security-bc-public-types-lib";
 import {AuthorizationAggregate} from "../domain/authorization_agg";
 
@@ -145,30 +151,30 @@ export class ExpressRoutes {
     }
 
     private async postBootstrap(req: express.Request, res: express.Response){
-        const data: AppPrivileges = req.body as AppPrivileges;
+        const data: BoundedContextPrivileges = req.body as BoundedContextPrivileges;
         this._logger.debug(data);
 
-        await this._authorizationAggregate.processAppBootstrap(req.securityContext!, data).then(()=>{
+        await this._authorizationAggregate.processBcBootstrap(req.securityContext!, data).then(()=>{
             return res.status(200).send();
         }).catch((error: Error)=>{
             if (this._handleUnauthorizedError(error, res)) return;
 
-            if (error instanceof InvalidAppPrivilegesError) {
+            if (error instanceof InvalidBcPrivilegesError) {
                 return res.status(400).json({
                     status: "error",
-                    msg: "Received invalid AppPrivileges"
+                    msg: "Received invalid BoundedContextPrivileges"
                 });
-            } else if (error instanceof CannotCreateDuplicateAppPrivilegesError) {
+            } else if (error instanceof CannotCreateDuplicateBcPrivilegesError) {
                 return res.status(409).json({
                     status: "error",
-                    msg: "Received duplicate AppPrivileges"
+                    msg: "Received duplicate BoundedContextPrivileges"
                 });
-            } else if (error instanceof CannotOverrideAppPrivilegesError) {
+            } else if (error instanceof CannotOverrideBcPrivilegesError) {
                 return res.status(400).json({
                     status: "error",
-                    msg: "Received AppPrivileges with lower version than latest"
+                    msg: "Received BoundedContextPrivileges with lower version than latest"
                 });
-            } else if (error instanceof CouldNotStoreAppPrivilegesError) {
+            } else if (error instanceof CouldNotStoreBcPrivilegesError) {
                 return res.status(500).json({
                     status: "error",
                     msg: "Could not store appPrivileges"
@@ -184,24 +190,22 @@ export class ExpressRoutes {
 
     private async getAppRoles(req: express.Request, res: express.Response){
         const bcName = req.query["bcName"] ?? null;
-        const appName = req.query["appName"] ?? null;
 
-        if(!bcName || !appName){
+        if(!bcName){
             return res.status(400).json({
                 status: "error",
-                msg: "invalid bcName or appName"
+                msg: "invalid bcName"
             });
         }
 
-        await this._authorizationAggregate.getAppPrivilegesByRole(
+        await this._authorizationAggregate.getBcPrivilegesByRole(
             req.securityContext!,
             bcName.toString(),
-            appName.toString()
         ).then((resp:PrivilegesByRole)=>{
             return res.send(resp);
         }).catch((error: Error)=>{
             if (this._handleUnauthorizedError(error, res)) return;
-            if (error instanceof ApplicationsPrivilegesNotFoundError) {
+            if (error instanceof BoundedContextsPrivilegesNotFoundError) {
                 return res.status(404).json({
                     status: "error",
                     msg: "Application Privileges not found"
@@ -218,7 +222,7 @@ export class ExpressRoutes {
     }
 
     private async getAllAppPrivileges(req: express.Request, res: express.Response){
-        await this._authorizationAggregate.getAllPrivileges(req.securityContext!).then((resp:PrivilegeWithOwnerAppInfo[])=>{
+        await this._authorizationAggregate.getAllPrivileges(req.securityContext!).then((resp:PrivilegeWithOwnerBcInfo[])=>{
             return res.send(resp);
         }).catch((error: Error)=>{
             if (this._handleUnauthorizedError(error, res)) return;
@@ -258,7 +262,7 @@ export class ExpressRoutes {
                     status: "error",
                     msg: "Received invalid PlatformRole"
                 });
-            } else if (error instanceof NewRoleWithPrivsUsersOrAppsError) {
+            } else if (error instanceof NewRoleWithPrivsUsersOrBcsError) {
                 return res.status(400).json({
                     status: "error",
                     msg: "New roles cannot have privileges, member users or member apps"
