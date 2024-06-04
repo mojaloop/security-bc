@@ -35,7 +35,7 @@
 
 import forge from "node-forge";
 import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
-import { ApprovalRequestState, CallSecurityContext, ForbiddenError, IAuthorizationClient, ICSRRequest, IDecodedCSRInfo, IPublicCertificate, MakerCheckerViolationError } from "@mojaloop/security-bc-public-types-lib";
+import { CallSecurityContext, ForbiddenError, IAuthorizationClient, ICSRRequest, IDecodedCSRInfo, IPublicCertificate } from "@mojaloop/security-bc-public-types-lib";
 import { CertificateManager } from "./certificate_manager";
 import { ISecureCertificateStorage } from "./isecure_storage";
 import { CertKeyManagementPrivileges } from "./privileges";
@@ -58,14 +58,19 @@ export class KeyManagementAggregate {
         this._authorizationClient = authorizationClient;
     }
 
+    async getAllCSRRequests(securityContext: CallSecurityContext): Promise<ICSRRequest[]> {
+        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.VIEW_CSR_APPROVALS);
+        return this._secureStorage.fetchAllCSRs();
+    }
+
     async getCSRFromId(securityContext: CallSecurityContext, csrId: string): Promise<ICSRRequest | null> {
         this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.VIEW_CSR_APPROVALS);
         return this._secureStorage.fetchCSRWhereCSRId(csrId);
     }
 
-    async getPendingCSRApprovals(securityContext: CallSecurityContext): Promise<ICSRRequest[]> {
+    async getCSRRequestsFromIds(securityContext: CallSecurityContext, csrIds: string[]): Promise<ICSRRequest[]> {
         this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.VIEW_CSR_APPROVALS);
-        return this._secureStorage.fetchCSRsWhereRequestState(ApprovalRequestState.CREATED);
+        return this._secureStorage.fetchCSRsWhereCSRIds(csrIds);
     }
 
     async uploadCSR(securityContext: CallSecurityContext, participantId: string, csr: string): Promise<string> {
@@ -76,69 +81,31 @@ export class KeyManagementAggregate {
             csrPEM: csr,
             decodedCsrInfo,
             participantId: participantId,
-            createdBy: securityContext.username!,
             createdDate: Date.now(),
-            requestState: ApprovalRequestState.CREATED,
-            approvedBy: null,
-            approvedDate: null,
-            rejectedBy: null,
-            rejectedDate: null,
-            used: false,
         };
         return await this._secureStorage.storeCSR(csrRequest);
     }
 
-    async approveCSRAndGeneratePublicCertificate(securityContext: CallSecurityContext, csrId: string): Promise<void> {
-        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.APPROVE_CSR);
+    async createCertificateFromCSR(securityContext: CallSecurityContext, csrId: string): Promise<string> {
+        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.CREATE_CERTIFICATE);
 
         const csrRequest = await this._secureStorage.fetchCSRWhereCSRId(csrId);
         if (!csrRequest) {
             throw new Error("CSR not found");
         }
 
-        if (csrRequest.requestState !== ApprovalRequestState.CREATED) {
-            throw new Error("CSR is not in CREATED state");
-        }
-
-        if (csrRequest.createdBy === securityContext.username) {
-            throw new MakerCheckerViolationError(
-                "Maker check violation - Same user cannot approve and sign participant public certificate."
-            );
-        }
-
-        if (csrRequest.used) {
-            throw new Error("CSR is already used to generate public certificate");
-        }
-
-        csrRequest.requestState = ApprovalRequestState.APPROVED;
-        csrRequest.approvedBy = securityContext.username!;
-        csrRequest.approvedDate = Date.now();
-        csrRequest.used = true;
         await this._secureStorage.updateCSR(csrId, csrRequest);
-        await this._certificateManager.signAndStorePublicCertFromCSR(csrId, csrRequest);
+        const certId = await this._certificateManager.signAndStorePublicCertFromCSR(csrId, csrRequest);
+        return certId;
     }
 
-    async rejectCSR(securityContext: CallSecurityContext, csrId: string): Promise<void> {
-        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.REJECT_CSR);
+    async removeCSR(securityContext: CallSecurityContext, csrId: string): Promise<void> {
+        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.REMOVE_CERTIFICATE);
 
         const csrRequest = await this._secureStorage.fetchCSRWhereCSRId(csrId);
         if (!csrRequest) {
             throw new Error("CSR not found");
         }
-
-        if (csrRequest.requestState !== ApprovalRequestState.CREATED) {
-            throw new Error("CSR is not in CREATED state");
-        }
-
-        if (csrRequest.createdBy === securityContext.username) {
-            throw new MakerCheckerViolationError(
-                "Maker check violation - Same user cannot reject participant CSR."
-            );
-        }
-
-        csrRequest.requestState = ApprovalRequestState.REJECTED;
-        csrRequest.rejectedBy = securityContext.username!;
-        csrRequest.rejectedDate = Date.now();
         await this._secureStorage.updateCSR(csrId, csrRequest);
     }
 
@@ -152,6 +119,12 @@ export class KeyManagementAggregate {
         this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.VIEW_PUB_CERTIFICATE);
 
         return this._secureStorage.getPublicCert(participantId);
+    }
+
+    async getParticipantsPubCerts(securityContext: CallSecurityContext, participantIds: string[]): Promise<IPublicCertificate[]> {
+        this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.VIEW_PUB_CERTIFICATE);
+
+        return this._secureStorage.getPublicCerts(participantIds);
     }
 
     async verifyCert(securityContext: CallSecurityContext, certPem: string): Promise<boolean> {

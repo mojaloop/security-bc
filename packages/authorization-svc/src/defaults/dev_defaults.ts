@@ -48,8 +48,8 @@ export const defaultDevRoles: PlatformRole[] = [
             "SECURITY_VIEW_HUB_PUB_CERTIFICATE",
             "SECURITY_VIEW_CSR_APPROVALS",
             "SECURITY_UPLOAD_CSR",
-            "SECURITY_APPROVE_CSR",
-            "SECURITY_REJECT_CSR",
+            "SECURITY_CREATE_CERTIFICATE",
+            "SECURITY_REMOVE_CERTIFICATE",
             "SECURITY_VERIFY_CERTIFICATE",
             "PLATFORM_CONFIGURATION_VIEW_GLOBAL",
             "PLATFORM_CONFIGURATION_BOOSTRAP_BOUNDED_CONTEXT",
@@ -121,10 +121,11 @@ export const defaultDevRoles: PlatformRole[] = [
 			"ACCOUNT_LOOKUP_VIEW_ALL_ORACLE_ASSOCIATIONS",
             "SECURITY_VIEW_PUB_CERTIFICATE",
             "SECURITY_VIEW_HUB_PUB_CERTIFICATE",
+            "SECURITY_VIEW_HUB_PRIVATE_KEY",
             "SECURITY_VIEW_CSR_APPROVALS",
             "SECURITY_UPLOAD_CSR",
-            "SECURITY_APPROVE_CSR",
-            "SECURITY_REJECT_CSR",
+            "SECURITY_CREATE_CERTIFICATE",
+            "SECURITY_REMOVE_CERTIFICATE",
 		]
 	}, {
 		id: "admin",
@@ -217,11 +218,12 @@ export const defaultDevRoles: PlatformRole[] = [
             "SECURITY_BUILTIN_IAM_DISABLE_APP",
             "SECURITY_BUILTIN_IAM_MANAGE_APP_ROLES",
             "SECURITY_VIEW_PUB_CERTIFICATE",
+            "SECURITY_VIEW_HUB_PRIVATE_KEY",
             "SECURITY_VIEW_HUB_PUB_CERTIFICATE",
             "SECURITY_VIEW_CSR_APPROVALS",
             "SECURITY_UPLOAD_CSR",
-            "SECURITY_APPROVE_CSR",
-            "SECURITY_REJECT_CSR",
+            "SECURITY_CREATE_CERTIFICATE",
+            "SECURITY_REMOVE_CERTIFICATE",
 		]
 	}, {
 		id: "participants-bc-participants-svc",
@@ -296,7 +298,10 @@ export const defaultDevRoles: PlatformRole[] = [
 		isApplicationRole: true,
         isPerParticipantRole: false,
 		privileges: [
-			"VIEW_PARTICIPANT"
+			"VIEW_PARTICIPANT",
+            "SECURITY_VIEW_PUB_CERTIFICATE",
+            "SECURITY_VIEW_HUB_PUB_CERTIFICATE",
+            "SECURITY_VIEW_HUB_PRIVATE_KEY",
 		]
 	}, {
 		id: "quoting-bc-quoting-svc",

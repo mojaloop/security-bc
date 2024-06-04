@@ -30,7 +30,7 @@
 
 "use strict";
 
-import { ApprovalRequestState, ICSRRequest, IPublicCertificate } from "@mojaloop/security-bc-public-types-lib";
+import { ICSRRequest, IPublicCertificate } from "@mojaloop/security-bc-public-types-lib";
 
 export enum SECURE_CERTIFICATE_STORAGE_TYPE {
     // add more storage types here
@@ -48,14 +48,16 @@ export interface ISecureCertificateStorage {
 
     fetchAllCSRs(): Promise<ICSRRequest[]>;
     fetchCSRWhereCSRId(csrId: string): Promise<ICSRRequest | null>;
+    fetchCSRsWhereCSRIds(csrIds: string[]): Promise<ICSRRequest[]>;
     fetchCSRsWhereParticipantId(participantId: string): Promise<ICSRRequest[]>;
-    fetchCSRsWhereRequestState(request_state: ApprovalRequestState): Promise<ICSRRequest[]>;
 
     storeCSR(csr: ICSRRequest): Promise<string>;
     updateCSR(csrId: string, csr: ICSRRequest): Promise<void>;
+    removeCSR(csrId: string): Promise<void>;
 
     getPublicCert(participantId: string): Promise<string>;
-    storePublicCert(participantId: string, cert: IPublicCertificate): Promise<void>;
+    getPublicCerts(participantIds: string[]): Promise<IPublicCertificate[]>;
+    storePublicCert(participantId: string, cert: IPublicCertificate): Promise<string>;
 
     storeCAHubPrivateKey(key: string): Promise<void>;
     getCAHubPrivateKey(): Promise<string>;

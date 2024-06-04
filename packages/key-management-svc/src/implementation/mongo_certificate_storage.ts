@@ -32,7 +32,7 @@ import { createCipheriv, randomBytes, createDecipheriv, scryptSync } from "crypt
 import { MongoClient, Collection, ObjectId } from "mongodb";
 import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
 import { ISecureCertificateStorage } from "../domain/isecure_storage";
-import { ApprovalRequestState, ICSRRequest, IPublicCertificate } from "@mojaloop/security-bc-public-types-lib";
+import { ICSRRequest, IPublicCertificate } from "@mojaloop/security-bc-public-types-lib";
 
 export class MongoCertificateStorage implements ISecureCertificateStorage {
     private _mongoClient: MongoClient;
@@ -86,6 +86,14 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
         await this._csrCollection.updateOne({ _id: csrObjectId }, { $set: csr });
     }
 
+    public async removeCSR(csrId: string): Promise<void> {
+        const csrObjectId = new ObjectId(csrId);
+        const result = await this._csrCollection.deleteOne({ _id: csrObjectId });
+        if (result.deletedCount === 0) {
+            throw new Error(`Failed to remove CSR with id: ${csrId}`);
+        }
+    }
+
     public async fetchAllCSRs(): Promise<ICSRRequest[]> {
         const csrs = await this._csrCollection.find()
             .toArray();
@@ -103,10 +111,10 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
         return csrs.map(this._mapDocumentToCSRRequest);
     }
 
-    public async fetchCSRsWhereRequestState(request_state: ApprovalRequestState): Promise<ICSRRequest[]> {
-        const csrs = await this._csrCollection.find({ requestState: request_state })
+    public async fetchCSRsWhereCSRIds(csrIds: string[]): Promise<ICSRRequest[]> {
+        const csrObjectIds = csrIds.map((id) => new ObjectId(id));
+        const csrs = await this._csrCollection.find({ _id: { $in: csrObjectIds } })
             .toArray();
-
         return csrs.map(this._mapDocumentToCSRRequest);
     }
 
@@ -120,7 +128,15 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
         return cert.cert;
     }
 
-    public async storePublicCert(participantId: string, cert: IPublicCertificate): Promise<void> {
+    public async getPublicCerts(participantIds: string[]): Promise<IPublicCertificate[]> {
+        const certs = await this._publicCertCollection.find({ participantId: { $in: participantIds }, isRevoked: { $ne: true } })
+            .project({ _id: 0 })
+            .toArray() as IPublicCertificate[];
+
+        return certs;
+    }
+
+    public async storePublicCert(participantId: string, cert: IPublicCertificate): Promise<string> {
         if (participantId === this._hubID) {
             this._logger.error(`Attempted to overwrite CA certificate with public cert: ${participantId}`);
             throw new Error("Operation not allowed: Cannot overwrite CA certificate with public certificate.");
@@ -136,9 +152,14 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
                 },
                 { upsert: true }
             );
+
+
             if (result.modifiedCount === 0 && result.upsertedCount === 0) {
                 throw new Error(`Failed to store certificate for participantId: ${participantId}`);
             }
+
+            return result.upsertedId!.toString();
+
         } catch (error) {
             throw new Error(`Failed to store certificate for participantId: ${participantId}`);
         }
@@ -262,14 +283,7 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
             csrPEM: csr.csrPEM,
             decodedCsrInfo: csr.decodedCsrInfo,
             participantId: csr.participantId,
-            createdBy: csr.createdBy,
-            createdDate: csr.createdDate,
-            requestState: csr.requestState,
-            approvedBy: csr.approvedBy,
-            approvedDate: csr.approvedDate,
-            rejectedBy: csr.rejectedBy,
-            rejectedDate: csr.rejectedDate,
-            used: csr.used
+            createdDate: csr.createdDate
         };
     }
 

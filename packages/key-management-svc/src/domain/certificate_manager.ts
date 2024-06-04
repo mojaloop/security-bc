@@ -34,10 +34,6 @@ export class CertificateManager {
     }
 
     async signAndStorePublicCertFromCSR(csrRequestId: string, csrRequest: ICSRRequest): Promise<string> {
-        if (csrRequest.requestState !== "APPROVED") {
-            throw new Error("CSR request is not in the approved state.");
-        }
-
         const csrPem = csrRequest.csrPEM;
         const participantId = csrRequest.participantId;
         const participantCSR = forge.pki.certificationRequestFromPem(csrPem);
@@ -91,17 +87,14 @@ export class CertificateManager {
 
         const pubCert: IPublicCertificate = {
             csrRequestId,
+            keyFingerprint: forge.md.sha1.create().update(forge.asn1.toDer(forge.pki.certificateToAsn1(newParticipantCert)).getBytes()).digest().toHex(),
             participantId: participantId,
             pubCertificatePem: clientCertPem,
             decodedCertInfo,
             createdDate: Date.now(),
-            createdBy: csrRequest.createdBy,
-            approvedBy: csrRequest.approvedBy,
-            approvedDate: csrRequest.approvedDate,
         };
-        await this._secureStorage.storePublicCert(participantId, pubCert);
-
-        return clientCertPem;
+        const certId = await this._secureStorage.storePublicCert(participantId, pubCert);
+        return certId;
     }
 
     getHubCAPubCert(): string {
@@ -144,13 +137,10 @@ export class CertificateManager {
 
             const pubCert: IPublicCertificate = {
                 participantId: secureStorage.getCAHubID(),
+                keyFingerprint: forge.md.sha1.create().update(forge.asn1.toDer(forge.pki.certificateToAsn1(cert)).getBytes()).digest().toHex(),
                 pubCertificatePem: certPem,
                 createdDate: Date.now(),
                 decodedCertInfo,
-                createdBy: "system",
-                approvedBy: "system",
-                approvedDate: Date.now(),
-
             };
             await secureStorage.storeCAHubRootCert(pubCert);
             logger.createChild("CertificateManager._checkKeyOrGenerateCAKeyPair").info("Generated new CA keypair and stored in secure storage.");

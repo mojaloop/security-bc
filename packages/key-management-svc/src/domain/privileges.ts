@@ -31,12 +31,13 @@
 "use strict";
 
 export enum CertKeyManagementPrivileges {
+    UPLOAD_CSR = "SECURITY_UPLOAD_CSR",
+    VIEW_CSR_APPROVALS = "SECURITY_VIEW_CSR_APPROVALS",
     VIEW_PUB_CERTIFICATE = "SECURITY_VIEW_PUB_CERTIFICATE",
     VIEW_HUB_PUB_CERTIFICATE = "SECURITY_VIEW_HUB_PUB_CERTIFICATE",
-    VIEW_CSR_APPROVALS = "SECURITY_VIEW_CSR_APPROVALS",
-    UPLOAD_CSR = "SECURITY_UPLOAD_CSR",
-    APPROVE_CSR = "SECURITY_APPROVE_CSR",
-    REJECT_CSR = "SECURITY_REJECT_CSR",
+    VIEW_HUB_PRIVATE_KEY = "SECURITY_VIEW_HUB_PRIVATE_KEY",
+    CREATE_CERTIFICATE = "SECURITY_CREATE_CERTIFICATE",
+    REMOVE_CERTIFICATE = "SECURITY_REMOVE_CERTIFICATE",
     REVOKE_CERTIFICATE = "SECURITY_REVOKE_CERTIFICATE",
     VIEW_REVOKED_CERTIFICATES = "SECURITY_VIEW_REVOKED_CERTIFICATES",
     VERIFY_CERTIFICATE = "SECURITY_VERIFY_CERTIFICATE",
@@ -44,6 +45,14 @@ export enum CertKeyManagementPrivileges {
 
 export const CertKeyMangementPriviledgesDefinition = [
     {
+        privId: CertKeyManagementPrivileges.UPLOAD_CSR,
+        labelName: "Upload CSR",
+        description: "Allows uploading of Certificate Signing Requests"
+    }, {
+        privId: CertKeyManagementPrivileges.VIEW_CSR_APPROVALS,
+        labelName: "View CSR Approvals",
+        description: "Allows fetching of Certificate Signing Requests for approval"
+    }, {
         privId: CertKeyManagementPrivileges.VIEW_PUB_CERTIFICATE,
         labelName: "View Public Certificate",
         description: "Allows fetching of the public certificates of participants"
@@ -52,21 +61,13 @@ export const CertKeyMangementPriviledgesDefinition = [
         labelName: "View Hub Public Certificate",
         description: "Allows fetching of the public certificate of the Hub"
     }, {
-        privId: CertKeyManagementPrivileges.VIEW_CSR_APPROVALS,
-        labelName: "View CSR Approvals",
-        description: "Allows fetching of Certificate Signing Requests for approval"
+        privId: CertKeyManagementPrivileges.CREATE_CERTIFICATE,
+        labelName: "Create Certificate",
+        description: "Allows creation of certificates for participants"
     }, {
-        privId: CertKeyManagementPrivileges.UPLOAD_CSR,
-        labelName: "Upload CSR",
-        description: "Allows uploading of Certificate Signing Requests"
-    }, {
-        privId: CertKeyManagementPrivileges.APPROVE_CSR,
-        labelName: "Approve CSR",
-        description: "Allows approval of Certificate Signing Requests"
-    }, {
-        privId: CertKeyManagementPrivileges.REJECT_CSR,
-        labelName: "Reject CSR",
-        description: "Allows rejection of Certificate Signing Requests"
+        privId: CertKeyManagementPrivileges.REMOVE_CERTIFICATE,
+        labelName: "Remove Certificate",
+        description: "Allows removal of certificates of participants"
     }, {
         privId: CertKeyManagementPrivileges.REVOKE_CERTIFICATE,
         labelName: "Revoke Certificate",

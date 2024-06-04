@@ -31,17 +31,12 @@
 "use strict";
 
 export class UploadCSRFailedError extends Error {}
-export class ApproveCSRFailedError extends Error {}
-export class RejectCSRFailedError extends Error {}
 export class GetCSRFailedError extends Error {}
 export class GetPublicCertificateFailedError extends Error {}
 export class VerifyPublicCertificateFailedError extends Error {}
-
-export enum ApprovalRequestState {
-    CREATED = "CREATED",
-    APPROVED = "APPROVED",
-    REJECTED = "REJECTED"
-}
+export class CreateCertificateFromCSRFailedError extends Error {}
+export class RevokeCertificateFailedError extends Error {}
+export class RemoveCSRFailedError extends Error {}
 
 export interface IDecodedCSRInfo {
     subject: string;
@@ -55,19 +50,13 @@ export declare interface ICSRRequest {
     csrPEM: string;
     decodedCsrInfo?: IDecodedCSRInfo;
     participantId: string;
-    createdBy: string;
     createdDate: number;
-    requestState: ApprovalRequestState;
-    approvedBy: string | null;
-    approvedDate: number | null;
-    rejectedBy: string | null;
-    rejectedDate: number | null;
-    used: boolean;
 }
 
 export declare interface IPublicCertificate {
     csrRequestId?: string | null;
     participantId: string;
+    keyFingerprint: string;
     pubCertificatePem: string;
     decodedCertInfo?: IDecodedCertificateInfo;
 
@@ -76,9 +65,6 @@ export declare interface IPublicCertificate {
     revocationDate?: Date;
 
     createdDate: number;
-    createdBy: string;
-    approvedBy: string | null;
-    approvedDate: number | null;
 }
 
 export interface IDecodedCertificateInfo {

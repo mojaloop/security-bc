@@ -94,19 +94,9 @@ const SVC_CLIENT_SECRET = process.env["SVC_CLIENT_SECRET"] || "superServiceSecre
 const SECURE_STORAGE_TYPE =
     process.env["SECURE_STORAGE_TYPE"] as SECURE_CERTIFICATE_STORAGE_TYPE || SECURE_CERTIFICATE_STORAGE_TYPE.MONGO;
 const CA_ENCRYPTION_SECRET_KEY = process.env["CA_ENCRYPTION_SECRET_KEY"] || "test_secret_key";
-// const CA_ENCRYPTION_ENABLED = process.env["CA_ENCRYPTION_ENABLED"] === "true" || false;
 
-// local storage env
-const PRIVATE_CERT_PEM_FILE_PATH = process.env["PRIVATE_CERT_PEM_FILE_PATH"] || "/app/data/private.pem";
-const PUBLIC_CERT_PEM_FILE_PATH = process.env["PUBLIC_CERT_PEM_FILE_PATH"] || "/app/data/public.pem";
-const PUBLIC_CERT_STORAGE_PATH = process.env["PUBLIC_CERT_STORAGE_PATH"] || "/app/data/certs";
 // mongo storage env
 const MONGO_URL = process.env["MONGO_URL"] || "mongodb://root:mongoDbPas42@localhost:27017/";
-// redis storage env
-const REDIS_URL = process.env["REDIS_URL"] || "redis://localhost:6379";
-// vault storage env
-const VAULT_URL = process.env["VAULT_URL"] || "http://localhost:8200";
-const VAULT_TOKEN = process.env["VAULT_TOKEN"] || "myroot";
 
 
 // kafka logger

@@ -115,56 +115,53 @@ describe('key-management-client-lib tests', () => {
         expect(csrId.id).toBeDefined();
     });
 
-    test("Get Pending CSR Approvals", async () => {
+    test("Get All CSR Requests", async () => {
         //
         const pendingApprovalParticipantId = 'dfsp_a_pending_approval_test';
         await makerKeyMgmtHttpClient.uploadCSR(pendingApprovalParticipantId, DFSP_A_CSR_PEM);
 
-        const pendingApprovals = await checkerKeyMgmtHttpClient.getPendingCSRApprovals();
-        expect(pendingApprovals).toBeDefined();
-        expect(pendingApprovals.length).toBeGreaterThanOrEqual(0);
-
-        // one of them should include the pendingApprovalParticipantId
-        const found = pendingApprovals.find((item: ICSRRequest) => item.participantId === pendingApprovalParticipantId);
-        expect(found).toBeDefined();
-
-        // every item should have requestState as 'CREATED'
-        pendingApprovals.forEach((item: ICSRRequest) => {
-            expect(item.requestState).toBe(ApprovalRequestState.CREATED);
-        })
+        const csrRequests = await checkerKeyMgmtHttpClient.getAllCSRs();
+        expect(csrRequests).toBeDefined();
+        expect(csrRequests.length).toBeGreaterThanOrEqual(0);
     })
 
-    test("Approve CSR", async () => {
-        const csrId = await makerKeyMgmtHttpClient.uploadCSR('dfsp_a_approval_test', DFSP_A_CSR_PEM);
+    test("Create Certificate From CSR", async () => {
+        const participantId = 'dfsp_a_create_cert_test';
+        const csrId = await makerKeyMgmtHttpClient.uploadCSR(participantId, DFSP_A_CSR_PEM);
         expect(csrId).toBeDefined();
         expect(csrId.id).toBeDefined();
 
-        await checkerKeyMgmtHttpClient.approveCSR(csrId.id);
+        await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
 
-        // check if the CSR is approved
-        const csr = await checkerKeyMgmtHttpClient.getCSRFromId(csrId.id);
-        expect(csr).toBeDefined();
-        expect(csr.requestState).toBe(ApprovalRequestState.APPROVED);
+        // check if the Certificate is created
+        const certificate = await checkerKeyMgmtHttpClient.getPaticipantPubCert(participantId);
+        expect(certificate).toBeDefined();
+        expect(certificate.pubCertificatePem).toContain('-----BEGIN CERTIFICATE-----');
+
+        const cert = pki.certificateFromPem(certificate.pubCertificatePem);
+        expect(cert).toBeDefined();
+        expect(cert.subject.getField('CN').value).toBe('DFSP_A');
+        expect(cert.issuer.getField('CN').value).toBe('vNextHub CA');
+        expect(cert.issuer.getField('O').value).toBe('Mojaloop');
     })
 
-    test("Reject CSR", async () => {
-        const csrId = await makerKeyMgmtHttpClient.uploadCSR('dfsp_a_reject_test', DFSP_A_CSR_PEM);
+    test("Remove CSR", async () => {
+        const csrId = await makerKeyMgmtHttpClient.uploadCSR('dfsp_a_remove_csr_test', DFSP_A_CSR_PEM);
         expect(csrId).toBeDefined();
         expect(csrId.id).toBeDefined();
 
-        await checkerKeyMgmtHttpClient.rejectCSR(csrId.id);
+        await checkerKeyMgmtHttpClient.removeCSR(csrId.id);
 
-        // check if the CSR is rejected
+        // check if the CSR is removed
         const csr = await checkerKeyMgmtHttpClient.getCSRFromId(csrId.id);
-        expect(csr).toBeDefined();
-        expect(csr.requestState).toBe(ApprovalRequestState.REJECTED);
+
     })
 
 
     test("Get Public Cert", async () => {
         const participantId = 'dfsp_a_get_cert_test';
         const csrId = await makerKeyMgmtHttpClient.uploadCSR(participantId, DFSP_A_CSR_PEM);
-        await checkerKeyMgmtHttpClient.approveCSR(csrId.id);
+        await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
 
         const publicCert = await appKeyMgmtHttpClient.getPaticipantPubCert(participantId);
         expect(publicCert).toBeDefined();

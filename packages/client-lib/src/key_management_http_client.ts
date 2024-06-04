@@ -28,7 +28,7 @@
 "use strict";
 
 // import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
-import { ApproveCSRFailedError, GetCSRFailedError, GetPublicCertificateFailedError, IAuthenticatedHttpRequester, ICSRRequest, IPublicCertificate, RejectCSRFailedError, UploadCSRFailedError} from "@mojaloop/security-bc-public-types-lib";
+import { RemoveCSRFailedError, CreateCertificateFromCSRFailedError, GetCSRFailedError, GetPublicCertificateFailedError, IAuthenticatedHttpRequester, ICSRRequest, IPublicCertificate, UploadCSRFailedError} from "@mojaloop/security-bc-public-types-lib";
 
 export class KeyMgmtHttpClient {
     // private readonly _logger: ILogger;
@@ -59,39 +59,41 @@ export class KeyMgmtHttpClient {
         });
         const response = await this._authRequester.fetch(requestInfo);
         if (!response.ok) {
-            throw new UploadCSRFailedError(`Failed to upload CSR: ${await response.text()}`);
+            throw new UploadCSRFailedError(await response.text());
         }
         return await response.json();
     }
 
-    public async approveCSR(id: string): Promise<void> {
-        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs/${id}/approve`, {
-            method: "PUT",
+    public async createCertificateFromCSR(csrId: string): Promise<string> {
+        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs/${csrId}/createCertificate`, {
+            method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
         });
         const response = await this._authRequester.fetch(requestInfo);
         if (!response.ok) {
-            throw new ApproveCSRFailedError(`Failed to approve CSR: ${await response.text()}`);
+            throw new CreateCertificateFromCSRFailedError(`Failed to create certificate from CSR: ${await response.text()}`);
         }
+
+        return await response.text(); // newly created certId
     }
 
-    public async rejectCSR(id: string): Promise<void> {
-        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs/${id}/reject`, {
-            method: "PUT",
+    public async removeCSR(csrId: string): Promise<void> {
+        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs/${csrId}`, {
+            method: "DELETE",
             headers: {
                 "Content-Type": "application/json",
             },
         });
         const response = await this._authRequester.fetch(requestInfo);
         if (!response.ok) {
-            throw new RejectCSRFailedError(`Failed to reject CSR: ${await response.text()}`);
+            throw new RemoveCSRFailedError(`Failed to remove CSR: ${await response.text()}`);
         }
     }
 
-    public async getPendingCSRApprovals(): Promise<ICSRRequest[]> {
-        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs/pendingApprovals`, {
+    public async getAllCSRs(): Promise<ICSRRequest[]> {
+        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs/`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -104,7 +106,7 @@ export class KeyMgmtHttpClient {
         return await response.json();
     }
 
-    public async getCSRFromId(id: string): Promise<ICSRRequest> {
+    public async getCSRFromId(id: string): Promise<ICSRRequest | null> {
         const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs/${id}`, {
             method: "GET",
             headers: {
@@ -114,6 +116,23 @@ export class KeyMgmtHttpClient {
         const response = await this._authRequester.fetch(requestInfo);
         if (!response.ok) {
             throw new GetCSRFailedError(`Failed to get CSR from ID: ${await response.text()}`);
+        }
+        return await response.json();
+    }
+
+    public async getCSRsFromIds(ids: string[]): Promise<ICSRRequest[]> {
+        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs/${ids}/multi`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                ids,
+            }),
+        });
+        const response = await this._authRequester.fetch(requestInfo);
+        if (!response.ok) {
+            throw new GetCSRFailedError(`Failed to get CSRs from IDs: ${await response.text()}`);
         }
         return await response.json();
     }

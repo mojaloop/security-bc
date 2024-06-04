@@ -60,13 +60,15 @@ export class KeyManagementRoutes {
 
         this._router.use(this._authenticationMiddleware.bind(this));
         // bind routes
-        this._router.get("/certs/csrs/pendingApprovals", this.getPendingCSRApprovals.bind(this));
+        this._router.get("/certs/csrs", this.getAllCSRRequests.bind(this));
         this._router.get("/certs/csrs/:id", this.getCSRFromId.bind(this));
+        this._router.get("/certs/csrs/:ids/multi", this.getCSRRequestsFromIds.bind(this));
         this._router.post("/certs/csrs", upload.single("csr"), this.uploadCSR.bind(this));
-        this._router.put("/certs/csrs/:id/approve", this.approveCSR.bind(this));
-        this._router.put("/certs/csrs/:id/reject", this.rejectCSR.bind(this));
+        this._router.post("/certs/csrs/:id/createCertificate", this.createCertificateFromCSR.bind(this));
+        this._router.delete("/certs/csrs/:id", this.removeCSR.bind(this));
 
         this._router.get("/certs/pubCerts/hubCA", this.getHubCARootCert.bind(this));
+        this._router.get("/certs/pubCerts/:participantIds/multi", this.getParticipantsPubCerts.bind(this));
         this._router.get("/certs/pubCerts/:participantId", this.getParticipantPubCert.bind(this));
 
         this._router.put("/certs/pubCerts/:participantId/revoke", this.revokeParticipantPubCert.bind(this));
@@ -89,10 +91,26 @@ export class KeyManagementRoutes {
         }
     }
 
-    async getPendingCSRApprovals(req: express.Request, res: express.Response) {
+    async getAllCSRRequests(req: express.Request, res: express.Response) {
         try {
-            const pendingApprovals = await this._keyMgmtAgg.getPendingCSRApprovals(req.securityContext!);
-            return res.status(200).json(pendingApprovals);
+            const csrRequests = await this._keyMgmtAgg.getAllCSRRequests(req.securityContext!);
+            return res.status(200).json(csrRequests);
+        } catch (error) {
+            this._logger.error("Failed to get pending CSR approvals.", (error as Error).message);
+            return res.status(500).send("Failed to get pending CSR approvals.");
+        }
+    }
+
+    async getCSRRequestsFromIds(req: express.Request, res: express.Response) {
+        const ids = req.params["ids"] ?? null;
+        const csrIds: string[] = ids == null ? [] : ids.split(",");
+        if (csrIds.length === 0) {
+            return res.status(400).send("No CSR IDs provided.");
+        }
+
+        try {
+            const csrRequests = await this._keyMgmtAgg.getCSRRequestsFromIds(req.securityContext!, csrIds);
+            return res.status(200).json(csrRequests);
         } catch (error) {
             this._logger.error("Failed to get pending CSR approvals.", (error as Error).message);
             return res.status(500).send("Failed to get pending CSR approvals.");
@@ -124,38 +142,40 @@ export class KeyManagementRoutes {
             const csrId = await this._keyMgmtAgg.uploadCSR(req.securityContext!, participantId, csrPem);
             return res.status(200).json({ id: csrId });
         } catch (error) {
-            this._logger.error("Failed to store CSR.", (error as Error).message);
-            return res.status(500).send("Failed to store CSR.");
+            const errMessage = `${(error as Error).message}`;
+            this._logger.error(errMessage);
+            return res.status(500).send(errMessage);
         }
     }
 
-    async approveCSR(req: express.Request, res: express.Response) {
+    async createCertificateFromCSR(req: express.Request, res: express.Response) {
         const csrId = req.params.id;
         if (!csrId) {
             return res.status(400).send("No CSR ID provided.");
         }
 
         try {
-            await this._keyMgmtAgg.approveCSRAndGeneratePublicCertificate(req.securityContext!, csrId);
-            return res.status(200).send("CSR approved and public certificate generated.");
+            const certId = await this._keyMgmtAgg.createCertificateFromCSR(req.securityContext!, csrId);
+            return res.status(200).send(certId);
+
         } catch (error) {
             this._logger.error("Failed to approve CSR and generate public certificate.", (error as Error).message);
             return res.status(500).send("Failed to approve CSR and generate public certificate.");
         }
     }
 
-    async rejectCSR(req: express.Request, res: express.Response) {
+    async removeCSR(req: express.Request, res: express.Response) {
         const csrId = req.params.id;
         if (!csrId) {
             return res.status(400).send("No CSR ID provided.");
         }
 
         try {
-            await this._keyMgmtAgg.rejectCSR(req.securityContext!, csrId);
-            return res.status(200).send("CSR rejected.");
+            await this._keyMgmtAgg.removeCSR(req.securityContext!, csrId);
+            return res.status(200).send("CSR Request is removed.");
         } catch (error) {
-            this._logger.error("Failed to reject CSR.", (error as Error).message);
-            return res.status(500).send("Failed to reject CSR.");
+            this._logger.error("Failed to remove CSR Request.", (error as Error).message);
+            return res.status(500).send("Failed to remove CSR Request.");
         }
     }
 
@@ -181,6 +201,22 @@ export class KeyManagementRoutes {
         } catch (error) {
             this._logger.error("Failed to get participant public certificate.", (error as Error).message);
             return res.status(500).send("Failed to get participant public certificate.");
+        }
+    }
+
+    async getParticipantsPubCerts(req: express.Request, res: express.Response) {
+        const participantIds = req.params.participantIds ?? null;
+        const participantIdList: string[] = participantIds == null ? [] : participantIds.split(",");
+        if (participantIdList.length === 0) {
+            return res.status(400).send("No participantIds provided.");
+        }
+
+        try {
+            const pubCerts = await this._keyMgmtAgg.getParticipantsPubCerts(req.securityContext!, participantIdList);
+            return res.status(200).json(pubCerts);
+        } catch (error) {
+            this._logger.error("Failed to get participants public certificates.", (error as Error).message);
+            return res.status(500).send("Failed to get participants public certificates.");
         }
     }
 
