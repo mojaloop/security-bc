@@ -132,6 +132,11 @@ export class TokenHelper implements ITokenHelper {
 
     async destroy(): Promise<void> {
         if(this._updateTimer) clearInterval(this._updateTimer);
+
+        if(this._messageConsumer){
+            await this._messageConsumer.stop();
+            await this._messageConsumer.destroy(false);
+        }
     }
 
     private async _messageHandler(message:IMessage):Promise<void>{

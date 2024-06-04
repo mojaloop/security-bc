@@ -66,7 +66,7 @@ export class AuthorizationClient implements IAuthorizationClient{
     private _privileges:Privilege[] = [];
 
     constructor(
-        boundedContextName: string, 
+        boundedContextName: string,
         privilegeSetVersion: string,
         authSvcBaseUrl:string, logger:ILogger,
         authRequester: IAuthenticatedHttpRequester, messageConsumer:IMessageConsumer|null = null
@@ -143,6 +143,13 @@ export class AuthorizationClient implements IAuthorizationClient{
             this._messageConsumer.setCallbackFn(this._messageHandler.bind(this));
             await this._messageConsumer.connect();
             await this._messageConsumer.startAndWaitForRebalance();
+        }
+    }
+
+    async destroy():Promise<void>{
+        if(this._messageConsumer){
+            await this._messageConsumer.stop();
+            await this._messageConsumer.destroy(false);
         }
     }
 
