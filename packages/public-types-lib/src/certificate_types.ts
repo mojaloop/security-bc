@@ -58,6 +58,7 @@ export declare interface IPublicCertificate {
     participantId: string;
     keyFingerprint: string;
     pubCertificatePem: string;
+    certType: "HUB_CA" | "HUB_INTERMEDIATE" | "DFSP";
     decodedCertInfo?: IDecodedCertificateInfo;
 
     isRevoked?: boolean;

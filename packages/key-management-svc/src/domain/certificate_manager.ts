@@ -89,6 +89,7 @@ export class CertificateManager {
             csrRequestId,
             keyFingerprint: forge.md.sha1.create().update(forge.asn1.toDer(forge.pki.certificateToAsn1(newParticipantCert)).getBytes()).digest().toHex(),
             participantId: participantId,
+            certType: "DFSP",
             pubCertificatePem: clientCertPem,
             decodedCertInfo,
             createdDate: Date.now(),
@@ -139,6 +140,7 @@ export class CertificateManager {
                 participantId: secureStorage.getCAHubID(),
                 keyFingerprint: forge.md.sha1.create().update(forge.asn1.toDer(forge.pki.certificateToAsn1(cert)).getBytes()).digest().toHex(),
                 pubCertificatePem: certPem,
+                certType: "HUB_CA",
                 createdDate: Date.now(),
                 decodedCertInfo,
             };
