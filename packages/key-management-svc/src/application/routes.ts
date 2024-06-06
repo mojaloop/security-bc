@@ -159,8 +159,8 @@ export class KeyManagementRoutes {
             return res.status(200).send(certId);
 
         } catch (error) {
-            this._logger.error("Failed to approve CSR and generate public certificate.", (error as Error).message);
-            return res.status(500).send("Failed to approve CSR and generate public certificate.");
+            this._logger.error((error as Error).message);
+            return res.status(500).send((error as Error).message);
         }
     }
 

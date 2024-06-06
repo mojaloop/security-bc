@@ -143,23 +143,12 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
         }
 
         try {
-            const result = await this._publicCertCollection.updateOne(
-                { participantId: participantId },
-                {
-                    $set: {
-                        cert,
-                    }
-                },
-                { upsert: true }
-            );
-
-
-            if (result.modifiedCount === 0 && result.upsertedCount === 0) {
-                throw new Error(`Failed to store certificate for participantId: ${participantId}`);
-            }
-
-            return result.upsertedId!.toString();
-
+            const result = await this._publicCertCollection.insertOne({
+                participantId,
+                cert,
+                isRevoked: false
+            });
+            return result.insertedId.toString();
         } catch (error) {
             throw new Error(`Failed to store certificate for participantId: ${participantId}`);
         }

@@ -75,8 +75,9 @@ export class CertificateManager {
         newParticipantCert.sign(this._caPrivateKey, forge.md.sha256.create());
         const clientCertPem = forge.pki.certificateToPem(newParticipantCert);
 
+        const subjectString = newParticipantCert.subject.attributes.map(attr => `${attr.shortName}=${attr.value}`).join(", ");
         const decodedCertInfo: IDecodedCertificateInfo = {
-            subject: newParticipantCert.subject.getField("CN").value,
+            subject: subjectString,
             issuer: newParticipantCert.issuer.getField("CN").value,
             validFrom: newParticipantCert.validity.notBefore.toISOString(),
             validTo: newParticipantCert.validity.notAfter.toISOString(),
