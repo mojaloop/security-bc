@@ -45,7 +45,7 @@ export class KeyMgmtHttpClient {
         this._authRequester = authRequester;
     }
 
-    public async uploadCSR(participantId: string, csr: string): Promise<{ id: string }> {
+    public async uploadCSR(participantId: string, csr: string): Promise<ICSRRequest> {
         const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs`, {
             method: "POST",
             headers: {

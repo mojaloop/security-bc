@@ -126,11 +126,11 @@ describe('key-management-client-lib tests', () => {
 
     test("Create Certificate From CSR", async () => {
         const participantId = 'dfsp_a_create_cert_test';
-        const csrId = await makerKeyMgmtHttpClient.uploadCSR(participantId, DFSP_A_CSR_PEM);
-        expect(csrId).toBeDefined();
-        expect(csrId.id).toBeDefined();
+        const csrRequest = await makerKeyMgmtHttpClient.uploadCSR(participantId, DFSP_A_CSR_PEM);
+        expect(csrRequest).toBeDefined();
+        expect(csrRequest.id).toBeDefined();
 
-        const certificate = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
+        const certificate = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrRequest.id!);
 
         // check if the Certificate is created
         expect(certificate).toBeDefined();
@@ -144,14 +144,14 @@ describe('key-management-client-lib tests', () => {
     })
 
     test("Remove CSR", async () => {
-        const csrId = await makerKeyMgmtHttpClient.uploadCSR('dfsp_a_remove_csr_test', DFSP_A_CSR_PEM);
-        expect(csrId).toBeDefined();
-        expect(csrId.id).toBeDefined();
+        const csrRequest = await makerKeyMgmtHttpClient.uploadCSR('dfsp_a_remove_csr_test', DFSP_A_CSR_PEM);
+        expect(csrRequest).toBeDefined();
+        expect(csrRequest.id).toBeDefined();
 
-        await checkerKeyMgmtHttpClient.removeCSR(csrId.id);
+        await checkerKeyMgmtHttpClient.removeCSR(csrRequest.id!);
 
         // check if the CSR is removed
-        const csr = await checkerKeyMgmtHttpClient.getCSRFromId(csrId.id);
+        const csr = await checkerKeyMgmtHttpClient.getCSRFromId(csrRequest.id!);
         expect(csr).toBeNull();
 
     })
@@ -159,8 +159,8 @@ describe('key-management-client-lib tests', () => {
 
     test("Get Public Cert", async () => {
         const participantId = 'dfsp_a_get_cert_test';
-        const csrId = await makerKeyMgmtHttpClient.uploadCSR(participantId, DFSP_A_CSR_PEM);
-        const publicCert = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
+        const csrRequest = await makerKeyMgmtHttpClient.uploadCSR(participantId, DFSP_A_CSR_PEM);
+        const publicCert = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrRequest.id!);
 
         expect(publicCert).toBeDefined();
         expect(publicCert!.pubCertificatePem).toContain('-----BEGIN CERTIFICATE-----');
@@ -173,19 +173,19 @@ describe('key-management-client-lib tests', () => {
     })
 
     test("Get CSR Requests From IDs", async () => {
-        const csrId = await makerKeyMgmtHttpClient.uploadCSR('dfsp_a_get_csr_test', DFSP_A_CSR_PEM);
-        const csrIds = [csrId.id];
+        const csrRequest = await makerKeyMgmtHttpClient.uploadCSR('dfsp_a_get_csr_test', DFSP_A_CSR_PEM);
+        const csrIds = [csrRequest.id!];
 
         const csrRequests = await checkerKeyMgmtHttpClient.getCSRsFromIds(csrIds);
         expect(csrRequests).toBeDefined();
         expect(csrRequests.length).toBeGreaterThan(0);
-        expect(csrRequests[0].id).toBe(csrId.id);
+        expect(csrRequests[0].id).toBe(csrRequest.id);
     });
 
     test("Revoke Participant Public Cert", async () => {
         const participantId = 'dfsp_a_revoke_cert_test';
-        const csrId = await makerKeyMgmtHttpClient.uploadCSR(participantId, DFSP_A_CSR_PEM);
-        const cert = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
+        const csrRequest = await makerKeyMgmtHttpClient.uploadCSR(participantId, DFSP_A_CSR_PEM);
+        const cert = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrRequest.id!);
         expect(cert).toBeDefined();
         expect(cert.id).toBeDefined();
 
@@ -199,8 +199,8 @@ describe('key-management-client-lib tests', () => {
 
     test("Verify Certificate", async () => {
         const participantId = 'dfsp_a_verify_cert_test';
-        const csrId = await makerKeyMgmtHttpClient.uploadCSR(participantId, DFSP_A_CSR_PEM);
-        const certificate = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
+        const csrRequest = await makerKeyMgmtHttpClient.uploadCSR(participantId, DFSP_A_CSR_PEM);
+        const certificate = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrRequest.id!);
         expect(certificate).toBeDefined();
 
         const isVerified = await appKeyMgmtHttpClient.verifyCert(certificate!.pubCertificatePem);

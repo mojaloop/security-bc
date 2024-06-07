@@ -73,7 +73,7 @@ export class KeyManagementAggregate {
         return this._secureStorage.fetchCSRsWhereCSRIds(csrIds);
     }
 
-    async uploadCSR(securityContext: CallSecurityContext, participantId: string, csr: string): Promise<string> {
+    async uploadCSR(securityContext: CallSecurityContext, participantId: string, csr: string): Promise<ICSRRequest> {
         this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.UPLOAD_CSR);
         this._validateCSR(csr);
         const decodedCsrInfo = this._decodeInfoFromCSR(csr);
@@ -83,7 +83,9 @@ export class KeyManagementAggregate {
             participantId: participantId,
             createdDate: Date.now(),
         };
-        return await this._secureStorage.storeCSR(csrRequest);
+        const csrId = await this._secureStorage.storeCSR(csrRequest);
+        csrRequest.id = csrId;
+        return csrRequest;
     }
 
     async createCertificateFromCSR(securityContext: CallSecurityContext, csrId: string): Promise<IPublicCertificate> {

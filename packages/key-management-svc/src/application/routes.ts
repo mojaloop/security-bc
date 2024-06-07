@@ -135,6 +135,7 @@ export class KeyManagementRoutes {
             return res.status(400).send("No CSR provided. Please upload a CSR file.");
         }
 
+        // participant should already been verified by participant-bc
         if (req.body.participantId && typeof req.body.participantId === "string") {
             participantId = req.body.participantId;
         } else {
@@ -143,8 +144,8 @@ export class KeyManagementRoutes {
         }
 
         try {
-            const csrId = await this._keyMgmtAgg.uploadCSR(req.securityContext!, participantId, csrPem);
-            return res.status(200).json({ id: csrId });
+            const csrRequest = await this._keyMgmtAgg.uploadCSR(req.securityContext!, participantId, csrPem);
+            return res.status(200).send(csrRequest);
         } catch (error) {
             const errMessage = `${(error as Error).message}`;
             this._logger.error(errMessage);
