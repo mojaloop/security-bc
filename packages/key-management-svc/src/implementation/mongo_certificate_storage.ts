@@ -118,22 +118,22 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
         return csrs.map(this._mapDocumentToCSRRequest);
     }
 
-    public async getPublicCert(participantId: string): Promise<string> {
-        const cert = await this._publicCertCollection
-            .findOne({ participantId: participantId, isRevoked: { $ne: true } }, { projection: { _id: 0, participantId: 0 } });
+    public async fetchPublicCertWhereCertId(certId: string): Promise<IPublicCertificate | null> {
+        const certObjectId = new ObjectId(certId);
+        const cert = await this._publicCertCollection.findOne({ _id: certObjectId });
 
         if (!cert) {
-            throw new Error(`Certificate not found for participantId: ${participantId}`);
+            return null;
         }
-        return cert.cert;
+        return this._mapDocumentToPublicCertificate(cert);
     }
 
-    public async getPublicCerts(participantIds: string[]): Promise<IPublicCertificate[]> {
-        const certs = await this._publicCertCollection.find({ participantId: { $in: participantIds }, isRevoked: { $ne: true } })
-            .project({ _id: 0 })
-            .toArray() as IPublicCertificate[];
+    public async fetchPublicCertsWhereCertIds(certIds: string[]): Promise<IPublicCertificate[]> {
+        const certObjectIds = certIds.map((id) => new ObjectId(id));
+        const certs = await this._publicCertCollection.find({ _id: { $in: certObjectIds } })
+            .toArray();
 
-        return certs;
+        return certs.map(this._mapDocumentToPublicCertificate);
     }
 
     public async storePublicCert(participantId: string, cert: IPublicCertificate): Promise<string> {
@@ -143,11 +143,7 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
         }
 
         try {
-            const result = await this._publicCertCollection.insertOne({
-                participantId,
-                cert,
-                isRevoked: false
-            });
+            const result = await this._publicCertCollection.insertOne(cert);
             return result.insertedId.toString();
         } catch (error) {
             throw new Error(`Failed to store certificate for participantId: ${participantId}`);
@@ -176,7 +172,7 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
     }
 
 
-    public async getCAHubPrivateKey(): Promise<string> {
+    public async fetchCAHubPrivateKey(): Promise<string> {
         const privateKey = await this._hubPrivateKeyCollection
             .findOne({ participantId: this._hubID }, { projection: { _id: 0, participantId: 0 } });
 
@@ -193,9 +189,7 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
             const result = await this._publicCertCollection.updateOne(
                 { participantId: this._hubID },
                 {
-                    $set: {
-                        cert,
-                    }
+                    $set: cert,
                 },
                 { upsert: true });
             if (result.modifiedCount === 0 && result.upsertedCount === 0) {
@@ -206,19 +200,19 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
         }
     }
 
-    public async getCAHubPublicCert(): Promise<IPublicCertificate> {
+    public async fetchCAHubPublicCert(): Promise<IPublicCertificate | null> {
         const publicCert = await this._publicCertCollection
-            .findOne({ participantId: this._hubID, isRevoked: { $ne: true } }, { projection: { _id: 0, participantId: 0 } });
+            .findOne({ participantId: this._hubID, isRevoked: { $ne: true } });
 
         if (!publicCert) {
-            throw new Error("Public key not found for hub");
+            throw new Error("Public certificate not found for hub");
         }
-        return publicCert.cert;
+        return this._mapDocumentToPublicCertificate(publicCert);
     }
 
-    public async revokePublicCert(participantId: string, reason: string): Promise<void> {
+    public async revokePublicCert(certId: string, reason: string): Promise<void> {
         const updateResult = await this._publicCertCollection.updateOne(
-            { participantId: participantId },
+            { _id: new ObjectId(certId) },
             {
                 $set: {
                     isRevoked: true,
@@ -229,14 +223,15 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
         );
 
         if (updateResult.modifiedCount === 0) {
-            throw new Error(`Failed to revoke certificate for participantId: ${participantId}`);
+            throw new Error(`Failed to revoke certificate for certId: ${certId}`);
         }
     }
 
-    public async getRevokedPublicCerts(): Promise<IPublicCertificate[]> {
-        return await this._publicCertCollection.find({ isRevoked: true })
-            .project({ _id: 0 })
-            .toArray() as IPublicCertificate[];
+    public async fetchRevokedPublicCerts(): Promise<IPublicCertificate[]> {
+        const revokedPubCerts = await this._publicCertCollection.find({ isRevoked: true })
+            .toArray();
+
+        return revokedPubCerts.map(this._mapDocumentToPublicCertificate);
     }
 
     _encrypt(text: string): string {
@@ -273,6 +268,22 @@ export class MongoCertificateStorage implements ISecureCertificateStorage {
             decodedCsrInfo: csr.decodedCsrInfo,
             participantId: csr.participantId,
             createdDate: csr.createdDate
+        };
+    }
+
+    _mapDocumentToPublicCertificate(cert: any): IPublicCertificate {
+        return {
+            id: cert._id.toString(),
+            csrRequestId: cert.csrRequestId,
+            participantId: cert.participantId,
+            keyFingerprint: cert.keyFingerprint,
+            pubCertificatePem: cert.pubCertificatePem,
+            certType: cert.certType,
+            decodedCertInfo: cert.decodedCertInfo,
+            isRevoked: cert.isRevoked,
+            revocationReason: cert.revocationReason,
+            revocationDate: cert.revocationDate,
+            createdDate: cert.createdDate
         };
     }
 

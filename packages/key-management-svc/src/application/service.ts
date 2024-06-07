@@ -150,7 +150,6 @@ export class Service {
 
             // await this.secureStorage.init(CA_ENCRYPTION_SECRET_KEY, CA_ENCRYPTION_ENABLED);
             await this.secureStorage.init(CA_ENCRYPTION_SECRET_KEY, false);
-            await CertificateManager._checkKeyOrGenerateCAKeyPair(this.secureStorage, this.logger);
         }
 
         if (!certificateManager) {

@@ -106,25 +106,25 @@ export class KeyManagementAggregate {
         if (!csrRequest) {
             throw new Error("CSR not found");
         }
-        await this._secureStorage.updateCSR(csrId, csrRequest);
+        await this._secureStorage.removeCSR(csrId);
     }
 
-    async getHubCAPubCert(securityContext: CallSecurityContext): Promise<IPublicCertificate> {
+    async getHubCAPubCert(securityContext: CallSecurityContext): Promise<IPublicCertificate | null> {
         this._enforcePrivilege(securityContext!, CertKeyManagementPrivileges.VIEW_HUB_PUB_CERTIFICATE);
 
-        return this._secureStorage.getCAHubPublicCert();
+        return this._secureStorage.fetchCAHubPublicCert();
     }
 
-    async getParticipantPubCert(securityContext: CallSecurityContext, participantId: string): Promise<string> {
+    async getPubCert(securityContext: CallSecurityContext, certId: string): Promise<IPublicCertificate | null> {
         this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.VIEW_PUB_CERTIFICATE);
 
-        return this._secureStorage.getPublicCert(participantId);
+        return this._secureStorage.fetchPublicCertWhereCertId(certId);
     }
 
-    async getParticipantsPubCerts(securityContext: CallSecurityContext, participantIds: string[]): Promise<IPublicCertificate[]> {
+    async getPubCerts(securityContext: CallSecurityContext, certId: string[]): Promise<IPublicCertificate[]> {
         this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.VIEW_PUB_CERTIFICATE);
 
-        return this._secureStorage.getPublicCerts(participantIds);
+        return this._secureStorage.fetchPublicCertsWhereCertIds(certId);
     }
 
     async verifyCert(securityContext: CallSecurityContext, certPem: string): Promise<boolean> {
@@ -133,10 +133,10 @@ export class KeyManagementAggregate {
         return this._certificateManager.verifyCert(certPem);
     }
 
-    async revokeParticipantPubCert(securityContext: CallSecurityContext, participantId: string, reason: string): Promise<void> {
+    async revokePubCert(securityContext: CallSecurityContext, certId: string, reason: string): Promise<void> {
         this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.REVOKE_CERTIFICATE);
 
-        return this._secureStorage.revokePublicCert(participantId, reason);
+        return this._secureStorage.revokePublicCert(certId, reason);
     }
 
     private _decodeInfoFromCSR(csrPEM: string): IDecodedCSRInfo {

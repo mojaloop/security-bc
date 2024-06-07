@@ -39,7 +39,6 @@ import {
     KeyMgmtHttpClient,
 } from "@mojaloop/security-bc-client-lib";
 import { ConsoleLogger } from "@mojaloop/logging-bc-public-types-lib";
-import { ApprovalRequestState, ICSRRequest } from "@mojaloop/security-bc-public-types-lib";
 
 const AUTH_N_SVC_BASEURL = "http://localhost:3201";
 
@@ -98,10 +97,10 @@ describe('key-management-client-lib tests', () => {
     test("Obtain Hub CA Public Cert", async () => {
         const hubCAPubCert = await appKeyMgmtHttpClient.getHubCAPubCert();
         expect(hubCAPubCert).toBeDefined();
-        expect(hubCAPubCert.pubCertificatePem).toContain('-----BEGIN CERTIFICATE-----');
+        expect(hubCAPubCert!.pubCertificatePem).toContain('-----BEGIN CERTIFICATE-----');
 
-        const cert = pki.certificateFromPem(hubCAPubCert.pubCertificatePem);
-        expect(cert).toBeDefined();
+        const cert = pki.certificateFromPem(hubCAPubCert!.pubCertificatePem);
+        expect(cert).not.toBeNull();
         expect(cert.subject.getField('CN').value).toBe('vNextHub CA');
         expect(cert.issuer.getField('CN').value).toBe('vNextHub CA');
         expect(cert.issuer.getField('O').value).toBe('Mojaloop');
@@ -131,14 +130,14 @@ describe('key-management-client-lib tests', () => {
         expect(csrId).toBeDefined();
         expect(csrId.id).toBeDefined();
 
-        await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
+        const certId = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
 
         // check if the Certificate is created
-        const certificate = await checkerKeyMgmtHttpClient.getPaticipantPubCert(participantId);
+        const certificate = await checkerKeyMgmtHttpClient.getPubCertFromCertId(certId);
         expect(certificate).toBeDefined();
-        expect(certificate.pubCertificatePem).toContain('-----BEGIN CERTIFICATE-----');
+        expect(certificate!.pubCertificatePem).toContain('-----BEGIN CERTIFICATE-----');
 
-        const cert = pki.certificateFromPem(certificate.pubCertificatePem);
+        const cert = pki.certificateFromPem(certificate!.pubCertificatePem);
         expect(cert).toBeDefined();
         expect(cert.subject.getField('CN').value).toBe('DFSP_A');
         expect(cert.issuer.getField('CN').value).toBe('vNextHub CA');
@@ -154,6 +153,7 @@ describe('key-management-client-lib tests', () => {
 
         // check if the CSR is removed
         const csr = await checkerKeyMgmtHttpClient.getCSRFromId(csrId.id);
+        expect(csr).toBeNull();
 
     })
 
@@ -161,17 +161,51 @@ describe('key-management-client-lib tests', () => {
     test("Get Public Cert", async () => {
         const participantId = 'dfsp_a_get_cert_test';
         const csrId = await makerKeyMgmtHttpClient.uploadCSR(participantId, DFSP_A_CSR_PEM);
-        await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
+        const certId = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
 
-        const publicCert = await appKeyMgmtHttpClient.getPaticipantPubCert(participantId);
+        const publicCert = await appKeyMgmtHttpClient.getPubCertFromCertId(certId);
         expect(publicCert).toBeDefined();
-        expect(publicCert.pubCertificatePem).toContain('-----BEGIN CERTIFICATE-----');
+        expect(publicCert!.pubCertificatePem).toContain('-----BEGIN CERTIFICATE-----');
 
-        const cert = pki.certificateFromPem(publicCert.pubCertificatePem);
+        const cert = pki.certificateFromPem(publicCert!.pubCertificatePem);
         expect(cert).toBeDefined();
         expect(cert.subject.getField('CN').value).toBe('DFSP_A');
         expect(cert.issuer.getField('CN').value).toBe('vNextHub CA');
         expect(cert.issuer.getField('O').value).toBe('Mojaloop');
     })
 
+    test("Get CSR Requests From IDs", async () => {
+        const csrId = await makerKeyMgmtHttpClient.uploadCSR('dfsp_a_get_csr_test', DFSP_A_CSR_PEM);
+        const csrIds = [csrId.id];
+
+        const csrRequests = await checkerKeyMgmtHttpClient.getCSRsFromIds(csrIds);
+        expect(csrRequests).toBeDefined();
+        expect(csrRequests.length).toBeGreaterThan(0);
+        expect(csrRequests[0].id).toBe(csrId.id);
+    });
+
+    test("Revoke Participant Public Cert", async () => {
+        const participantId = 'dfsp_a_revoke_cert_test';
+        const csrId = await makerKeyMgmtHttpClient.uploadCSR(participantId, DFSP_A_CSR_PEM);
+        const certId = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
+
+        await checkerKeyMgmtHttpClient.revokePubCert(certId, 'Key compromised');
+
+        const publicCert = await appKeyMgmtHttpClient.getPubCertFromCertId(certId);
+        expect(publicCert).toBeDefined();
+        expect(publicCert!.isRevoked).toBe(true);
+        expect(publicCert!.revocationReason).toBe('Key compromised');
+    });
+
+    test("Verify Certificate", async () => {
+        const participantId = 'dfsp_a_verify_cert_test';
+        const csrId = await makerKeyMgmtHttpClient.uploadCSR(participantId, DFSP_A_CSR_PEM);
+        const certId = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
+
+        const certificate = await appKeyMgmtHttpClient.getPubCertFromCertId(certId);
+        expect(certificate).toBeDefined();
+
+        const isVerified = await appKeyMgmtHttpClient.verifyCert(certificate!.pubCertificatePem);
+        expect(isVerified.verified).toBe(true);
+    });
 });

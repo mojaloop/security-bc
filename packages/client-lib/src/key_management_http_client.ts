@@ -114,21 +114,15 @@ export class KeyMgmtHttpClient {
             },
         });
         const response = await this._authRequester.fetch(requestInfo);
-        if (!response.ok) {
-            throw new GetCSRFailedError(`Failed to get CSR from ID: ${await response.text()}`);
-        }
-        return await response.json();
+        return response.ok ? await response.json() : null;
     }
 
     public async getCSRsFromIds(ids: string[]): Promise<ICSRRequest[]> {
-        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs/${ids}/multi`, {
+        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs/${ids.join(",")}/multi`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                ids,
-            }),
+            }
         });
         const response = await this._authRequester.fetch(requestInfo);
         if (!response.ok) {
@@ -138,7 +132,7 @@ export class KeyMgmtHttpClient {
     }
 
 
-    public async getHubCAPubCert(): Promise<IPublicCertificate> {
+    public async getHubCAPubCert(): Promise<IPublicCertificate | null> {
         const requestInfo = new Request(`${this._baseUrlHttpService}/certs/pubCerts/hubCA`, {
             method: "GET",
             headers: {
@@ -147,13 +141,13 @@ export class KeyMgmtHttpClient {
         });
         const response = await this._authRequester.fetch(requestInfo);
         if (!response.ok) {
-            throw new GetPublicCertificateFailedError(`Failed to get Hub CA Public Cert: ${await response.text()}`);
+            return null;
         }
         return await response.json();
     }
 
-    public async getPaticipantPubCert(participantId: string): Promise<IPublicCertificate> {
-        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/pubCerts/${participantId}`, {
+    public async getPubCertFromCertId(certId: string): Promise<IPublicCertificate | null> {
+        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/pubCerts/${certId}`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -161,12 +155,26 @@ export class KeyMgmtHttpClient {
         });
         const response = await this._authRequester.fetch(requestInfo);
         if (!response.ok) {
-            throw new GetPublicCertificateFailedError(`Failed to get Participant Public Cert: ${await response.text()}`);
+            return null;
         }
         return await response.json();
     }
 
-    public async verifyCert(cert: string): Promise<boolean> {
+    public async revokePubCert(certId: string, reason: string): Promise<void> {
+        const requestInfo = new Request(`${this._baseUrlHttpService}/certs/pubCerts/${certId}/revoke`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ reason }),
+        });
+        const response = await this._authRequester.fetch(requestInfo);
+        if (!response.ok) {
+            throw new Error(`Failed to revoke public certificate: ${await response.text()}`);
+        }
+    }
+
+    public async verifyCert(cert: string): Promise<{verified: boolean}> {
         const requestInfo = new Request(`${this._baseUrlHttpService}/certs/verify`, {
             method: "POST",
             headers: {

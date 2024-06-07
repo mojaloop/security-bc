@@ -54,6 +54,7 @@ export declare interface ICSRRequest {
 }
 
 export declare interface IPublicCertificate {
+    id?: string;
     csrRequestId?: string | null;
     participantId: string;
     keyFingerprint: string;

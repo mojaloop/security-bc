@@ -8,6 +8,10 @@ import { ISecureCertificateStorage } from "./isecure_storage";
 import { ILogger } from "@mojaloop/logging-bc-public-types-lib";
 import { ICSRRequest, IDecodedCertificateInfo, IPublicCertificate } from "@mojaloop/security-bc-public-types-lib";
 
+interface KeyPairResult {
+    privateKeyPem: string;
+    cert: IPublicCertificate;
+}
 export class CertificateManager {
     private _caPubKeyPem: string;
     private _caPrivateKeyPem: string;
@@ -23,9 +27,9 @@ export class CertificateManager {
     }
 
     async init() {
-        const caHubPubCert = await this._secureStorage.getCAHubPublicCert();
-        this._caPubKeyPem = caHubPubCert.pubCertificatePem;
-        this._caPrivateKeyPem = await this._secureStorage.getCAHubPrivateKey();
+        const {privateKeyPem, cert} = await this._checkKeyOrGenerateCAKeyPair(this._secureStorage, this._logger);
+        this._caPubKeyPem = cert.pubCertificatePem;
+        this._caPrivateKeyPem = privateKeyPem;
 
         this._caPubCert = forge.pki.certificateFromPem(this._caPubKeyPem);
         this._caPrivateKey = forge.pki.privateKeyFromPem(this._caPrivateKeyPem);
@@ -108,9 +112,14 @@ export class CertificateManager {
         return pki.verifyCertificateChain(this._ca_store, [cert]);
     }
 
-    static async _checkKeyOrGenerateCAKeyPair(secureStorage: ISecureCertificateStorage, logger: ILogger): Promise<void> {
+    async _checkKeyOrGenerateCAKeyPair(secureStorage: ISecureCertificateStorage, logger: ILogger): Promise<KeyPairResult> {
         try {
-            await secureStorage.getCAHubPrivateKey();
+            const privateKeyPem = await secureStorage.fetchCAHubPrivateKey();
+            const cert = await secureStorage.fetchCAHubPublicCert();
+            if (!cert) {
+                throw new Error("CA Hub public certificate not found in secure storage.");
+            }
+            return { privateKeyPem, cert };
         } catch (error) {
             // If the CA private key and public key are not found in the secure storage, generate a new keypair
             const certHelper = new CertificatesHelper();
@@ -147,6 +156,7 @@ export class CertificateManager {
             };
             await secureStorage.storeCAHubRootCert(pubCert);
             logger.createChild("CertificateManager._checkKeyOrGenerateCAKeyPair").info("Generated new CA keypair and stored in secure storage.");
+            return { privateKeyPem: signingKeyPem, cert: pubCert };
         }
     }
 

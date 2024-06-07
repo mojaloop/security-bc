@@ -61,29 +61,33 @@ export class KeyManagementRoutes {
         this._router.use(this._authenticationMiddleware.bind(this));
         // bind routes
         this._router.get("/certs/csrs", this.getAllCSRRequests.bind(this));
-        this._router.get("/certs/csrs/:id", this.getCSRFromId.bind(this));
-        this._router.get("/certs/csrs/:ids/multi", this.getCSRRequestsFromIds.bind(this));
+        this._router.get("/certs/csrs/:csrId", this.getCSRFromId.bind(this));
+        this._router.get("/certs/csrs/:csrIds/multi", this.getCSRRequestsFromIds.bind(this));
         this._router.post("/certs/csrs", upload.single("csr"), this.uploadCSR.bind(this));
-        this._router.post("/certs/csrs/:id/createCertificate", this.createCertificateFromCSR.bind(this));
-        this._router.delete("/certs/csrs/:id", this.removeCSR.bind(this));
+        this._router.post("/certs/csrs/:csrId/createCertificate", this.createCertificateFromCSR.bind(this));
+        this._router.delete("/certs/csrs/:csrId", this.removeCSR.bind(this));
 
         this._router.get("/certs/pubCerts/hubCA", this.getHubCARootCert.bind(this));
-        this._router.get("/certs/pubCerts/:participantIds/multi", this.getParticipantsPubCerts.bind(this));
-        this._router.get("/certs/pubCerts/:participantId", this.getParticipantPubCert.bind(this));
+        this._router.get("/certs/pubCerts/:certIds/multi", this.getPubCerts.bind(this));
+        this._router.get("/certs/pubCerts/:certId", this.getPubCert.bind(this));
 
-        this._router.put("/certs/pubCerts/:participantId/revoke", this.revokeParticipantPubCert.bind(this));
+        this._router.put("/certs/pubCerts/:certId/revoke", this.revokePubCert.bind(this));
 
         this._router.post("/certs/verify", this.verifyCert.bind(this));
     }
 
     async getCSRFromId(req: express.Request, res: express.Response) {
-        const csrId = req.params.id;
+        const csrId = req.params.csrId;
         if (!csrId) {
             return res.status(400).send("No CSR ID provided.");
         }
 
         try {
             const csr = await this._keyMgmtAgg.getCSRFromId(req.securityContext!, csrId);
+            if (!csr) {
+                return res.status(404).send(null);
+            }
+
             return res.send(csr);
         } catch (error) {
             this._logger.error("Failed to get CSR.", (error as Error).message);
@@ -102,7 +106,7 @@ export class KeyManagementRoutes {
     }
 
     async getCSRRequestsFromIds(req: express.Request, res: express.Response) {
-        const ids = req.params["ids"] ?? null;
+        const ids = req.params.csrIds ?? null;
         const csrIds: string[] = ids == null ? [] : ids.split(",");
         if (csrIds.length === 0) {
             return res.status(400).send("No CSR IDs provided.");
@@ -149,7 +153,7 @@ export class KeyManagementRoutes {
     }
 
     async createCertificateFromCSR(req: express.Request, res: express.Response) {
-        const csrId = req.params.id;
+        const csrId = req.params.csrId;
         if (!csrId) {
             return res.status(400).send("No CSR ID provided.");
         }
@@ -165,7 +169,7 @@ export class KeyManagementRoutes {
     }
 
     async removeCSR(req: express.Request, res: express.Response) {
-        const csrId = req.params.id;
+        const csrId = req.params.csrId;
         if (!csrId) {
             return res.status(400).send("No CSR ID provided.");
         }
@@ -182,6 +186,9 @@ export class KeyManagementRoutes {
     async getHubCARootCert(req: express.Request, res: express.Response) {
         try {
             const hubCAPubCert = await this._keyMgmtAgg.getHubCAPubCert(req.securityContext!);
+            if (!hubCAPubCert) {
+                return res.status(404).send(null);
+            }
             return res.send(hubCAPubCert);
         } catch (error) {
             this._logger.error("Failed to get Hub CA Public Certificate.", (error as Error).message);
@@ -189,22 +196,25 @@ export class KeyManagementRoutes {
         }
     }
 
-    async getParticipantPubCert(req: express.Request, res: express.Response) {
-        const participantId = req.params.participantId;
-        if (!participantId) {
-            return res.status(400).send("No participantId provided.");
+    async getPubCert(req: express.Request, res: express.Response) {
+        const certId = req.params.certId;
+        if (!certId) {
+            return res.status(400).send("No certId provided.");
         }
 
         try {
-            const participantPubCert = await this._keyMgmtAgg.getParticipantPubCert(req.securityContext!, participantId);
-            return res.type("application/x-pem-file").send(participantPubCert);
+            const cert = await this._keyMgmtAgg.getPubCert(req.securityContext!, certId);
+            if (!cert) {
+                return res.status(404).send(null);
+            }
+            return res.status(200).json(cert);
         } catch (error) {
             this._logger.error("Failed to get participant public certificate.", (error as Error).message);
             return res.status(500).send("Failed to get participant public certificate.");
         }
     }
 
-    async getParticipantsPubCerts(req: express.Request, res: express.Response) {
+    async getPubCerts(req: express.Request, res: express.Response) {
         const participantIds = req.params.participantIds ?? null;
         const participantIdList: string[] = participantIds == null ? [] : participantIds.split(",");
         if (participantIdList.length === 0) {
@@ -212,7 +222,7 @@ export class KeyManagementRoutes {
         }
 
         try {
-            const pubCerts = await this._keyMgmtAgg.getParticipantsPubCerts(req.securityContext!, participantIdList);
+            const pubCerts = await this._keyMgmtAgg.getPubCerts(req.securityContext!, participantIdList);
             return res.status(200).json(pubCerts);
         } catch (error) {
             this._logger.error("Failed to get participants public certificates.", (error as Error).message);
@@ -220,12 +230,13 @@ export class KeyManagementRoutes {
         }
     }
 
-    async revokeParticipantPubCert(req: express.Request, res: express.Response) {
-        const participantId = req.params.participantId;
+    async revokePubCert(req: express.Request, res: express.Response) {
+        this._logger.debug("Revoking public certificate.");
+        const certId = req.params.certId;
         const reason = req.body.reason;
 
-        if (!participantId) {
-            return res.status(400).send("No participantId provided.");
+        if (!certId) {
+            return res.status(400).send("No certId provided.");
         }
 
         if (!reason) {
@@ -233,11 +244,12 @@ export class KeyManagementRoutes {
         }
 
         try {
-            await this._keyMgmtAgg.revokeParticipantPubCert(req.securityContext!, participantId, reason);
-            return res.status(200).send("Participant public certificate revoked.");
+            await this._keyMgmtAgg.revokePubCert(req.securityContext!, certId, reason);
+            return res.status(200).send("Certificate revoked.");
         } catch (error) {
-            this._logger.error("Failed to revoke participant public certificate.", (error as Error).message);
-            return res.status(500).send("Failed to revoke participant public certificate.");
+            const errMessage = `${(error as Error).message}`;
+            this._logger.error(errMessage);
+            return res.status(500).send(errMessage);
         }
     }
 

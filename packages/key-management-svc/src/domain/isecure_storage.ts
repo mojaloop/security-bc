@@ -55,19 +55,20 @@ export interface ISecureCertificateStorage {
     updateCSR(csrId: string, csr: ICSRRequest): Promise<void>;
     removeCSR(csrId: string): Promise<void>;
 
-    getPublicCert(participantId: string): Promise<string>;
-    getPublicCerts(participantIds: string[]): Promise<IPublicCertificate[]>;
+    fetchPublicCertWhereCertId(certId: string): Promise<IPublicCertificate | null>;
+    fetchPublicCertsWhereCertIds(certIds: string[]): Promise<IPublicCertificate[]>;
+
     storePublicCert(participantId: string, cert: IPublicCertificate): Promise<string>;
 
     storeCAHubPrivateKey(key: string): Promise<void>;
-    getCAHubPrivateKey(): Promise<string>;
+    fetchCAHubPrivateKey(): Promise<string>;
 
     storeCAHubRootCert(cert: IPublicCertificate): Promise<void>;
 
-    getCAHubPublicCert(): Promise<IPublicCertificate>;
+    fetchCAHubPublicCert(): Promise<IPublicCertificate | null>;
 
-    revokePublicCert(participantId: string, reason: string): Promise<void>;
-    getRevokedPublicCerts(): Promise<IPublicCertificate[]>;
+    revokePublicCert(certId: string, reason: string): Promise<void>;
+    fetchRevokedPublicCerts(): Promise<IPublicCertificate[]>;
 
     destroy(): Promise<void>;
 }
