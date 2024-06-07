@@ -64,7 +64,7 @@ export class KeyMgmtHttpClient {
         return await response.json();
     }
 
-    public async createCertificateFromCSR(csrId: string): Promise<string> {
+    public async createCertificateFromCSR(csrId: string): Promise<IPublicCertificate> {
         const requestInfo = new Request(`${this._baseUrlHttpService}/certs/csrs/${csrId}/createCertificate`, {
             method: "POST",
             headers: {
@@ -76,7 +76,7 @@ export class KeyMgmtHttpClient {
             throw new CreateCertificateFromCSRFailedError(`Failed to create certificate from CSR: ${await response.text()}`);
         }
 
-        return await response.text(); // newly created certId
+        return await response.json();
     }
 
     public async removeCSR(csrId: string): Promise<void> {

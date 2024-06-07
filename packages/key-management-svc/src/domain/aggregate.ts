@@ -86,7 +86,7 @@ export class KeyManagementAggregate {
         return await this._secureStorage.storeCSR(csrRequest);
     }
 
-    async createCertificateFromCSR(securityContext: CallSecurityContext, csrId: string): Promise<string> {
+    async createCertificateFromCSR(securityContext: CallSecurityContext, csrId: string): Promise<IPublicCertificate> {
         this._enforcePrivilege(securityContext, CertKeyManagementPrivileges.CREATE_CERTIFICATE);
 
         const csrRequest = await this._secureStorage.fetchCSRWhereCSRId(csrId);
@@ -95,8 +95,8 @@ export class KeyManagementAggregate {
         }
 
         await this._secureStorage.updateCSR(csrId, csrRequest);
-        const certId = await this._certificateManager.signAndStorePublicCertFromCSR(csrId, csrRequest);
-        return certId;
+        const pubCert = await this._certificateManager.signAndStorePublicCertFromCSR(csrId, csrRequest);
+        return pubCert;
     }
 
     async removeCSR(securityContext: CallSecurityContext, csrId: string): Promise<void> {

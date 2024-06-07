@@ -37,7 +37,7 @@ export class CertificateManager {
         this._ca_store.addCertificate(pki.certificateFromPem(this._caPubKeyPem));
     }
 
-    async signAndStorePublicCertFromCSR(csrRequestId: string, csrRequest: ICSRRequest): Promise<string> {
+    async signAndStorePublicCertFromCSR(csrRequestId: string, csrRequest: ICSRRequest): Promise<IPublicCertificate> {
         const csrPem = csrRequest.csrPEM;
         const participantId = csrRequest.participantId;
         const participantCSR = forge.pki.certificationRequestFromPem(csrPem);
@@ -100,7 +100,8 @@ export class CertificateManager {
             createdDate: Date.now(),
         };
         const certId = await this._secureStorage.storePublicCert(participantId, pubCert);
-        return certId;
+        pubCert.id = certId;
+        return pubCert;
     }
 
     getHubCAPubCert(): string {

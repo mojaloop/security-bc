@@ -159,9 +159,8 @@ export class KeyManagementRoutes {
         }
 
         try {
-            const certId = await this._keyMgmtAgg.createCertificateFromCSR(req.securityContext!, csrId);
-            return res.status(200).send(certId);
-
+            const pubCert = await this._keyMgmtAgg.createCertificateFromCSR(req.securityContext!, csrId);
+            return res.status(200).send(pubCert);
         } catch (error) {
             this._logger.error((error as Error).message);
             return res.status(500).send((error as Error).message);
@@ -215,18 +214,18 @@ export class KeyManagementRoutes {
     }
 
     async getPubCerts(req: express.Request, res: express.Response) {
-        const participantIds = req.params.participantIds ?? null;
-        const participantIdList: string[] = participantIds == null ? [] : participantIds.split(",");
-        if (participantIdList.length === 0) {
+        const certIds = req.params.certIds ?? null;
+        const certIdsList: string[] = certIds == null ? [] : certIds.split(",");
+        if (certIdsList.length === 0) {
             return res.status(400).send("No participantIds provided.");
         }
 
         try {
-            const pubCerts = await this._keyMgmtAgg.getPubCerts(req.securityContext!, participantIdList);
+            const pubCerts = await this._keyMgmtAgg.getPubCerts(req.securityContext!, certIdsList);
             return res.status(200).json(pubCerts);
         } catch (error) {
-            this._logger.error("Failed to get participants public certificates.", (error as Error).message);
-            return res.status(500).send("Failed to get participants public certificates.");
+            this._logger.error("Failed to get public certificates.", (error as Error).message);
+            return res.status(500).send("Failed to get public certificates.");
         }
     }
 

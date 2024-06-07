@@ -130,14 +130,13 @@ describe('key-management-client-lib tests', () => {
         expect(csrId).toBeDefined();
         expect(csrId.id).toBeDefined();
 
-        const certId = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
+        const certificate = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
 
         // check if the Certificate is created
-        const certificate = await checkerKeyMgmtHttpClient.getPubCertFromCertId(certId);
         expect(certificate).toBeDefined();
-        expect(certificate!.pubCertificatePem).toContain('-----BEGIN CERTIFICATE-----');
+        expect(certificate.pubCertificatePem).toContain('-----BEGIN CERTIFICATE-----');
 
-        const cert = pki.certificateFromPem(certificate!.pubCertificatePem);
+        const cert = pki.certificateFromPem(certificate.pubCertificatePem);
         expect(cert).toBeDefined();
         expect(cert.subject.getField('CN').value).toBe('DFSP_A');
         expect(cert.issuer.getField('CN').value).toBe('vNextHub CA');
@@ -161,9 +160,8 @@ describe('key-management-client-lib tests', () => {
     test("Get Public Cert", async () => {
         const participantId = 'dfsp_a_get_cert_test';
         const csrId = await makerKeyMgmtHttpClient.uploadCSR(participantId, DFSP_A_CSR_PEM);
-        const certId = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
+        const publicCert = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
 
-        const publicCert = await appKeyMgmtHttpClient.getPubCertFromCertId(certId);
         expect(publicCert).toBeDefined();
         expect(publicCert!.pubCertificatePem).toContain('-----BEGIN CERTIFICATE-----');
 
@@ -187,11 +185,13 @@ describe('key-management-client-lib tests', () => {
     test("Revoke Participant Public Cert", async () => {
         const participantId = 'dfsp_a_revoke_cert_test';
         const csrId = await makerKeyMgmtHttpClient.uploadCSR(participantId, DFSP_A_CSR_PEM);
-        const certId = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
+        const cert = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
+        expect(cert).toBeDefined();
+        expect(cert.id).toBeDefined();
 
-        await checkerKeyMgmtHttpClient.revokePubCert(certId, 'Key compromised');
+        await checkerKeyMgmtHttpClient.revokePubCert(cert.id!, 'Key compromised');
 
-        const publicCert = await appKeyMgmtHttpClient.getPubCertFromCertId(certId);
+        const publicCert = await appKeyMgmtHttpClient.getPubCertFromCertId(cert.id!);
         expect(publicCert).toBeDefined();
         expect(publicCert!.isRevoked).toBe(true);
         expect(publicCert!.revocationReason).toBe('Key compromised');
@@ -200,9 +200,7 @@ describe('key-management-client-lib tests', () => {
     test("Verify Certificate", async () => {
         const participantId = 'dfsp_a_verify_cert_test';
         const csrId = await makerKeyMgmtHttpClient.uploadCSR(participantId, DFSP_A_CSR_PEM);
-        const certId = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
-
-        const certificate = await appKeyMgmtHttpClient.getPubCertFromCertId(certId);
+        const certificate = await checkerKeyMgmtHttpClient.createCertificateFromCSR(csrId.id);
         expect(certificate).toBeDefined();
 
         const isVerified = await appKeyMgmtHttpClient.verifyCert(certificate!.pubCertificatePem);
