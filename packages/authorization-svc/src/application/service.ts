@@ -57,7 +57,7 @@ const packageJSON = require("../../package.json");
 
 const BC_NAME = "security-bc";
 const APP_NAME = "authorization-svc";
-const PRIVILEGE_SET_VERSION = packageJSON.version;
+const APP_VERSION = packageJSON.version;
 const PRODUCTION_MODE = process.env["PRODUCTION_MODE"] || false;
 const LOG_LEVEL:LogLevel = process.env["LOG_LEVEL"] as LogLevel || LogLevel.DEBUG;
 
@@ -123,7 +123,7 @@ export class Service {
             logger = new KafkaLogger(
                     BC_NAME,
                     APP_NAME,
-                    PRIVILEGE_SET_VERSION,
+                    APP_VERSION,
                     kafkaProducerCommonOptions,
                     KAFKA_LOGS_TOPIC,
                     LOG_LEVEL
@@ -164,7 +164,7 @@ export class Service {
             this.messageProducer,
             this.messageConsumer,
             BC_NAME,
-            PRIVILEGE_SET_VERSION,
+            APP_VERSION,
             this.logger,
             BuiltinIdentityPrivilegesDefinition
         );
@@ -225,7 +225,7 @@ export class Service {
 
         this.expressServer = app.listen(portNum, () => {
             console.log(`🚀 Server ready at: http://localhost:${portNum}`);
-            this.logger.info(`Authorization service v: ${PRIVILEGE_SET_VERSION} started`);
+            this.logger.info(`Authorization service v: ${APP_VERSION} started`);
         }).on("error", err => {
             this.logger.fatal(err);
             process.exit(9);
