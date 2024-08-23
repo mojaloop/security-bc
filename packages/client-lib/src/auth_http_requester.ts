@@ -179,7 +179,8 @@ export class AuthenticatedHttpRequester implements IAuthenticatedHttpRequester{
 			}else if(reason && reason.cause && reason.cause.code ==="ECONNREFUSED"){
 				item.callback(new ConnectionRefusedError(), null);
 			}else {
-				item.callback(new Error(reason && reason.name ? reason.name : reason), null);
+                this._logger.error("Unhandled error calling fetch", JSON.stringify(reason));
+                item.callback(new Error(reason && reason.cause && reason.cause.code ? reason.cause.code : reason.toString()), null);
 			}
 		}).finally(()=>{
 			this._queue_processing = false;
